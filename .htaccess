@@ -1,0 +1,2 @@
+# Disable directory index listings site-wide
+Options -Indexes

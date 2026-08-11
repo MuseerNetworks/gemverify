@@ -1,0 +1,72 @@
+/**
+ * GemVerify Design Tokens
+ * Shared across Admin and User portals
+ * https://gemverify.com
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  /* ── Brand Colors ── */
+  --gv-navy:    #0a1931;
+  --gv-navy2:   #123b79;
+  --gv-blue:    #0050FF;
+  --gv-cyan:    #00C8E6;
+
+  /* ── Surface Colors ── */
+  --gv-bg:      #eef1f6;
+  --gv-card:    #ffffff;
+  --gv-line:    #e8edf4;
+  --gv-surface: #f8fafc;
+
+  /* ── Text Colors ── */
+  --gv-text:    #0f172a;
+  --gv-muted:   #64748b;
+  --gv-subtle:  #94a3b8;
+
+  /* ── Status Colors ── */
+  --gv-green:   #16a34a;
+  --gv-orange:  #d97706;
+  --gv-red:     #dc2626;
+  --gv-amber:   #b45309;
+
+  /* ── Spacing & Shape ── */
+  --gv-radius:  18px;
+  --gv-radius-sm: 10px;
+  --gv-radius-lg: 24px;
+  --gv-shadow:  0 10px 30px rgba(15, 23, 42, .06);
+  --gv-shadow-md: 0 24px 70px rgba(10, 25, 49, .12);
+
+  /* ── Typography ── */
+  --gv-font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ── Dark Mode Overrides ── */
+body.dark-mode {
+  --gv-bg:      #0b1220;
+  --gv-card:    #111827;
+  --gv-line:    #1f2937;
+  --gv-surface: #0f172a;
+  --gv-text:    #e5e7eb;
+  --gv-muted:   #94a3b8;
+  --gv-subtle:  #64748b;
+}
+
+/* ── Base Reset ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  font-family: var(--gv-font);
+  background: var(--gv-bg);
+  color: var(--gv-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+a { text-decoration: none; color: inherit; }

@@ -1,0 +1,2554 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" href="../assets/img/auth-shield.png">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>GemVerify Admin Portal</title>
+<style>
+:root{
+  --navy:#0a1931;--navy2:#123b79;--blue:#0b5cff;--cyan:#0ea5e9;
+  --bg:#eef1f6;--card:#fff;--line:#e8edf4;--muted:#64748b;--text:#0f172a;
+  --green:#16a34a;--orange:#d97706;--red:#dc2626;--radius:18px;
+  --shadow:0 10px 30px rgba(15,23,42,.06)
+}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+.hidden{display:none!important}
+.login{min-height:100vh;display:grid;place-items:center;padding:28px;background:
+ radial-gradient(circle at 15% 10%,rgba(11,92,255,.12),transparent 30%),
+ radial-gradient(circle at 90% 85%,rgba(14,165,233,.10),transparent 28%),var(--bg)}
+.login-box{width:min(1060px,94vw);display:grid;grid-template-columns:1fr 430px;background:#fff;border:1px solid var(--line);border-radius:28px;box-shadow:0 24px 70px rgba(10,25,49,.12);overflow:hidden}
+.login-brand{padding:54px;background:linear-gradient(145deg,var(--navy),var(--navy2));color:#fff;position:relative}
+.login-brand:after{content:"";position:absolute;width:260px;height:260px;border:1px solid rgba(255,255,255,.13);border-radius:50%;right:-80px;bottom:-90px}
+.logo-mark{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:#fff;color:var(--blue);font-weight:900;font-size:22px}
+.login-brand h1{font-size:42px;line-height:1.08;margin:60px 0 16px;letter-spacing:-1.5px}
+.login-brand p{max-width:430px;color:#c9d6e9;line-height:1.7}.secure{margin-top:46px;display:flex;gap:10px;align-items:center;color:#dce8f8;font-size:13px}
+.login-form{padding:54px}.eyebrow{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--blue)}
+.login-form h2{font-size:30px;margin:8px 0 8px}.login-form .sub{color:var(--muted);margin:0 0 30px}
+.field{margin:16px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:8px}
+.field input,.field select,.field textarea{width:100%;padding:13px 14px;border:1px solid #dce3ec;border-radius:12px;outline:none;background:#fff;color:var(--text)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(11,92,255,.1)}
+.primary{border:0;background:var(--blue);color:#fff;border-radius:12px;padding:13px 18px;font-weight:800;box-shadow:0 8px 18px rgba(11,92,255,.18)}
+.primary:hover{filter:brightness(.96)}.secondary{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:12px;padding:11px 15px;font-weight:750}
+.app{display:none;min-height:100vh}.app.on{display:block}
+
+/* Sidebar hidden by default on desktop and mobile. */
+.side{position:fixed;left:0;top:0;bottom:0;width:258px;background:#fff;border-right:1px solid var(--line);z-index:40;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .22s ease,box-shadow .22s ease}
+.side.show{transform:translateX(0);box-shadow:18px 0 50px rgba(10,25,49,.14)}
+.brand{height:76px;padding:16px 20px;display:flex;gap:11px;align-items:center;border-bottom:1px solid var(--line);flex:0 0 auto}
+.brand .logo{width:38px;height:38px;border-radius:12px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:900}
+.brand b{display:block;font-size:15px}.brand small{font-size:9px;color:var(--muted);font-weight:800;letter-spacing:.1em}
+.nav{padding:16px 12px;overflow:auto;overscroll-behavior:contain}.nav-label{font-size:9px;font-weight:900;letter-spacing:.12em;color:#94a3b8;padding:12px 10px 7px}
+.nav button{width:100%;border:0;background:transparent;text-align:left;padding:10px 11px;border-radius:11px;color:#475569;font-weight:700;font-size:12px;margin:2px 0}
+.nav button:hover{background:#f1f5f9;color:var(--navy)}.nav button.active{background:#edf4ff;color:var(--blue)}
+.nav .danger{color:#dc2626;margin-top:12px}.admin-mini{margin-top:auto;padding:14px;border-top:1px solid var(--line);flex:0 0 auto}
+.user-chip{display:flex;align-items:center;gap:9px;padding:9px;border-radius:12px;background:#f8fafc}.avatar{width:34px;height:34px;border-radius:10px;background:#dbeafe;color:var(--blue);display:grid;place-items:center;font-weight:900;font-size:12px}
+.user-chip b{font-size:11px;display:block}.user-chip small{color:var(--muted);font-size:9px}
+.main{margin-left:0;min-height:100vh;width:100%}.top{height:76px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 30px;position:sticky;top:0;z-index:20}
+.top-left{display:flex;align-items:center;gap:12px;min-width:0}.hamb{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px;cursor:pointer;flex:0 0 auto}
+.search{width:min(280px,32vw);border:1px solid var(--line);border-radius:11px;padding:10px 13px;background:#f8fafc;outline:none}
+.top-actions{display:flex;align-items:center;gap:10px;flex:0 0 auto}.icon-btn{width:38px;height:38px;border:1px solid var(--line);background:#fff;border-radius:11px}
+.content{padding:28px;max-width:1500px;margin:auto;min-width:0}.heading{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:22px}.heading h1{font-size:25px;margin:0 0 5px;letter-spacing:-.5px}.heading p{margin:0;color:var(--muted);font-size:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.stat.kpi-clickable{cursor:pointer;transition:transform .18s ease,box-shadow .18s ease;border-color:var(--line)}.stat.kpi-clickable:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(15,23,42,.10)}.stat.kpi-clickable:focus-visible{outline:3px solid rgba(37,99,235,.25);outline-offset:2px}.stat{min-width:0;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}.stat-top{display:flex;justify-content:space-between;align-items:center;gap:8px}.stat .ico{width:38px;height:38px;border-radius:11px;background:#eff6ff;color:var(--blue);display:grid;place-items:center;font-weight:900;flex:0 0 auto}.stat small{color:var(--muted);font-weight:700}.stat strong{font-size:25px;display:block;margin-top:13px;overflow-wrap:anywhere}.delta{font-size:10px;color:var(--green);font-weight:800}
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;margin-top:16px}.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:auto}.card-head{padding:17px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;min-width:0}.card-head h3{margin:0;font-size:14px}.card-head span{font-size:11px;color:var(--muted)}
+table{width:100%;min-width:680px;border-collapse:collapse}th,td{padding:12px 15px;text-align:left;border-bottom:1px solid #eef2f6;font-size:11px}th{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8}td b{font-size:11px}.pill{display:inline-flex;padding:5px 8px;border-radius:99px;font-size:9px;font-weight:800}.green{background:#eaf8ef;color:#15803d}.amber{background:#fff7e6;color:#b45309}.blue{background:#eaf4ff;color:#0369a1}.red{background:#fff0f0;color:#b91c1c}
+.queue{display:flex;flex-direction:column;gap:11px;padding:15px}.q{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #edf1f5;border-radius:13px}.q b{font-size:11px}.q small{display:block;color:var(--muted);margin-top:3px}.q strong{font-size:14px}
+.page{display:none}.page.active{display:block}
+.toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.toolbar input,.toolbar select{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;outline:none;font-size:11px;max-width:100%}
+.service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.service{min-width:0;padding:17px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}.service-top{display:flex;justify-content:space-between;gap:10px}.service .ico{width:42px;height:42px;border-radius:12px;background:#eff6ff;color:var(--blue);display:grid;place-items:center;font-weight:900;flex:0 0 auto}.service h3{font-size:13px;margin:12px 0 5px}.service p{font-size:10px;color:var(--muted);min-height:30px}.service-row{display:flex;justify-content:space-between;align-items:end;gap:10px;margin-top:15px}.price{font-size:17px;font-weight:900}.toggle{position:relative;width:38px;height:22px;border:0;border-radius:20px;background:#cbd5e1}.toggle.on{background:var(--blue)}.toggle i{position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s}.toggle.on i{left:19px}
+.modal{position:fixed;inset:0;background:rgba(10,25,49,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}.modal.show{display:flex}.modal-box{width:min(600px,96vw);max-height:90vh;background:#fff;border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.18);overflow:auto}.modal-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}.modal-head h3{margin:0;font-size:15px}.modal-body{padding:20px}.modal-foot{padding:14px 20px;background:#f8fafc;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+
+@media(max-width:1200px){
+  .grid4{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:900px){
+  .grid4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cols{grid-template-columns:1fr}
+  .content{padding:22px 18px}
+  .search{width:min(240px,38vw)}
+}
+@media(max-width:650px){
+  .side{width:min(300px,88vw)}
+  .top{height:64px;padding:0 12px}
+  .top-left{flex:1}
+  .search{display:none}
+  .top-actions{gap:6px}
+  .top-actions .icon-btn{display:none}
+  .content{padding:16px 12px}
+  .heading{flex-direction:column;gap:12px;margin-bottom:16px}
+  .heading h1{font-size:22px}
+  .heading .primary,.heading .secondary{width:100%}
+  .grid4,.service-grid{grid-template-columns:1fr}
+  .stat{padding:15px}
+  .stat strong{font-size:22px}
+  .card-head{align-items:flex-start;flex-direction:column}
+  .queue .q{align-items:flex-start;flex-direction:column}
+  .login-box{grid-template-columns:1fr}
+  .login-brand{display:none}
+  .login-form{padding:32px 24px}
+  .modal{padding:10px}
+  .modal-box{width:100%;max-height:94vh;border-radius:16px}
+}
+
+/* FINAL MOBILE APP LAYOUT — no sideways scrolling */
+html, body { width:100%; max-width:100%; overflow-x:hidden; }
+*, *::before, *::after { box-sizing:border-box; }
+
+@media (max-width:650px){
+  html, body { width:100%; max-width:100%; overflow-x:hidden; }
+  .app, .main, .content, .page { width:100%; max-width:100%; min-width:0; }
+  .content { overflow-x:hidden; }
+
+  /* Never force tables wider than the phone. Convert table rows into cards. */
+  .card { width:100%; max-width:100%; overflow:hidden; }
+  .card table,
+  .card table thead,
+  .card table tbody,
+  .card table tr,
+  .card table th,
+  .card table td {
+    display:block;
+    width:100%;
+    min-width:0;
+  }
+  .card table thead {
+    display:none;
+  }
+  .card table tr {
+    padding:10px 12px;
+    border-bottom:1px solid #eef2f6;
+  }
+  .card table td {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+    padding:7px 2px;
+    border:0;
+    font-size:11px;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+  .card table td::before {
+    content:attr(data-label);
+    flex:0 0 38%;
+    color:#94a3b8;
+    font-size:9px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+
+  /* Prevent long controls and buttons from creating horizontal overflow. */
+  input, select, textarea, button { max-width:100%; }
+  .toolbar { width:100%; }
+  .toolbar input, .toolbar select { width:100%; }
+  .toolbar button { width:100%; }
+
+  .heading, .card-head { width:100%; }
+  .card-head > * { max-width:100%; }
+  .card-head input { width:100%; }
+
+  .grid4, .cols, .service-grid {
+    width:100%;
+    max-width:100%;
+    grid-template-columns:1fr !important;
+  }
+
+  .stat, .service, .q {
+    width:100%;
+    max-width:100%;
+    min-width:0;
+  }
+
+  .stat strong, .service h3, .service p, .q b, .q small {
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+
+  .service-row {
+    flex-wrap:wrap;
+  }
+
+  .modal {
+    width:100%;
+    max-width:100%;
+    padding:8px;
+  }
+  .modal-box {
+    width:100%;
+    max-width:100%;
+    max-height:94vh;
+  }
+
+  /* Keep the opened sidebar inside the viewport. */
+  .side {
+    width:min(290px, 86vw);
+    max-width:86vw;
+  }
+}
+
+/* ===== Collapsible sidebar categories (requested change 4) ===== */
+.nav-group{margin:0}
+.nav-label{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.nav-label .nav-caret{font-size:8px;color:#94a3b8;transition:transform .18s ease;flex:0 0 auto}
+.nav-group.open .nav-label .nav-caret{transform:rotate(180deg)}
+.nav-sub{max-height:0;overflow:hidden;transition:max-height .22s ease}
+.nav-group.open .nav-sub{max-height:1200px}
+
+/* ===== Fix Withdrawal Profit / finance panel clipping (requested change 3) ===== */
+.fin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.fin-card{min-width:0}
+.fin-amount{overflow-wrap:anywhere;word-break:break-word}
+@media(max-width:900px){
+  .fin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:650px){
+  .fin-grid{grid-template-columns:1fr}
+}
+
+/* ===== Dark Mode (requested change 1) — additive, light mode untouched ===== */
+body.dark-mode{background:#0b1220;color:#e5e7eb}
+body.dark-mode .login{background:radial-gradient(circle at 15% 10%,rgba(11,92,255,.16),transparent 30%),radial-gradient(circle at 90% 85%,rgba(14,165,233,.14),transparent 28%),#0b1220}
+body.dark-mode .login-box{background:#111827;border-color:#1f2937}
+body.dark-mode .login-form h2,body.dark-mode .login-form label{color:#e5e7eb}
+body.dark-mode .login-form .sub{color:#94a3b8}
+body.dark-mode .field input,body.dark-mode .field select,body.dark-mode .field textarea{background:#0f172a;border-color:#263349;color:#e5e7eb}
+body.dark-mode .secondary{background:#111827;border-color:#263349;color:#e5e7eb}
+body.dark-mode .side{background:#0f172a;border-color:#1f2937}
+body.dark-mode .brand{border-color:#1f2937}
+body.dark-mode .brand b{color:#e5e7eb}
+body.dark-mode .nav button{color:#94a3b8}
+body.dark-mode .nav button:hover{background:#1e293b;color:#e5e7eb}
+body.dark-mode .nav button.active{background:#16305f;color:#60a5fa}
+body.dark-mode .nav-label{color:#64748b}
+body.dark-mode .admin-mini{border-color:#1f2937}
+body.dark-mode .user-chip{background:#0f172a}
+body.dark-mode .user-chip b{color:#e5e7eb}
+body.dark-mode .main .top{background:#0f172a;border-color:#1f2937}
+body.dark-mode .hamb,body.dark-mode .icon-btn{background:#0f172a;border-color:#263349;color:#e5e7eb}
+body.dark-mode .search{background:#0b1220;border-color:#263349;color:#e5e7eb}
+body.dark-mode .content{color:#e5e7eb}
+body.dark-mode .heading p{color:#94a3b8}
+body.dark-mode .stat,body.dark-mode .service,body.dark-mode .card{background:#111827;border-color:#1f2937}
+body.dark-mode .stat small,body.dark-mode .service p{color:#94a3b8}
+body.dark-mode .card-head{border-color:#1f2937}
+body.dark-mode .card-head span{color:#94a3b8}
+body.dark-mode table th{color:#64748b}
+body.dark-mode table td{border-color:#1f2937;color:#e5e7eb}
+body.dark-mode .q{border-color:#1f2937;background:#0f172a}
+body.dark-mode .q small{color:#94a3b8}
+body.dark-mode .toolbar input,body.dark-mode .toolbar select{background:#0f172a;border-color:#263349;color:#e5e7eb}
+body.dark-mode .modal-box{background:#111827}
+body.dark-mode .modal-head{border-color:#1f2937}
+body.dark-mode .modal-foot{background:#0f172a;border-color:#1f2937}
+body.dark-mode div[style*="f8fafc"]{background:#0f172a!important;border-color:#1f2937!important}
+body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!important;border-color:#4a3a17!important}
+</style>
+</head>
+<body>
+
+<section id="login" class="login">
+  <div class="login-box">
+    <div class="login-brand">
+      <img src="../assets/img/auth-shield.png" style="width:52px;height:52px;object-fit:contain;border-radius:12px;" alt="GemVerify">
+      <h1>GemVerify<br>Admin Portal</h1>
+      <p>Secure operations control for identity verification, manual service requests, payments, users and GemPrint.</p>
+      <div class="secure">◉ <span>Protected administrative environment</span></div>
+    </div>
+    <div class="login-form">
+      <div class="eyebrow">Administration</div>
+      <h2>Welcome back</h2>
+      <p class="sub">Sign in to manage GemVerify operations.</p>
+      <div class="field"><label>Admin Email</label><input id="email" type="email" placeholder="admin@gemverify.com"></div>
+      <div class="field"><label>Password</label><input id="password" type="password" placeholder="Enter your password"></div>
+      <div id="loginError" style="display:none;font-size:11px;color:#dc2626;background:#fff0f0;padding:8px 12px;border-radius:8px;margin-bottom:12px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 22px;font-size:11px">
+        <label><input type="checkbox"> Remember this device</label>
+        <a href="#" style="color:var(--blue);font-weight:800">Forgot password?</a>
+      </div>
+      <button id="loginBtn" class="primary" style="width:100%" onclick="login()">Sign In to Admin</button>
+      <p style="font-size:10px;color:#94a3b8;text-align:center;margin-top:18px">Authenticated administrative access only.</p>
+    </div>
+  </div>
+</section>
+
+<section id="app" class="app">
+<aside id="side" class="side">
+  <div class="brand"><div class="logo">G</div><div><b>GemVerify</b><small>ADMIN PORTAL</small></div></div>
+  <nav class="nav">
+    <div class="nav-group open">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">OVERVIEW<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button class="active" data-page="dashboard" onclick="go('dashboard',this)">▦　Dashboard</button>
+    <button data-page="analytics" onclick="go('analytics',this)">◔　Analytics</button>
+    </div>
+    </div>
+
+    <div class="nav-group">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">OPERATIONS<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button data-page="requests" onclick="go('requests',this)">◫　Manual Requests</button>
+    <button data-page="pending" onclick="go('pending',this)">◷　Pending Requests</button>
+    <button data-page="processing" onclick="go('processing',this)">◌　Processing</button>
+    <button data-page="completed" onclick="go('completed',this)">✓　Completed</button>
+    <button data-page="rejected" onclick="go('rejected',this)">⊘　Rejected</button>
+    <button data-page="api-transactions" onclick="go('api-transactions',this)">⚡　API Transactions</button>
+    </div>
+    </div>
+
+    <div class="nav-group">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">NIN SERVICES<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button data-page="nin-validation" onclick="go('nin-validation',this)">N　Validation</button>
+    <button data-page="nin-ipe" onclick="go('nin-ipe',this)">N　IPE Modification</button>
+    <button data-page="nin-personalisation" onclick="go('nin-personalisation',this)">N　Personalisation</button>
+    <button data-page="nin-modification" onclick="go('nin-modification',this)">N　Modification</button>
+    <button data-page="nin-dob" onclick="go('nin-dob',this)">N　DOB &gt; 5 Years</button>
+    <button data-page="nin-delinking" onclick="go('nin-delinking',this)">N　Self-Service Delinking</button>
+    </div>
+    </div>
+
+    <div class="nav-group">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">BVN SERVICES<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button data-page="bvn-license" onclick="go('bvn-license',this)">B　License Creation</button>
+    <button data-page="bvn-nonappearance" onclick="go('bvn-nonappearance',this)">B　Non-Appearance</button>
+    <button data-page="bvn-risk" onclick="go('bvn-risk',this)">B　Central Risk Management</button>
+    <button data-page="bvn-modification" onclick="go('bvn-modification',this)">B　Modification</button>
+    </div>
+    </div>
+
+    <div class="nav-group">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">JAMB<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button data-page="jamb-all" onclick="go('jamb-all',this)">J　All Requests</button>
+    <button data-page="jamb-result" onclick="go('jamb-result',this)">J　Original Result</button>
+    <button data-page="jamb-slip" onclick="go('jamb-slip',this)">J　Exam Slip</button>
+    <button data-page="jamb-admission" onclick="go('jamb-admission',this)">J　Admission Letter</button>
+    <button data-page="jamb-reprints" onclick="go('jamb-reprints',this)">J　Re-Prints</button>
+    </div>
+    </div>
+
+    <div class="nav-group">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">CAC<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button data-page="cac-business" onclick="go('cac-business',this)">C　Business Name</button>
+    <button data-page="cac-ltd" onclick="go('cac-ltd',this)">C　LTD Setup</button>
+    <button data-page="cac-verification" onclick="go('cac-verification',this)">C　Verification</button>
+    </div>
+    </div>
+
+    <div class="nav-group">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">TIN<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button data-page="tin" onclick="go('tin',this)">T　Registration</button>
+    </div>
+    </div>
+
+    <div class="nav-group">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">ATTESTATION<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button data-page="attestation" onclick="go('attestation',this)">A　NIN Attestation</button>
+    </div>
+    </div>
+
+    <div class="nav-group">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">GEMPRINT<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button data-page="products" onclick="go('products',this)">▤　Products</button>
+    <button data-page="orders" onclick="go('orders',this)">▣　Orders</button>
+    <button data-page="print-jobs" onclick="go('print-jobs',this)">▥　Print Jobs</button>
+    <button data-page="inventory" onclick="go('inventory',this)">▤　Inventory</button>
+    </div>
+    </div>
+
+    <div class="nav-group">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">FINANCE<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button data-page="revenue" onclick="go('revenue',this)">₦　Revenue</button>
+    <button data-page="provider-balance" onclick="go('provider-balance',this)">◉　Providers Balance</button>
+    <button data-page="profit" onclick="go('profit',this)">↗　Profit & Withdrawals</button>
+    <button data-page="transactions" onclick="go('transactions',this)">₦　Transactions</button>
+    <button data-page="wallet-funding" onclick="go('wallet-funding',this)">＋　Wallet Funding</button>
+    <button data-page="refunds" onclick="go('refunds',this)">↩　Refunds</button>
+    </div>
+    </div>
+
+    <div class="nav-group">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">USERS<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button data-page="users" onclick="go('users',this)">♙　All Users</button>
+    <button data-page="active-users" onclick="go('active-users',this)">●　Active</button>
+    <button data-page="suspended-users" onclick="go('suspended-users',this)">⊘　Suspended</button>
+    </div>
+    </div>
+
+    <div class="nav-group">
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">SYSTEM<span class="nav-caret">▾</span></div>
+    <div class="nav-sub">
+    <button data-page="notifications" onclick="go('notifications',this)">♧　Notifications</button>
+    <button data-page="admins" onclick="go('admins',this)">♙　Admin Users</button>
+    <button data-page="roles" onclick="go('roles',this)">◈　Roles &amp; Permissions</button>
+    <button data-page="services" onclick="go('services',this)">⚙　Services &amp; Pricing</button>
+    <button data-page="audit" onclick="go('audit',this)">◷　Audit Logs</button>
+    <button data-page="settings" onclick="go('settings',this)">⚙　Settings</button>
+    <button class="danger" onclick="logout()">↪　Logout</button>
+    </div>
+    </div>
+  </nav>
+  <div class="admin-mini"><div class="user-chip"><div class="avatar">SA</div><div><b>Super Admin</b><small>Full access</small></div></div></div>
+</aside>
+
+<main class="main">
+<header class="top">
+  <div class="top-left"><button class="hamb" aria-label="Toggle navigation" onclick="toggleSidebar()">☰</button><input class="search" placeholder="Search users, requests, reference..."></div>
+  <div class="top-actions"><button class="icon-btn" id="darkToggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button><button class="icon-btn">⌕</button><button class="icon-btn">♧</button><div class="avatar">SA</div></div>
+</header>
+
+<div class="content">
+<section id="page-dashboard" class="page active">
+  <div class="heading"><div><h1>Good morning, Admin</h1><p>Here's what is happening across GemVerify today.</p></div><button class="primary" onclick="go('requests')">View Manual Queue</button></div>
+  <div class="grid4">
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Registered Accounts" onclick="openKpiPage('registered-accounts')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('registered-accounts')"><div class="stat-top"><small>Registered Accounts</small><div class="ico">♙</div></div><strong id="statRegUsers">0</strong><span class="delta">Live accounts</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Active Today" onclick="openKpiPage('active-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('active-today')"><div class="stat-top"><small>Active Today</small><div class="ico">●</div></div><strong id="statActiveUsers">0</strong><span class="delta">Active sessions</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Wallet Liability" onclick="openKpiPage('wallet-liability')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('wallet-liability')"><div class="stat-top"><small>Wallet Liability</small><div class="ico">₦</div></div><strong id="statWalletLiability">₦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Customer funds</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Revenue Today" onclick="openKpiPage('revenue-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('revenue-today')"><div class="stat-top"><small>Revenue Today</small><div class="ico">₦</div></div><strong id="statRevenue">₦0</strong><span class="delta">Gross service revenue</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Profit Today" onclick="openKpiPage('profit-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('profit-today')"><div class="stat-top"><small>Profit Today</small><div class="ico">↗</div></div><strong id="statProfit">₦0</strong><span class="delta">After recorded service costs</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Successful Txn" onclick="openKpiPage('successful-txn')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('successful-txn')"><div class="stat-top"><small>Successful Txn</small><div class="ico">✓</div></div><strong id="statCompleted">0</strong><span class="delta">Completed requests</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Failed Txns" onclick="openKpiPage('failed-txns')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('failed-txns')"><div class="stat-top"><small>Failed Txns</small><div class="ico">×</div></div><strong id="statRejected">0</strong><span style="font-size:10px;color:var(--red);font-weight:800">Rejected & cancelled</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Withdrawable Profit" onclick="openKpiPage('withdrawable-profit')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('withdrawable-profit')"><div class="stat-top"><small>Withdrawable Profit</small><div class="ico">↗</div></div><strong id="withdrawableStat">₦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Settled company funds</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Providers Balance" onclick="openKpiPage('provider-balance')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('provider-balance')"><div class="stat-top"><small>Providers Balance</small><div class="ico">◉</div></div><strong id="providerBalanceStat">₦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Configured provider balances</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="card-head">
+      <div><h3>Financial Control Center</h3><span>Separate customer liability from company revenue and withdrawable profit.</span></div>
+      <button class="primary" onclick="openWithdraw()">Withdraw Profit</button>
+    </div>
+    <div class="fin-grid" style="padding:18px">
+      <div class="fin-card" style="padding:15px;border:1px solid var(--line);border-radius:14px;background:#f8fafc">
+        <small style="color:var(--muted);font-weight:800">CUSTOMER WALLET LIABILITY</small>
+        <div id="finCustomerLiability" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">₦0</div>
+        <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Must never be withdrawable as company profit.</p>
+      </div>
+      <div class="fin-card" style="padding:15px;border:1px solid var(--line);border-radius:14px;background:#f8fafc">
+        <small style="color:var(--muted);font-weight:800">REVENUE TODAY</small>
+        <div id="finRevenueToday" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">₦0</div>
+        <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Gross amount charged for successful services.</p>
+      </div>
+      <div class="fin-card" style="padding:15px;border:1px solid var(--line);border-radius:14px;background:#f8fafc">
+        <small style="color:var(--muted);font-weight:800">WITHDRAWABLE PROFIT</small>
+        <div id="withdrawablePanel" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">₦0</div>
+        <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Only settled, non-customer funds can be withdrawn.</p>
+      </div>
+    </div>
+  </div>
+  
+<div id="provider-intelligence-card" class="card" style="margin-top:16px;cursor:pointer" onclick="go('provider-balance')" tabindex="0" role="button" aria-label="Open provider intelligence" onkeydown="if(event.key==='Enter'||event.key===' ')go('provider-balance')">
+  <div class="card-head">
+    <div><h3>Provider Intelligence</h3><span>Click to inspect provider health, balances and operational coverage</span></div>
+    <span class="pill blue">Open Providers</span>
+  </div>
+  <div class="grid4" style="padding:16px">
+    <div class="stat"><small>Total Providers</small><strong id="provIntelTotal">0</strong></div>
+    <div class="stat"><small>Low-balance Alerts</small><strong id="provIntelAlerts">0</strong></div>
+    <div class="stat"><small>Provider Status</small><strong id="provIntelStatus" style="font-size:18px">Healthy</strong></div>
+    <div class="stat"><small>Last Sync</small><strong id="provIntelSync" style="font-size:18px">—</strong></div>
+  </div>
+</div>
+
+<div class="cols">
+    <div class="card"><div class="card-head"><h3>Manual Processing Queue</h3><span>Latest requests</span></div>
+      <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No requests currently submitted. Fresh installation state.</td></tr>
+      </tbody></table>
+    </div>
+    <div class="card"><div class="card-head"><h3>Workload by Service</h3><span>Live status</span></div>
+      <div class="queue">
+        <div class="q"><div><b>NIN Services</b><small>Validation · IPE · Modification</small></div><strong>0</strong></div>
+        <div class="q"><div><b>JAMB</b><small>Results · Slips · Admission</small></div><strong>0</strong></div>
+        <div class="q"><div><b>CAC</b><small>Registration · Verification</small></div><strong>0</strong></div>
+        <div class="q"><div><b>BVN</b><small>Manual BVN operations</small></div><strong>0</strong></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="page-services" class="page">
+  <div class="heading"><div><h1>Services & Pricing</h1><p>Control what users see, how services are named, and what they pay.</p></div><button class="primary" onclick="openService()">+ Add Service</button></div>
+  <div class="card" style="margin-bottom:16px"><div class="card-head"><h3>Service Catalogue</h3><span>Loaded from database — prices and status are authoritative</span></div>
+    <div style="padding:15px"><div class="toolbar"><input id="serviceSearch" oninput="renderServices()" placeholder="Search services..."><select id="catFilter" onchange="renderServices()"><option value="">All categories</option><option>NIN</option><option>BVN</option><option>JAMB</option><option>CAC</option><option>TIN</option><option>Attestation</option><option>GemPrint</option></select></div></div>
+    <div id="serviceGrid" class="service-grid" style="padding:0 15px 18px"></div>
+  </div>
+</section>
+
+<section id="page-requests" class="page">
+ <div class="heading"><div><h1>Manual Requests</h1><p>Process externally completed jobs and upload results for users.</p></div></div>
+ <div class="card"><div class="card-head"><h3>Processing Queue</h3><span>Pending → Processing → Completed</span></div>
+ <table><thead><tr><th>Reference</th><th>Customer</th><th>Service</th><th>Payment</th><th>Status</th><th>Action</th></tr></thead><tbody>
+ <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">No requests currently submitted. Fresh installation state.</td></tr>
+ </tbody></table></div>
+</section>
+
+<section id="page-users" class="page"><div class="heading"><div><h1>Users</h1><p>Customer accounts and activity.</p></div><button class="secondary">Export</button></div><div class="card"><table><thead><tr><th>User</th><th>Phone</th><th>Wallet</th><th>Requests</th><th>Status</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No customer users registered yet.</td></tr></tbody></table></div></section>
+
+<section id="page-transactions" class="page"><div class="heading"><div><h1>Transactions</h1><p>Wallet funding, service charges and refunds.</p></div></div><div class="card"><table><thead><tr><th>Reference</th><th>User</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No transactions recorded yet.</td></tr></tbody></table></div></section>
+
+
+<section id="page-api-transactions" class="page"><div class="heading"><div><h1>API Transactions</h1><p>TechHub-powered service requests — NIN, BVN, Self-Service, Personalization, IPE.</p></div><div style="display:flex;gap:8px;align-items:center"><select id="atxn-filter-status" onchange="fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px"><option value="">All Statuses</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select><input id="atxn-search" type="text" placeholder="Search ref / ticket…" onkeydown="if(event.key==='Enter')fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;width:200px"><button class="primary" onclick="fetchApiTransactions(1)" style="height:36px;padding:0 14px;font-size:13px">🔄 Refresh</button></div></div><div id="atxn-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div><div class="card"><table id="atxn-table"><thead><tr><th>GV Reference</th><th>User</th><th>Service</th><th>Variant</th><th>Method</th><th>Status</th><th>Provider</th><th>Amount</th><th>Submitted</th><th>Actions</th></tr></thead><tbody id="atxn-body"><tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr></tbody></table></div><div id="atxn-pagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px"></div>
+
+<!-- API Transaction Detail Modal -->
+<div id="atxn-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+<div style="background:var(--card);border-radius:16px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto;padding:28px;position:relative">
+<button onclick="document.getElementById('atxn-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text)">✕</button>
+<h2 style="margin:0 0 20px;font-size:18px">API Transaction Detail</h2>
+<div id="atxn-modal-content"></div>
+</div></div>
+
+<!-- Refund Flag Modal -->
+<div id="atxn-refund-modal" style="display:none;position:fixed;inset:0;z-index:210;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+<div style="background:var(--card);border-radius:16px;max-width:480px;width:100%;padding:28px;position:relative">
+<button onclick="document.getElementById('atxn-refund-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text)">✕</button>
+<h2 style="margin:0 0 16px;font-size:16px">⚠ Flag for Refund</h2>
+<p id="atxn-refund-info" style="font-size:13px;margin-bottom:12px;opacity:.7"></p>
+<textarea id="atxn-refund-note" placeholder="Reason for refund…" style="width:100%;height:80px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+<button onclick="document.getElementById('atxn-refund-modal').style.display='none'" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text);cursor:pointer">Cancel</button>
+<button id="atxn-refund-confirm" class="primary" style="padding:8px 18px;border-radius:8px">Confirm Refund Flag</button>
+</div></div></div>
+
+</section>
+<section id="page-gemprint" class="page"><div class="heading"><div><h1>GemPrint</h1><p>Materials, orders, inventory and printing jobs.</p></div><button class="primary">+ Add Product</button></div><div class="grid4"><div class="stat"><small>Products</small><strong>0</strong></div><div class="stat"><small>Pending Orders</small><strong>0</strong></div><div class="stat"><small>Print Jobs</small><strong>0</strong></div><div class="stat"><small>Today's Sales</small><strong>₦0</strong></div></div><div class="card" style="margin-top:16px"><div class="card-head"><h3>Printing Job Queue</h3><span>Payment Confirmed → Queued → Processing → Printing → Finishing → Ready → Out for Delivery → Completed</span></div><table><thead><tr><th>Job</th><th>Customer</th><th>Service</th><th>Stage</th></tr></thead><tbody><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">No print jobs in queue.</td></tr></tbody></table></div></section>
+
+<section id="page-analytics" class="page"><div class="heading"><div><h1>Analytics</h1><p>Platform performance overview.</p></div></div><div class="grid4"><div class="stat"><small>Verification Volume</small><strong>0</strong><span class="delta">0%</span></div><div class="stat"><small>Manual Completion</small><strong>100%</strong><span class="delta">0%</span></div><div class="stat"><small>GemPrint Orders</small><strong>0</strong><span class="delta">0%</span></div><div class="stat"><small>Avg. Processing</small><strong>0m</strong><span class="delta">0m</span></div></div></section>
+
+<section id="page-admins" class="page"><div class="heading"><div><h1>Admin Users</h1><p>Roles and access control.</p></div><button class="primary">+ Add Admin</button></div><div class="card"><table><thead><tr><th>Admin</th><th>Role</th><th>Last Active</th><th>Status</th></tr></thead><tbody><tr><td data-label="Admin"><b>Super Admin</b></td><td data-label="Role">Full Access</td><td data-label="Last Active">Now</td><td data-label="Status"><span class="pill green">Active</span></td></tr><tr><td data-label="Admin">Operations Admin</td><td data-label="Role">Manual Processing</td><td data-label="Last Active">Active</td><td data-label="Status"><span class="pill green">Active</span></td></tr><tr><td data-label="Admin">Support Admin</td><td data-label="Role">Support</td><td data-label="Last Active">Active</td><td data-label="Status"><span class="pill green">Active</span></td></tr></tbody></table></div></section>
+
+<section id="page-audit" class="page"><div class="heading"><div><h1>Audit Logs</h1><p>Track sensitive administrative actions.</p></div></div><div class="card"><table><thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th></tr></thead><tbody><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">No audit actions logged. Clean installation state.</td></tr></tbody></table></div></section>
+
+<section id="page-settings" class="page"><div class="heading"><div><h1>Settings</h1><p>Administrative and platform controls.</p></div></div><div class="card"><div style="padding:20px"><div class="field"><label>Platform Name</label><input id="settingPlatformName" value="GemVerify"></div><div class="field"><label>Default Currency</label><select><option>NGN — Nigerian Naira</option></select></div><div class="field"><label>Require re-authentication for wallet adjustments</label><select><option>Enabled</option><option>Disabled</option></select></div><div class="field"><label>GemPrint Module Status</label><select id="settingGemPrintStatus"><option value="enabled">Active (Fully Enabled)</option><option value="coming_soon">Coming Soon / Disabled</option></select></div><div class="field"><label>GemPrint Delivery Fee (₦)</label><input id="settingGemPrintDeliveryFee" type="number" value="1500"></div><button class="primary" onclick="saveAdminSettings()">Save Settings</button></div></div></section>
+
+<section id="page-pending" class="page">
+  <div class="heading"><div><h1>Pending Requests</h1><p>Requests awaiting admin action.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Pending Requests Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody>
+  <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No pending requests.</td></tr>
+  </tbody></table></div>
+</section>
+<section id="page-processing" class="page">
+  <div class="heading"><div><h1>Processing</h1><p>Requests currently being handled by operations.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Processing Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody>
+  <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No requests currently in processing.</td></tr>
+  </tbody></table></div>
+</section>
+<section id="page-completed" class="page">
+  <div class="heading"><div><h1>Completed</h1><p>Successfully completed manual requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Completed Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody>
+  <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No completed requests yet.</td></tr>
+  </tbody></table></div>
+</section>
+<section id="page-rejected" class="page">
+  <div class="heading"><div><h1>Rejected</h1><p>Requests rejected or cancelled.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Rejected Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody>
+  <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No rejected requests.</td></tr>
+  </tbody></table></div>
+</section>
+<section id="page-nin-validation" class="page">
+  <div class="heading"><div><h1>NIN Validation</h1><p>NIN Validation manual processing queue.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>NIN Validation Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No NIN Validation requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-nin-ipe" class="page">
+  <div class="heading"><div><h1>IPE Modification</h1><p>IPE Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>IPE Modification Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No IPE Modification requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-nin-personalisation" class="page">
+  <div class="heading"><div><h1>Personalisation</h1><p>NIN Personalisation requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Personalisation Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Personalisation requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-nin-modification" class="page">
+  <div class="heading"><div><h1>NIN Modification</h1><p>NIN Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>NIN Modification Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No NIN Modification requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-nin-dob" class="page">
+  <div class="heading"><div><h1>DOB > 5 Years</h1><p>DOB correction requests beyond five years.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>DOB > 5 Years Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No DOB > 5 Years requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-nin-delinking" class="page">
+  <div class="heading"><div><h1>Self-Service Delinking</h1><p>Self-Service Delinking requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Self-Service Delinking Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Self-Service Delinking requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-bvn-license" class="page">
+  <div class="heading"><div><h1>BVN License Creation</h1><p>BVN License Creation requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>BVN License Creation Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No BVN License Creation requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-bvn-nonappearance" class="page">
+  <div class="heading"><div><h1>BVN Non-Appearance</h1><p>BVN Non-Appearance requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>BVN Non-Appearance Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No BVN Non-Appearance requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-bvn-risk" class="page">
+  <div class="heading"><div><h1>Central Risk Management</h1><p>Central Risk Management requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Central Risk Management Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Central Risk Management requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-bvn-modification" class="page">
+  <div class="heading"><div><h1>BVN Modification</h1><p>BVN Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>BVN Modification Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No BVN Modification requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-jamb-all" class="page">
+  <div class="heading"><div><h1>JAMB All Requests</h1><p>All JAMB service requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>JAMB All Requests Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-jamb-result" class="page">
+  <div class="heading"><div><h1>JAMB Original Result</h1><p>Original Result requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>JAMB Original Result Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Original Result requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-jamb-slip" class="page">
+  <div class="heading"><div><h1>JAMB Exam Slip</h1><p>Exam Slip requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>JAMB Exam Slip Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Exam Slip requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-jamb-admission" class="page">
+  <div class="heading"><div><h1>JAMB Admission Letter</h1><p>Admission Letter requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>JAMB Admission Letter Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Admission Letter requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-jamb-reprints" class="page">
+  <div class="heading"><div><h1>JAMB Re-Prints</h1><p>JAMB re-print requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>JAMB Re-Prints Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Re-Prints requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-cac-business" class="page">
+  <div class="heading"><div><h1>CAC Business Name</h1><p>Business Name Registration requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>CAC Business Name Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No CAC Business Name requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-cac-ltd" class="page">
+  <div class="heading"><div><h1>CAC LTD Setup</h1><p>Company LTD Setup requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>CAC LTD Setup Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No CAC LTD Setup requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-cac-verification" class="page">
+  <div class="heading"><div><h1>CAC Verification</h1><p>Business Verification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>CAC Verification Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No CAC Verification requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-tin" class="page">
+  <div class="heading"><div><h1>TIN Registration</h1><p>TIN Registration requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>TIN Registration Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No TIN Registration requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-attestation" class="page">
+  <div class="heading"><div><h1>NIN Attestation</h1><p>NIN Attestation requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>NIN Attestation Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No NIN Attestation requests currently queued.</td></tr></tbody></table></div>
+</section>
+<section id="page-products" class="page">
+  <div class="heading"><div><h1>GemPrint Products</h1><p>Printing materials products catalogue.</p></div>
+  <div class="flex gap-2"><button class="primary" onclick="openAddProductModal()">+ Add Product</button><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div></div>
+  <div class="card"><div class="card-head"><h3>GemPrint Products Catalogue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>ID</th><th>Name</th><th>SKU</th><th>Category</th><th>Price</th><th>Stock</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No products found. Add products to populate.</td></tr></tbody></table></div>
+</section>
+<section id="page-orders" class="page">
+  <div class="heading"><div><h1>GemPrint Orders</h1><p>GemPrint materials orders and delivery status.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Product Orders Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Order ID</th><th>Customer Name</th><th>Items Summary</th><th>Total Paid</th><th>Payment</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No customer orders placed yet.</td></tr></tbody></table></div>
+</section>
+<section id="page-print-jobs" class="page">
+  <div class="heading"><div><h1>GemPrint Print Jobs</h1><p>Printing service jobs and production stages.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Printing Jobs Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Job ID</th><th>Service Type</th><th>Specs</th><th>Price</th><th>Payment</th><th>Stage</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No print jobs submitted yet.</td></tr></tbody></table></div>
+</section>
+<section id="page-inventory" class="page">
+  <div class="heading"><div><h1>GemPrint Inventory</h1><p>Stock levels and inventory management.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Inventory Stock Control</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>SKU</th><th>Product Name</th><th>Stock Level</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No products found in inventory.</td></tr></tbody></table></div>
+</section>
+<section id="page-revenue" class="page">
+  <div class="heading"><div><h1>Revenue</h1><p>Revenue overview and service income.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Revenue Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Revenue items recorded.</td></tr></tbody></table></div>
+</section>
+<section id="page-wallet-funding" class="page">
+  <div class="heading">
+    <div><h1>Wallet Funding</h1><p>Monitor all wallet top-up orders and virtual account credits.</p></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="wf-filter-status" onchange="fetchWalletTopups(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="processing">Processing</option>
+        <option value="completed">Completed</option>
+        <option value="partial">Partial</option>
+        <option value="failed">Failed</option>
+        <option value="expired">Expired</option>
+      </select>
+      <button class="secondary" onclick="fetchWalletTopups(1)" style="height:36px">⟳ Refresh</button>
+      <button class="secondary" onclick="go('dashboard')" style="height:36px">← Dashboard</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div id="wf-summary-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px"></div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="card-head" style="padding:14px 18px">
+      <h3>Top-Up Orders</h3>
+      <span id="wf-total-badge" style="font-size:12px;opacity:.6">Loading…</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="wf-table">
+        <thead>
+          <tr>
+            <th>Reference</th>
+            <th>User</th>
+            <th>Amount</th>
+            <th>Received</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="wf-tbody">
+          <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="wf-pagination" style="display:flex;justify-content:center;gap:8px;padding:14px"></div>
+  </div>
+</section>
+
+<!-- Wallet Top-up Detail Modal -->
+<div id="wf-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;padding:24px;overflow:auto">
+  <div style="max-width:600px;margin:auto;background:var(--card);border-radius:16px;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--border)">
+      <h3 style="margin:0;font-size:15px">Top-Up Detail</h3>
+      <button onclick="document.getElementById('wf-detail-modal').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text)">✕</button>
+    </div>
+    <div id="wf-detail-body" style="padding:20px"></div>
+    <div id="wf-detail-actions" style="padding:0 20px 20px;display:flex;gap:10px;flex-wrap:wrap"></div>
+  </div>
+</div>
+<section id="page-refunds" class="page">
+  <div class="heading"><div><h1>Refunds</h1><p>Refund requests and processed refunds.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Refunds Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Refund transactions recorded.</td></tr></tbody></table></div>
+</section>
+<section id="page-active-users" class="page">
+  <div class="heading"><div><h1>Active Users</h1><p>Currently active customer accounts.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Active Users Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No active user activity logged.</td></tr></tbody></table></div>
+</section>
+<section id="page-suspended-users" class="page">
+  <div class="heading"><div><h1>Suspended Users</h1><p>Suspended customer accounts.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Suspended Users Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No suspended user accounts.</td></tr></tbody></table></div>
+</section>
+<section id="page-notifications" class="page">
+  <div class="heading"><div><h1>Notifications</h1><p>Platform and administrative notifications.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Notifications Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No administrative notifications.</td></tr></tbody></table></div>
+</section>
+<section id="page-roles" class="page">
+  <div class="heading"><div><h1>Roles & Permissions</h1><p>Admin roles, permissions and access controls.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Roles & Permissions Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No custom roles configured. Standard RBAC active.</td></tr></tbody></table></div>
+</section>
+<section id="page-suspended-users" class="page">
+  <div class="heading"><div><h1>Suspended Users</h1><p>Suspended customer accounts.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Suspended Users Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No suspended user accounts.</td></tr></tbody></table></div>
+</section>
+<section id="page-notifications" class="page">
+  <div class="heading"><div><h1>Notifications</h1><p>Platform and administrative notifications.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Notifications Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No administrative notifications.</td></tr></tbody></table></div>
+</section>
+<section id="page-roles" class="page">
+  <div class="heading"><div><h1>Roles & Permissions</h1><p>Admin roles, permissions and access controls.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="card"><div class="card-head"><h3>Roles & Permissions Queue</h3><span>Admin controlled</span></div>
+  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No custom roles configured. Standard RBAC active.</td></tr></tbody></table></div>
+</section>
+
+
+<section id="page-provider-balance" class="page">
+  <div class="heading">
+    <div><h1>Providers Balance</h1><p>Monitor available balances across verification and service providers.</p></div>
+    <button class="primary" onclick="refreshProviderBalances()">Refresh Balances</button>
+  </div>
+
+  <div class="grid4">
+    <div class="stat"><small>Total Providers</small><strong>0</strong><span class="delta">Configured providers</span></div>
+    <div class="stat"><small>Total Provider Balance</small><strong id="providerTotal">₦0</strong><span class="delta">Across all configured providers</span></div>
+    <div class="stat"><small>Low Balance Alerts</small><strong>0</strong><span style="font-size:10px;color:var(--muted);font-weight:800">No alerts</span></div>
+    <div class="stat"><small>Last Sync</small><strong style="font-size:18px">—</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Provider balances sync</span></div>
+  </div>
+
+  
+<div id="provider-operational-summary" class="card" style="margin-top:16px">
+  <div class="card-head">
+    <div><h3>Provider Operational Summary</h3><span>Connect provider APIs to populate live balance data</span></div>
+    <button class="primary" onclick="refreshProviderBalances()">Refresh Balances</button>
+  </div>
+  <div style="padding:16px 20px;color:var(--muted);font-size:13px">
+    Provider balance integration is pending. Configure provider API credentials in the backend to enable live balance monitoring.
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+    <div class="card-head">
+      <div><h3>Provider Accounts</h3><span>Balance, status and operational health</span></div>
+      <input id="providerSearch" oninput="filterProviders()" placeholder="Search provider..." style="padding:9px 12px;border:1px solid var(--line);border-radius:10px">
+    </div>
+    <table id="providerTable">
+      <thead><tr><th>Provider</th><th>Services</th><th>Available Balance</th><th>Threshold</th><th>Status</th><th>Last Sync</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">API-Based Provider accounts integration pending provider configuration.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-head"><div><h3>Provider Balance Alerts</h3><span>Prevent failed transactions caused by insufficient provider funds.</span></div></div>
+    <div class="queue">
+      <div class="q"><div><b>No Active Provider Alerts</b><small>All provider accounts are operating normally.</small></div><span class="pill green">Healthy</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="page-profit" class="page">
+  <div class="heading">
+    <div><h1>Profit & Withdrawals</h1><p>Control settled company earnings without touching customer wallet liability.</p></div>
+    <button class="primary" onclick="openWithdraw()">Withdraw Profit</button>
+  </div>
+  <div class="grid4">
+    <div class="stat"><small>Revenue Today</small><strong id="profitRevenueToday">₦0</strong></div>
+    <div class="stat"><small>Profit Today</small><strong id="profitToday">₦0</strong></div>
+    <div class="stat"><small>Withdrawable</small><strong id="withdrawablePage">₦0</strong></div>
+    <div class="stat"><small>Customer Liability</small><strong id="profitCustomerLiability">₦0</strong></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="card-head"><h3>Withdrawal History</h3><span>Every withdrawal must be auditable</span></div>
+    <table><thead><tr><th>Reference</th><th>Amount</th><th>Destination</th><th>Requested By</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No withdrawals recorded. Clean installation state.</td></tr>
+    </tbody></table>
+  </div>
+</section>
+</div>
+</main>
+</section>
+
+
+<div id="kpiDetailModal" class="modal" aria-hidden="true">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="kpiDetailTitle">Metric Details</h3>
+      <button class="icon-btn" onclick="closeKpiDetail()" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" id="kpiDetailBody"></div>
+    <div class="modal-foot">
+      <button class="secondary" onclick="closeKpiDetail()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal" class="modal"><div class="modal-box"><div class="modal-head"><h3 id="modalTitle">Edit</h3><button class="secondary" onclick="closeModal()">✕</button></div><div id="modalBody" class="modal-body"></div><div id="modalFoot" class="modal-foot"></div></div></div>
+
+<script>
+// ── API Transactions Admin (TH-27/28/29) ─────────────────────────────────────
+let atxnCurrentPage = 1;
+let atxnCurrentRef  = null;
+
+async function fetchApiTransactions(page) {
+  page = page || 1;
+  atxnCurrentPage = page;
+  var token  = localStorage.getItem('gv_admin_token');
+  if (!token) return;
+  var status = (document.getElementById('atxn-filter-status') && document.getElementById('atxn-filter-status').value) || '';
+  var search = ((document.getElementById('atxn-search') && document.getElementById('atxn-search').value) || '').trim();
+  var qs = 'page=' + page;
+  if (status) qs += '&status=' + encodeURIComponent(status);
+  if (search) qs += '&search=' + encodeURIComponent(search);
+
+  var tbody = document.getElementById('atxn-body');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">Loading\u2026</td></tr>';
+
+  fetch('../api/admin/api-transactions?' + qs, {
+    headers: { 'Authorization': 'Bearer ' + token }
+  }).then(function(res){ return res.json(); }).then(function(json){
+    if (!json.success) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger)">Error loading transactions.</td></tr>';
+      return;
+    }
+    var items = (json.data && json.data.items) || json.items || [];
+    var totalPages = (json.data && json.data.total_pages) || json.total_pages || 1;
+    renderAtxnTable(items);
+    renderAtxnPagination(totalPages, page);
+    fetchApiTxnStats();
+  }).catch(function(e){
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger)">Network error.</td></tr>';
+  });
+}
+
+function renderAtxnTable(items) {
+  var tbody = document.getElementById('atxn-body');
+  if (!tbody) return;
+  if (!items || !items.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">No API transactions found.</td></tr>';
+    return;
+  }
+  var statusColors = { pending:'#f59e0b', processing:'#3b82f6', completed:'#22c55e', failed:'#ef4444', refunded:'#8b5cf6' };
+  tbody.innerHTML = items.map(function(tx) {
+    var sc = statusColors[tx.gv_status] || 'var(--muted)';
+    var method = tx.input_method ? tx.input_method.replace('by_','') : '\u2014';
+    var ticket = tx.provider_ticket_id
+      ? '<span title="' + tx.provider_ticket_id + '" style="font-family:monospace">' + tx.provider_ticket_id.substring(0,12) + '\u2026</span>'
+      : (tx.result_type === 'pdf_base64' ? '<span style="color:#22c55e">PDF Sync</span>' : '\u2014');
+    var refundBtn = (tx.gv_status==='failed'||tx.gv_status==='pending') && !tx.refund_issued
+      ? '<button onclick="openAtxnRefundModal(\'' + tx.gv_reference + '\',\'' + ((tx.user && tx.user.business_name)||'').replace(/'/g,"\\'") + '\',' + (tx.price_paid||0) + ')" style="padding:4px 10px;border-radius:6px;font-size:11px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;margin-left:4px">Refund</button>'
+      : '';
+    return '<tr>'
+      + '<td style="font-family:monospace;font-size:12px">' + tx.gv_reference + '</td>'
+      + '<td><div style="font-size:13px">' + ((tx.user && tx.user.business_name)||'\u2014') + '</div><div style="font-size:11px;opacity:.6">' + ((tx.user && tx.user.email)||'') + '</div></td>'
+      + '<td style="font-size:13px">' + ((tx.service && tx.service.name)||'\u2014') + '</td>'
+      + '<td style="font-size:12px;opacity:.8">' + (tx.variant_key||'\u2014') + '</td>'
+      + '<td style="font-size:12px;text-transform:capitalize">' + method + '</td>'
+      + '<td><span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:' + sc + '22;color:' + sc + '">' + tx.gv_status + '</span></td>'
+      + '<td style="font-size:12px">' + ticket + '</td>'
+      + '<td style="font-weight:600">\u20a6' + Number(tx.price_paid||0).toLocaleString() + '</td>'
+      + '<td style="font-size:11px;opacity:.7">' + ((tx.submitted_at||'').substring(0,16)||'\u2014') + '</td>'
+      + '<td style="white-space:nowrap"><button onclick="viewAtxnDetail(\'' + tx.gv_reference + '\')" style="padding:4px 10px;border-radius:6px;font-size:11px;border:1px solid var(--border);cursor:pointer;background:none;color:var(--text)">Detail</button>' + refundBtn + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function renderAtxnPagination(totalPages, currentPage) {
+  var container = document.getElementById('atxn-pagination');
+  if (!container) return;
+  if (totalPages <= 1) { container.innerHTML = ''; return; }
+  var html = '';
+  var max = Math.min(totalPages, 10);
+  for (var i = 1; i <= max; i++) {
+    var style = i === currentPage
+      ? 'background:var(--primary);color:#fff;'
+      : 'background:var(--card);color:var(--text);';
+    html += '<button onclick="fetchApiTransactions(' + i + ')" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;' + style + 'font-size:13px">' + i + '</button>';
+  }
+  container.innerHTML = html;
+}
+
+function fetchApiTxnStats() {
+  var token = localStorage.getItem('gv_admin_token');
+  if (!token) return;
+  fetch('../api/admin/api-transactions/stats', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  }).then(function(res){ return res.json(); }).then(function(json){
+    if (!json.success) return;
+    var data  = json.data || json;
+    var today = data.today || {};
+    var stats = document.getElementById('atxn-stats');
+    if (!stats) return;
+    stats.innerHTML =
+      '<div class="stat"><small>Today\'s Requests</small><strong>' + (today.cnt||0) + '</strong></div>' +
+      '<div class="stat"><small>Today\'s Revenue</small><strong>\u20a6' + Number(today.revenue||0).toLocaleString() + '</strong></div>' +
+      '<div class="stat"><small>Pending / Processing</small><strong style="color:#f59e0b">' + (data.pending_count||0) + '</strong></div>' +
+      '<div class="stat"><small>Failed (Unrefunded)</small><strong style="color:#ef4444">' + (data.failed_pending_refund||0) + '</strong></div>';
+  }).catch(function(e){});
+}
+
+function viewAtxnDetail(ref) {
+  atxnCurrentRef = ref;
+  var token   = localStorage.getItem('gv_admin_token');
+  var modal   = document.getElementById('atxn-modal');
+  var content = document.getElementById('atxn-modal-content');
+  if (!modal || !content || !token) return;
+  content.innerHTML = '<div style="text-align:center;padding:32px;opacity:.6">Loading\u2026</div>';
+  modal.style.display = 'flex';
+  var statusColors = { pending:'#f59e0b', processing:'#3b82f6', completed:'#22c55e', failed:'#ef4444', refunded:'#8b5cf6' };
+  fetch('../api/admin/api-transactions/' + ref, {
+    headers: { 'Authorization': 'Bearer ' + token }
+  }).then(function(res){ return res.json(); }).then(function(json){
+    if (!json.success) {
+      content.innerHTML = '<div style="color:var(--danger)">Failed to load: ' + (json.message||'Unknown error') + '</div>';
+      return;
+    }
+    var tx = json.data || json;
+    var sc = statusColors[tx.gv_status] || 'var(--muted)';
+    var errorRow = tx.error_code ? '<div style="grid-column:1/-1"><strong>Error</strong><br><span style="color:#ef4444">[' + tx.error_code + '] ' + (tx.error_message||'') + '</span></div>' : '';
+    var summaryRow = tx.input_summary ? '<div style="grid-column:1/-1"><strong>Input Summary (masked)</strong><br><code style="font-size:11px;opacity:.8">' + tx.input_summary + '</code></div>' : '';
+    var resultRow  = tx.has_result ? '<div style="grid-column:1/-1"><span style="color:#22c55e">\u2713 Result data available</span></div>' : '';
+    var refundBtn  = (!tx.refund_issued && (tx.gv_status==='failed'||tx.gv_status==='pending'))
+      ? '<div style="margin-top:16px;display:flex;justify-content:flex-end"><button onclick="openAtxnRefundModal(\'' + tx.gv_reference + '\',\'' + ((tx.user && tx.user.business_name)||'').replace(/'/g,"\\'") + '\',' + (tx.price_paid||0) + ')" style="padding:8px 18px;border-radius:8px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer">Flag for Refund</button></div>'
+      : '';
+    content.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">'
+      + '<div><strong>GV Reference</strong><br><code style="font-size:12px">' + tx.gv_reference + '</code></div>'
+      + '<div><strong>Status</strong><br><span style="color:' + sc + ';font-weight:600;text-transform:capitalize">' + tx.gv_status + '</span></div>'
+      + '<div><strong>Service</strong><br>' + ((tx.service && tx.service.name)||'\u2014') + '</div>'
+      + '<div><strong>Variant</strong><br>' + (tx.variant_key||'\u2014') + '</div>'
+      + '<div><strong>User</strong><br>' + ((tx.user && tx.user.business_name)||'\u2014') + '<br><span style="opacity:.6;font-size:11px">' + ((tx.user && tx.user.email)||'') + '</span></div>'
+      + '<div><strong>Amount Paid</strong><br><span style="font-weight:700">\u20a6' + Number(tx.price_paid||0).toLocaleString() + '</span></div>'
+      + '<div><strong>Input Method</strong><br>' + (tx.input_method||'\u2014') + '</div>'
+      + '<div><strong>Result Type</strong><br>' + (tx.result_type||'\u2014') + '</div>'
+      + '<div><strong>Provider</strong><br>' + (tx.provider||'techhub') + '</div>'
+      + '<div><strong>Provider Status</strong><br>' + (tx.provider_status||'\u2014') + '</div>'
+      + '<div><strong>Ticket ID</strong><br><code style="font-size:11px">' + (tx.provider_ticket_id||'\u2014') + '</code></div>'
+      + '<div><strong>Provider TxnID</strong><br><code style="font-size:11px">' + (tx.provider_txn_id||'\u2014') + '</code></div>'
+      + '<div><strong>Submitted</strong><br>' + (tx.submitted_at||'\u2014') + '</div>'
+      + '<div><strong>Completed</strong><br>' + (tx.completed_at||'\u2014') + '</div>'
+      + '<div><strong>Last Polled</strong><br>' + (tx.last_checked_at||'\u2014') + '</div>'
+      + '<div><strong>Refund Issued</strong><br>' + (tx.refund_issued ? '<span style="color:#8b5cf6">Yes</span>' : 'No') + '</div>'
+      + errorRow + summaryRow + resultRow
+      + '</div>' + refundBtn;
+  }).catch(function(e){
+    content.innerHTML = '<div style="color:var(--danger)">Network error: ' + e.message + '</div>';
+  });
+}
+
+function openAtxnRefundModal(ref, userName, price) {
+  atxnCurrentRef = ref;
+  var info  = document.getElementById('atxn-refund-info');
+  var note  = document.getElementById('atxn-refund-note');
+  var modal = document.getElementById('atxn-refund-modal');
+  if (info) info.textContent = 'Flag ' + ref + ' (' + userName + ') \u2014 \u20a6' + Number(price).toLocaleString() + ' for wallet refund. This marks the transaction and sets status to "refunded". Process actual wallet credit separately.';
+  if (note) note.value = '';
+  if (modal) modal.style.display = 'flex';
+  document.getElementById('atxn-modal').style.display = 'none';
+  var btn = document.getElementById('atxn-refund-confirm');
+  if (btn) btn.onclick = function(){ confirmAtxnRefund(ref); };
+}
+
+function confirmAtxnRefund(ref) {
+  var noteEl = document.getElementById('atxn-refund-note');
+  var note   = noteEl ? noteEl.value.trim() : '';
+  var token  = localStorage.getItem('gv_admin_token');
+  if (!note) { alert('Please enter a reason.'); return; }
+  var btn = document.getElementById('atxn-refund-confirm');
+  if (btn) { btn.disabled = true; btn.textContent = 'Processing\u2026'; }
+  fetch('../api/admin/api-transactions/' + ref + '/refund-flag', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note: note })
+  }).then(function(res){ return res.json(); }).then(function(json){
+    if (json.success) {
+      document.getElementById('atxn-refund-modal').style.display = 'none';
+      fetchApiTransactions(atxnCurrentPage);
+      var uid = (json.data && json.data.user_id) || json.user_id || '?';
+      alert('\u2713 ' + ref + ' flagged for refund. Process wallet credit for user_id=' + uid + '.');
+    } else {
+      alert('Error: ' + (json.message || 'Unknown error'));
+    }
+  }).catch(function(e){
+    alert('Network error: ' + e.message);
+  }).finally(function(){
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirm Refund Flag'; }
+  });
+}
+let services = [];
+
+async function fetchAdminServices() {
+  let token = localStorage.getItem("gv_admin_token");
+  if (!token) return;
+  try {
+    const res = await fetch('../api/admin/services', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (json.success && json.data) {
+      let svcArray = Array.isArray(json.data) ? json.data : (json.data.data || []);
+      services = svcArray.map(s => {
+        let displayPrice = s.pricing && s.pricing.length > 0 ? Number(s.pricing[0].price) : 0;
+        return {
+          id: s.id,
+          cat: s.category,
+          name: s.name,
+          slug: s.slug,
+          price: displayPrice,
+          visible: s.is_active === 1 || s.is_active === '1' || s.is_active === true,
+          active: s.is_active === 1 || s.is_active === '1' || s.is_active === true,
+          type: s.is_manual ? 'Manual' : 'API-Based',
+          pricing: s.pricing || [],
+          est_time: s.est_time || ''
+        };
+      });
+      renderServices();
+    }
+  } catch (e) {
+    console.error("Failed to load services from backend", e);
+  }
+}
+
+async function login(){
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  errEl.style.display = 'none';
+  if (!email || !password) {
+    errEl.textContent = 'Please enter admin email and password.';
+    errEl.style.display = 'block';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Authenticating...';
+  try {
+    const res = await fetch('../api/admin/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      errEl.textContent = json.message || 'Invalid admin credentials.';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Sign In to Admin';
+      return;
+    }
+    localStorage.setItem('gv_admin_token', json.data.token);
+    localStorage.setItem('gv_admin', JSON.stringify(json.data.admin));
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('app').classList.add('on');
+    fetchDashboardData();
+    fetchAdminServices();
+  } catch(e) {
+    errEl.textContent = 'Connection error connecting to backend API.';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Sign In to Admin';
+  }
+}
+
+async function fetchDashboardData(){
+  const token = localStorage.getItem('gv_admin_token');
+  if(!token) return;
+  try {
+    const res = await fetch('../api/admin/stats', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if(json.success) {
+      const data = json.data;
+      if(document.getElementById('statRegUsers')) document.getElementById('statRegUsers').textContent = data.total_users || 0;
+      if(document.getElementById('statActiveUsers')) document.getElementById('statActiveUsers').textContent = data.active_users || 0;
+      if(document.getElementById('statWalletLiability')) document.getElementById('statWalletLiability').textContent = money(data.total_wallet_liability || 0);
+      if(document.getElementById('statRevenue')) document.getElementById('statRevenue').textContent = money(data.total_revenue || 0);
+      if(document.getElementById('statProfit')) document.getElementById('statProfit').textContent = money(data.total_profit || 0);
+      if(document.getElementById('statCompleted')) document.getElementById('statCompleted').textContent = data.total_completed || 0;
+      if(document.getElementById('statRejected')) document.getElementById('statRejected').textContent = data.total_rejected || 0;
+      if(document.getElementById('withdrawableStat')) document.getElementById('withdrawableStat').textContent = money(data.withdrawable_profit || 0);
+      if(document.getElementById('providerBalanceStat')) document.getElementById('providerBalanceStat').textContent = money(data.provider_balance || 0);
+      if(document.getElementById('finCustomerLiability')) document.getElementById('finCustomerLiability').textContent = money(data.total_wallet_liability || 0);
+      if(document.getElementById('finRevenueToday')) document.getElementById('finRevenueToday').textContent = money(data.total_revenue || 0);
+      if(document.getElementById('withdrawablePanel')) document.getElementById('withdrawablePanel').textContent = money(data.withdrawable_profit || 0);
+      if(document.getElementById('profitRevenueToday')) document.getElementById('profitRevenueToday').textContent = money(data.total_revenue || 0);
+      if(document.getElementById('profitToday')) document.getElementById('profitToday').textContent = money(data.total_profit || 0);
+      if(document.getElementById('withdrawablePage')) document.getElementById('withdrawablePage').textContent = money(data.withdrawable_profit || 0);
+      if(document.getElementById('profitCustomerLiability')) document.getElementById('profitCustomerLiability').textContent = money(data.total_wallet_liability || 0);
+      renderLiveQueue();
+    }
+  } catch(e){}
+}
+
+async function renderLiveQueue(){
+  const token = localStorage.getItem('gv_admin_token');
+  if(!token) return;
+  try {
+    const res = await fetch('../api/admin/requests?per_page=10', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if(json.success && json.data) {
+      const rawData = json.data.data || json.data;
+      const list = Array.isArray(rawData) ? rawData : (rawData.requests || []);
+      const tbody = document.querySelector('#page-dashboard table tbody');
+      if(!tbody) return;
+      if(list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No requests currently submitted. Fresh installation state.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(r => {
+        const uName = (r.user && r.user.business_name) || r.user_name || r.business_name || ('User #' + (r.user_id || ''));
+        const sName = (r.service && r.service.name) || r.service_name || 'Service';
+        return `
+        <tr>
+          <td data-label="Reference"><b>${r.reference}</b></td>
+          <td data-label="User">${uName}</td>
+          <td data-label="Service">${sName}</td>
+          <td data-label="Status"><span class="pill ${r.status === 'completed' ? 'green' : r.status === 'rejected' ? 'red' : r.status === 'processing' ? 'blue' : 'amber'}">${r.status}</span></td>
+          <td data-label=""><button class="secondary" onclick="openRequest('${r.reference}','${sName}')">Open</button></td>
+        </tr>
+      `}).join('');
+    }
+  } catch(e){}
+}
+window.gvAdminPages = window.gvAdminPages || {};
+
+async function renderRequestsQueue(page, statusFilter = "", pageNumber = 1) {
+  const token = localStorage.getItem("gv_admin_token");
+  if(!token) return;
+  
+  // Track page number globally
+  window.gvAdminPages[page] = pageNumber;
+  
+  const tbody = document.querySelector("#page-" + page + " table tbody");
+  if(!tbody) return;
+  
+  try {
+    tbody.innerHTML = '<tr><td colspan="' + (page === 'requests' ? '6' : '5') + '" style="text-align:center;padding:24px;color:var(--muted)">Loading requests...</td></tr>';
+    
+    // Request paginated data from backend (10 items per page)
+    let url = '../api/admin/requests?per_page=10&page=' + pageNumber;
+    if(statusFilter) {
+      url += '&status=' + statusFilter;
+    }
+    
+    const res = await fetch(url, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    
+    if(json.success && json.data) {
+      const rawData = json.data.data || json.data;
+      const list = Array.isArray(rawData) ? rawData : (rawData.requests || []);
+      
+      if(list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="' + (page === 'requests' ? '6' : '5') + '" style="text-align:center;padding:24px;color:var(--muted)">No requests currently in this queue.</td></tr>';
+        
+        // Remove pagination controls if queue is empty
+        const oldPagination = document.querySelector("#page-" + page + " .card-pagination");
+        if (oldPagination) oldPagination.remove();
+        return;
+      }
+      
+      tbody.innerHTML = list.map(r => {
+        const uName = r.business_name || r.user_name || (r.user && r.user.business_name) || ('User #' + (r.user_id || ''));
+        const sName = r.service_name || (r.service && r.service.name) || 'Service';
+        
+        if (page === 'requests') {
+          const pricePaid = parseFloat(r.price_paid || 0);
+          return `
+          <tr>
+            <td data-label="Reference"><b>${r.reference}</b></td>
+            <td data-label="Customer">${uName}</td>
+            <td data-label="Service">${sName}</td>
+            <td data-label="Payment">₦${pricePaid.toLocaleString('en-NG', {minimumFractionDigits: 2})}</td>
+            <td data-label="Status"><span class="pill ${r.status === 'completed' ? 'green' : r.status === 'rejected' ? 'red' : r.status === 'processing' ? 'blue' : 'amber'}">${r.status}</span></td>
+            <td data-label=""><button class="secondary" onclick="openRequest('${r.reference}','${sName}')">Open</button></td>
+          </tr>
+          `;
+        } else {
+          return `
+          <tr>
+            <td data-label="Reference"><b>${r.reference}</b></td>
+            <td data-label="User">${uName}</td>
+            <td data-label="Service">${sName}</td>
+            <td data-label="Status"><span class="pill ${r.status === 'completed' ? 'green' : r.status === 'rejected' ? 'red' : r.status === 'processing' ? 'blue' : 'amber'}">${r.status}</span></td>
+            <td data-label=""><button class="secondary" onclick="openRequest('${r.reference}','${sName}')">Open</button></td>
+          </tr>
+          `;
+        }
+      }).join('');
+      
+      // Handle Pagination Controls dynamically
+      const paginationInfo = json.data.pagination || json.pagination;
+      const totalPages = paginationInfo ? paginationInfo.total_pages : 1;
+      
+      // Find or create pagination container inside the card
+      const cardEl = document.querySelector("#page-" + page + " .card");
+      if (cardEl) {
+        let paginationEl = cardEl.querySelector(".card-pagination");
+        if (!paginationEl) {
+          paginationEl = document.createElement("div");
+          paginationEl.className = "card-pagination";
+          paginationEl.style = "display:flex;gap:6px;padding:14px 18px;justify-content:center;border-top:1px solid var(--border);flex-wrap:wrap;";
+          cardEl.appendChild(paginationEl);
+        }
+        
+        if (totalPages > 1) {
+          let html = '';
+          // Previous button
+          html += `<button onclick="renderRequestsQueue('${page}', '${statusFilter}', ${Math.max(1, pageNumber - 1)})" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--card);font-size:12px;" ${pageNumber === 1 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>Previous</button>`;
+          
+          // Page X of Y indicator
+          html += `<span style="font-size:12px;opacity:0.8;display:flex;align-items:center;padding:0 8px;">Page ${pageNumber} of ${totalPages}</span>`;
+          
+          // Next button
+          html += `<button onclick="renderRequestsQueue('${page}', '${statusFilter}', ${Math.min(totalPages, pageNumber + 1)})" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--card);font-size:12px;" ${pageNumber === totalPages ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>Next</button>`;
+          
+          paginationEl.innerHTML = html;
+          paginationEl.style.display = 'flex';
+        } else {
+          paginationEl.style.display = 'none';
+        }
+      }
+    }
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="' + (page === 'requests' ? '6' : '5') + '" style="text-align:center;padding:24px;color:var(--muted)">Error loading requests.</td></tr>';
+  }
+}
+
+
+function logout(){document.getElementById('app').classList.remove('on');document.getElementById('login').style.display='grid'}
+function go(page,btn){
+ window.scrollTo(0,0);
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+ const p=document.getElementById('page-'+page);if(p)p.classList.add('active');
+ document.querySelectorAll('.nav button[data-page]').forEach(x=>x.classList.remove('active'));
+ let activeBtn=btn;
+ if(activeBtn){activeBtn.classList.add('active')}else{activeBtn=document.querySelector('.nav button[data-page="'+page+'"]');if(activeBtn)activeBtn.classList.add('active')}
+ openNavCatFor(activeBtn);
+ closeSidebar();
+ window.scrollTo(0,0);
+
+ // Fetch queue data dynamically on navigation
+ if(page === "requests") renderRequestsQueue("requests");
+ if(page === "products" || page === "orders" || page === "print-jobs" || page === "inventory" || page === "gemprint" || page === "settings") fetchGemPrintAdminData();
+ if(page === "pending") renderRequestsQueue("pending", "submitted");
+ if(page === "processing") renderRequestsQueue("processing", "processing");
+ if(page === "completed") renderRequestsQueue("completed", "completed");
+ if(page === "rejected") renderRequestsQueue("rejected", "rejected");
+ if(page === "services") fetchAdminServices();
+  if(page === "wallet-funding") fetchWalletTopups(1);
+}
+function toggleSidebar(){
+ const side=document.getElementById('side');
+ if(side)side.classList.toggle('show');
+}
+function closeSidebar(){
+ const side=document.getElementById('side');
+ if(side)side.classList.remove('show');
+}
+function toggleNavCat(el){
+ const group=el.closest('.nav-group');
+ if(group)group.classList.toggle('open');
+}
+function openNavCatFor(btn){
+ if(!btn)return;
+ const group=btn.closest('.nav-group');
+ if(group)group.classList.add('open');
+}
+function toggleDarkMode(){
+ const isDark=document.body.classList.contains('dark-mode');
+ applyTheme(isDark?'light':'dark');
+}
+function applyTheme(mode){
+ if(mode==='dark'){document.body.classList.add('dark-mode')}else{document.body.classList.remove('dark-mode')}
+ const btn=document.getElementById('darkToggle');
+ if(btn)btn.textContent=mode==='dark'?'☀':'☾';
+ try{localStorage.setItem('gv-theme',mode)}catch(e){}
+}
+function initTheme(){
+ let saved='light';
+ try{saved=localStorage.getItem('gv-theme')||'light'}catch(e){}
+ applyTheme(saved);
+}
+initTheme();
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Wallet Funding Admin Functions
+// ──────────────────────────────────────────────────────────────────────────────
+let _wfCurrentPage = 1;
+
+async function fetchWalletTopups(page) {
+  _wfCurrentPage = page || 1;
+  const status = document.getElementById('wf-filter-status')?.value || '';
+  const tbody = document.getElementById('wf-tbody');
+  const pagination = document.getElementById('wf-pagination');
+  const totalBadge = document.getElementById('wf-total-badge');
+  if(tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading…</td></tr>';
+  if(pagination) pagination.innerHTML = '';
+
+  let url = '../api/admin/wallet/topups?page=' + _wfCurrentPage;
+  if(status) url += '&status=' + encodeURIComponent(status);
+
+  try {
+    const res = await fetch(url, {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('gv_admin_token') }
+    });
+    const json = await res.json();
+    if(!res.ok || !json.success) { throw new Error(json.message || 'Failed'); }
+
+    const { data, pagination: pg, summary } = json.data;
+
+    // Summary cards
+    renderWfSummaryCards(summary || {});
+
+    // Badge
+    if(totalBadge) totalBadge.textContent = (pg?.total || 0) + ' record' + (pg?.total === 1 ? '' : 's');
+
+    // Table rows
+    if(!tbody) return;
+    if(!data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">No top-up orders found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(r => {
+      const isVA = r.merchant_reference?.startsWith('VAC_');
+      const typeBadge = isVA
+        ? '<span style="background:#e0f2fe;color:#0369a1;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700">VIRTUAL A/C</span>'
+        : '<span style="background:#f0fdf4;color:#15803d;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700">CHECKOUT</span>';
+
+      const statusColors = {
+        completed: 'background:#dcfce7;color:#15803d',
+        partial:   'background:#fff7ed;color:#c2410c',
+        pending:   'background:#fefce8;color:#92400e',
+        processing:'background:#eff6ff;color:#1d4ed8',
+        failed:    'background:#fef2f2;color:#dc2626',
+        expired:   'background:#f1f5f9;color:#64748b',
+        cancelled: 'background:#f1f5f9;color:#64748b',
+      };
+      const sc = statusColors[r.status] || 'background:#f1f5f9;color:#64748b';
+      const statusBadge = '<span style="' + sc + ';padding:3px 9px;border-radius:99px;font-size:10px;font-weight:700">' + (r.status || '-').toUpperCase() + '</span>';
+
+      const receivedCell = r.amount_received != null
+        ? '<span style="' + (r.amount_received < r.amount ? 'color:#c2410c' : 'color:#15803d') + '">' + money(r.amount_received) + '</span>'
+        : '<span style="color:var(--muted)">—</span>';
+
+      const date = r.created_at ? r.created_at.substring(0,16).replace('T',' ') : '—';
+      const shortRef = (r.merchant_reference || '').substring(0, 22) + '…';
+
+      return '<tr>' +
+        '<td style="font-size:11px;font-family:monospace" title="' + r.merchant_reference + '">' + shortRef + '</td>' +
+        '<td><div style="font-weight:600;font-size:12px">' + (r.user_name || '—') + '</div><div style="font-size:11px;color:var(--muted)">' + (r.user_email || '') + '</div></td>' +
+        '<td style="font-weight:700">' + money(r.amount) + '</td>' +
+        '<td>' + receivedCell + '</td>' +
+        '<td>' + typeBadge + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td style="font-size:11px;color:var(--muted)">' + date + '</td>' +
+        '<td><button class="secondary" style="height:28px;padding:0 10px;font-size:11px" onclick="viewWfTopUp(\'' + r.merchant_reference + '\')">View</button>' +
+        (r.status === 'partial' || r.status === 'pending' || r.status === 'failed' ? ' <button class="primary" style="height:28px;padding:0 10px;font-size:11px;background:#16a34a;border-color:#16a34a" onclick="openWfCreditModal(\'' + r.merchant_reference + '\',' + r.amount + ',' + (r.amount_received || 0) + ')">Credit</button>' : '') +
+        '</td>' +
+        '</tr>';
+    }).join('');
+
+    // Pagination
+    if(pagination && pg && pg.total_pages > 1) {
+      let btns = '';
+      for(let i=1; i<=pg.total_pages; i++) {
+        btns += '<button onclick="fetchWalletTopups(' + i + ')" style="' +
+          (i === pg.current_page ? 'background:var(--accent);color:#fff;' : 'background:var(--card);') +
+          'border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">' + i + '</button>';
+      }
+      pagination.innerHTML = btns;
+    }
+
+  } catch(e) {
+    if(tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#dc2626">Error: ' + e.message + '</td></tr>';
+  }
+}
+
+function renderWfSummaryCards(summary) {
+  const el = document.getElementById('wf-summary-cards');
+  if(!el) return;
+  const items = [
+    { key:'completed', label:'Completed', color:'#15803d', bg:'#dcfce7' },
+    { key:'pending',   label:'Pending',   color:'#92400e', bg:'#fefce8' },
+    { key:'partial',   label:'Partial',   color:'#c2410c', bg:'#fff7ed' },
+    { key:'failed',    label:'Failed',    color:'#dc2626', bg:'#fef2f2' },
+  ];
+  el.innerHTML = items.map(it => {
+    const d = summary[it.key] || { count: 0, total_amount: 0 };
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">' +
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">' + it.label + '</div>' +
+      '<div style="font-size:20px;font-weight:800;color:' + it.color + '">' + d.count + '</div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + money(d.total_amount) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function viewWfTopUp(ref) {
+  const modal = document.getElementById('wf-detail-modal');
+  const body = document.getElementById('wf-detail-body');
+  const actions = document.getElementById('wf-detail-actions');
+  if(!modal || !body) return;
+  body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">Loading…</div>';
+  actions.innerHTML = '';
+  modal.style.display = 'block';
+
+  try {
+    const res = await fetch('../api/admin/wallet/topups/' + encodeURIComponent(ref), {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('gv_admin_token') }
+    });
+    const json = await res.json();
+    if(!res.ok || !json.success) throw new Error(json.message || 'Failed');
+    const r = json.data;
+
+    const row = (label, val) => '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">' + label + '</span><span style="font-weight:600;text-align:right;max-width:60%">' + val + '</span></div>';
+
+    const pa = r.payment_account;
+    const paHtml = pa ? row('Bank', pa.bank_name || '—') + row('Account', pa.account_number || '—') + row('Account Name', pa.account_name || '—') : '';
+
+    body.innerHTML =
+      row('Reference', '<span style="font-family:monospace;font-size:11px">' + r.merchant_reference + '</span>') +
+      row('User', (r.user_name || '—') + '<br><span style="font-size:11px;color:var(--muted)">' + (r.user_email || '') + '</span>') +
+      row('Amount Requested', money(r.amount)) +
+      row('Amount Received', r.amount_received != null ? money(r.amount_received) : '—') +
+      row('Status', r.status?.toUpperCase()) +
+      row('KatPay UUID', r.katpay_uuid || '—') +
+      row('Credited TX ID', r.credited_tx_id || 'Not credited') +
+      paHtml +
+      row('Admin Note', r.admin_note || '—') +
+      row('Created', r.created_at || '—') +
+      row('Completed', r.completed_at || '—');
+
+    // Actions
+    if(!r.credited_tx_id && ['partial','pending','failed','processing'].includes(r.status)) {
+      actions.innerHTML = '<button class="primary" style="background:#16a34a;border-color:#16a34a" onclick="openWfCreditModal(\'' + r.merchant_reference + '\',' + r.amount + ',' + (r.amount_received || 0) + ')">💳 Manual Credit</button>';
+    }
+
+  } catch(e) {
+    body.innerHTML = '<div style="text-align:center;padding:24px;color:#dc2626">Error: ' + e.message + '</div>';
+  }
+}
+
+function openWfCreditModal(ref, amount, received) {
+  const creditAmount = received > 0 ? received : amount;
+  const note = prompt(
+    'Manual credit for: ' + ref + '\n\nEnter credit amount (default: ₦' + creditAmount.toLocaleString() + '):',
+    creditAmount.toString()
+  );
+  if(note === null) return;
+  const parsed = parseFloat(note);
+  if(isNaN(parsed) || parsed <= 0) { alert('Invalid amount'); return; }
+
+  const adminNote = prompt('Enter a note for this manual credit (required):');
+  if(!adminNote || !adminNote.trim()) { alert('Note is required'); return; }
+
+  confirmWfCredit(ref, parsed, adminNote.trim());
+}
+
+async function confirmWfCredit(ref, creditAmount, note) {
+  if(!confirm('Credit ₦' + creditAmount.toLocaleString() + ' to wallet for top-up: ' + ref + '?\n\nThis action is irreversible.')) return;
+
+  try {
+    const res = await fetch('../api/admin/wallet/topups/' + encodeURIComponent(ref) + '/credit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('gv_admin_token')
+      },
+      body: JSON.stringify({ credit_amount: creditAmount, note: note, skip_katpay_verify: true })
+    });
+    const json = await res.json();
+    if(!res.ok || !json.success) throw new Error(json.message || 'Credit failed');
+    alert('✓ Wallet credited successfully!\nTx Reference: ' + (json.data?.transaction_ref || ''));
+    document.getElementById('wf-detail-modal').style.display = 'none';
+    fetchWalletTopups(_wfCurrentPage);
+  } catch(e) {
+    alert('Credit failed: ' + e.message);
+  }
+}
+
+function money(n){return n?new Intl.NumberFormat('en-NG',{style:'currency',currency:'NGN',maximumFractionDigits:0}).format(n):'—'}
+function renderServices(){
+ const q=(document.getElementById('serviceSearch')?.value||'').toLowerCase(),cat=document.getElementById('catFilter')?.value||'';
+ const arr=services.filter(s=>(!q||s.name.toLowerCase().includes(q))&&(!cat||s.cat===cat));
+ document.getElementById('serviceGrid').innerHTML=arr.map(s=>`
+ <div class="service">
+  <div class="service-top"><div class="ico">${s.cat==='NIN'?'N':s.cat==='BVN'?'B':s.cat==='JAMB'?'J':s.cat==='CAC'?'C':s.cat==='TIN'?'T':s.cat==='GemPrint'?'G':'A'}</div>
+  <button class="toggle ${s.visible?'on':''}" onclick="toggleVisible('${s.id}')"><i></i></button></div>
+  <h3>${s.name}</h3><p>${s.cat} · ${s.type} · ${s.visible?'Visible to users':'Hidden from users'}</p>
+  <div class="service-row"><div><small style="color:var(--muted);font-size:9px">USER PRICE</small><div class="price">${money(s.price)}</div></div><button class="secondary" onclick="openService('${s.id}')">Edit</button></div>
+ </div>`).join('');
+}
+
+async function toggleVisible(id){
+  const s = services.find(x => x.id == id);
+  if (!s) return;
+  s.visible = !s.visible;
+  s.active = s.visible;
+  await saveServiceSettings(s);
+}
+
+async function saveServiceSettings(s) {
+  let token = localStorage.getItem("gv_admin_token");
+  try {
+    const res = await fetch(`../api/admin/services/${s.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: s.name,
+        active: s.visible ? 1 : 0,
+        is_manual: s.type === 'Manual' ? 1 : 0
+      })
+    });
+    const json = await res.json();
+    if (json.success) {
+      await fetchAdminServices();
+    }
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function openService(id){
+ const s=services.find(x=>x.id==id);
+ if(!s) return;
+ 
+ let pricingHtml = '';
+ if (s.pricing && s.pricing.length > 0) {
+     pricingHtml = s.pricing.map(p => {
+         let label = p.variant_key ? `Price for '${p.variant_key}' (₦)` : 'Price (₦)';
+         return `<div class="field"><label>${label}</label><input class="mVariantPrice" data-pid="${p.pricing_id}" type="number" value="${p.price}"></div>`;
+     }).join('');
+ } else {
+     pricingHtml = `<div class="field"><label>Price (₦)</label><input class="mVariantPrice" data-pid="" type="number" value="${s.price}"></div>`;
+ }
+ 
+ document.getElementById('modalTitle').textContent='Edit Service';
+ document.getElementById('modalBody').innerHTML=`
+ <div class="field"><label>Service Name</label><input id="mName" value="${s.name}"></div>
+ <div class="field"><label>Category</label><select id="mCat" disabled><option value="${s.cat}">${s.cat}</option></select></div>
+ ${pricingHtml}
+ <div class="field"><label>Estimated Processing Time</label><input id="mEstTime" value="${s.est_time || ''}" placeholder="e.g. Instant, 1-3 days"></div>
+ <div class="field"><label>Service Type</label><select id="mType"><option value="Manual" ${s.type==='Manual'?'selected':''}>Manual</option><option value="API-Based" ${s.type==='API-Based'?'selected':''}>API-Based</option></select></div>
+ <div class="field-row"><label><input type="checkbox" id="mVisible" ${s.visible?'checked':''}> Visible to users</label></div>
+ `;
+ document.getElementById('modalFoot').innerHTML=`
+  <button class="secondary" onclick="closeModal()">Cancel</button>
+  <button class="primary" onclick="saveService('${s.id}')">Save Changes</button>
+ `;
+ document.getElementById('modal').classList.add('show');
+}
+
+async function saveService(id){
+  let s=services.find(x=>x.id==id);
+  if(!s) return;
+  
+  let newName = document.getElementById('mName').value.trim()||s.name;
+  let newType = document.getElementById('mType').value;
+  let newVisible = document.getElementById('mVisible').checked;
+  let newEstTime = document.getElementById('mEstTime').value.trim();
+  
+  let token = localStorage.getItem("gv_admin_token");
+  
+  try {
+    // 1. Update service settings (name, is_manual, is_active, est_time)
+    const resSvc = await fetch(`../api/admin/services/${s.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: newName,
+        active: newVisible ? 1 : 0,
+        is_manual: newType === 'Manual' ? 1 : 0,
+        est_time: newEstTime
+      })
+    });
+    
+    if (!resSvc.ok) {
+      const errJson = await resSvc.json().catch(() => ({}));
+      throw new Error(errJson.message || "Failed to update service settings");
+    }
+    
+    // 2. Update variant prices
+    const priceInputs = document.querySelectorAll('.mVariantPrice');
+    for (let input of priceInputs) {
+      let pid = input.getAttribute('data-pid');
+      let val = Number(input.value) || 0;
+      if (val > 0 && pid) {
+        const resPrice = await fetch(`../api/admin/services/${s.id}/pricing/${pid}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ price: val })
+        });
+      }
+    }
+    
+    closeModal();
+    await fetchAdminServices();
+  } catch(e) {
+    console.error("Failed to save service", e);
+  }
+}
+async function openRequest(ref, defaultServiceTitle) {
+  document.getElementById('modalTitle').textContent = 'Loading Request ' + ref + '...';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="text-align:center;padding:30px;color:var(--muted)">
+      Loading complete request data from database...
+    </div>
+  `;
+  document.getElementById('modalFoot').innerHTML = `<button class="secondary" onclick="closeModal()">Close</button>`;
+  document.getElementById('modal').classList.add('show');
+
+  const token = localStorage.getItem('gv_admin_token');
+  try {
+    const res = await fetch('../api/admin/requests/' + ref, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success || !json.data) {
+      document.getElementById('modalBody').innerHTML = `
+        <div style="padding:20px;color:#ef4444;background:#fef2f2;border-radius:10px">
+          Failed to load request details: ${json.message || 'Unknown error'}
+        </div>
+      `;
+      return;
+    }
+
+    const d = json.data.data || json.data;
+    const req = d.request || {};
+    const user = d.user || {};
+    const svc = d.service || {};
+    const formData = req.form_data || {};
+    const docs = d.documents || [];
+    const history = d.status_history || [];
+    const notes = d.admin_notes || [];
+    const trx = d.transaction || {};
+
+    document.getElementById('modalTitle').textContent = (svc.name || defaultServiceTitle) + ' · ' + req.reference;
+
+    // Helper for rendering form data dynamically
+    let formDataHtml = '';
+    if (typeof formData === 'object' && formData !== null && Object.keys(formData).length > 0) {
+      formDataHtml = Object.entries(formData).map(([k, v]) => {
+        let valStr = typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v);
+        return `
+          <div style="background:#fff;border:1px solid #e2e8f0;padding:10px;border-radius:8px;word-break:break-word">
+            <small style="color:var(--muted);text-transform:uppercase;font-size:10px;font-weight:700">${k.replace(/_/g, ' ')}</small>
+            <div style="font-size:12px;font-weight:600;margin-top:2px">${valStr}</div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      formDataHtml = '<div style="color:var(--muted);font-size:12px">No structured form fields submitted.</div>';
+    }
+
+    // Helper for documents
+    let docsHtml = '';
+    if (docs.length > 0) {
+      docsHtml = docs.map(doc => `
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #e2e8f0;padding:8px 12px;border-radius:8px;font-size:11px;margin-bottom:6px">
+          <div>
+            <b>${doc.original_name}</b> (${(doc.file_size / 1024).toFixed(1)} KB)
+            <br><small style="color:var(--muted)">Field: ${doc.field_name}</small>
+          </div>
+          <button onclick="adminDownloadDoc('${doc.secure_url}')" style="padding:4px 10px;background:#0050FF;color:#fff;border-radius:6px;font-size:10px;font-weight:600;border:none;cursor:pointer">Download</button>
+        </div>
+      `).join('');
+    } else {
+      docsHtml = '<div style="color:var(--muted);font-size:11px">No attached documents.</div>';
+    }
+
+    // Helper for history timeline
+    let histHtml = '';
+    if (history.length > 0) {
+      histHtml = history.map(h => `
+        <div style="font-size:11px;border-left:2px solid #0050FF;padding-left:8px;margin-bottom:8px">
+          <b style="text-transform:capitalize">${h.status || h.new_status}</b>
+          <span style="color:var(--muted);font-size:10px"> · ${h.created_at || h.changed_at}</span>
+          ${h.notes ? `<br><small style="color:#64748b">${h.notes}</small>` : ''}
+        </div>
+      `).join('');
+    } else {
+      histHtml = '<div style="color:var(--muted);font-size:11px">Initial submission.</div>';
+    }
+
+    // Helper for admin notes
+    let notesHtml = '';
+    if (notes.length > 0) {
+      notesHtml = notes.map(n => `
+        <div style="font-size:11px;background:#f8fafc;padding:8px;border-radius:6px;margin-bottom:6px">
+          <b>${n.admin_name || 'Admin'}</b> <span style="color:var(--muted);font-size:10px">${n.created_at}</span>
+          <div>${n.note}</div>
+        </div>
+      `).join('');
+    } else {
+      notesHtml = '<div style="color:var(--muted);font-size:11px">No admin notes added yet.</div>';
+    }
+
+    document.getElementById('modalBody').innerHTML = `
+      <!-- SECTION 1: REQUEST SUMMARY -->
+      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 1 — Request Summary</b>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:10px;font-size:11px">
+          <div><small style="color:var(--muted)">Reference</small><br><b>${req.reference}</b></div>
+          <div><small style="color:var(--muted)">Service</small><br><b>${svc.name || defaultServiceTitle}</b></div>
+          <div><small style="color:var(--muted)">Category</small><br><b>${svc.category || 'N/A'}</b></div>
+          <div><small style="color:var(--muted)">Status</small><br><span class="pill blue" style="text-transform:capitalize">${req.status}</span></div>
+          <div><small style="color:var(--muted)">Amount Paid</small><br><b>₦${Number(req.price_paid || 0).toLocaleString('en-NG', {minimumFractionDigits:2})}</b></div>
+          <div><small style="color:var(--muted)">Submitted Date</small><br><b>${req.submitted_at}</b></div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: CUSTOMER INFORMATION -->
+      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 2 — Customer Information</b>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:10px;font-size:11px">
+          <div><small style="color:var(--muted)">Business / User</small><br><b>${user.business_name || 'N/A'}</b></div>
+          <div><small style="color:var(--muted)">Email</small><br><b>${user.email || 'N/A'}</b></div>
+          <div><small style="color:var(--muted)">Phone</small><br><b>${user.phone || 'N/A'}</b></div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: SUBMITTED FORM DATA -->
+      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 3 — Submitted Form Data</b>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+          ${formDataHtml}
+        </div>
+      </div>
+
+      <!-- SECTION 4: DOCUMENTS -->
+      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 4 — Uploaded Documents</b>
+        <div style="margin-top:10px">
+          ${docsHtml}
+        </div>
+      </div>
+
+      <!-- SECTION 5: STATUS TIMELINE -->
+      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 5 — Status Timeline</b>
+        <div style="margin-top:10px">
+          ${histHtml}
+        </div>
+      </div>
+
+      <!-- SECTION 6: ADMIN NOTES -->
+      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 6 — Admin Notes</b>
+        <div style="margin-top:10px;margin-bottom:10px">
+          ${notesHtml}
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <textarea id="adminNoteText" rows="2" placeholder="Add internal note..."></textarea>
+          <button class="secondary" style="margin-top:6px;font-size:11px;padding:4px 10px" onclick="addAdminNote('${req.reference}')">Save Note</button>
+        </div>
+      </div>
+
+      <!-- SECTION 7: ACTIONS -->
+      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px">
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 7 — Operational Actions</b>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <div class="field" style="margin-bottom:0">
+            <label style="font-size:11px">Update Request Status</label>
+            <select id="updateStatusSelect" style="font-size:11px">
+              <option value="submitted" ${req.status==='submitted'?'selected':''}>Submitted</option>
+              <option value="under_review" ${req.status==='under_review'?'selected':''}>Under Review</option>
+              <option value="processing" ${req.status==='processing'?'selected':''}>Processing</option>
+              <option value="awaiting_info" ${req.status==='awaiting_info'?'selected':''}>Awaiting Info</option>
+              <option value="completed" ${req.status==='completed'?'selected':''}>Completed</option>
+              <option value="rejected" ${req.status==='rejected'?'selected':''}>Rejected</option>
+            </select>
+            <button class="secondary" style="margin-top:6px;font-size:11px;padding:4px 10px;width:100%" onclick="updateRequestStatus('${req.reference}')">Update Status</button>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label style="font-size:11px">Upload Verification Result</label>
+            <input type="file" id="resultFileInput" accept=".pdf,.jpg,.jpeg,.png" style="font-size:11px">
+            <button class="primary" style="margin-top:6px;font-size:11px;padding:4px 10px;width:100%" onclick="uploadResultFile('${req.reference}')">Upload Result File</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('modalFoot').innerHTML = `<button class="secondary" onclick="closeModal()">Close</button>`;
+
+  } catch (err) {
+    document.getElementById('modalBody').innerHTML = `
+      <div style="padding:20px;color:#ef4444;background:#fef2f2;border-radius:10px">
+        Connection error loading request details.
+      </div>
+    `;
+  }
+}
+
+let withdrawableProfit = 0;
+
+function updateWithdrawableUI(){
+  const value = money(withdrawableProfit);
+  ['withdrawableStat','withdrawablePanel','withdrawablePage'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.textContent=value;
+  });
+}
+
+function openWithdraw(){
+  document.getElementById('modalTitle').textContent='Withdraw Company Profit';
+  document.getElementById('modalBody').innerHTML=`
+    <div style="background:#eff6ff;border:1px solid #dbeafe;padding:14px;border-radius:13px;margin-bottom:16px">
+      <small style="color:var(--muted);font-weight:800">AVAILABLE FOR WITHDRAWAL</small>
+      <div style="font-size:24px;font-weight:900;margin-top:4px">${money(withdrawableProfit)}</div>
+      <p style="font-size:10px;color:var(--muted);margin:5px 0 0">This balance represents settled company funds only. Customer wallet balances are excluded.</p>
+    </div>
+    <div class="field"><label>Withdrawal Amount (NGN)</label><input id="withdrawAmount" type="number" min="1" max="${withdrawableProfit}" placeholder="Enter amount"></div>
+    <div class="field"><label>Destination</label><select id="withdrawDestination"><option>Company Settlement Account</option><option>Approved Business Bank Account</option></select></div>
+    <div class="field"><label>Reason / Reference</label><input id="withdrawReason" placeholder="e.g. Weekly profit settlement"></div>
+    <div style="background:#fff7e6;color:#92400e;border:1px solid #fde68a;padding:11px;border-radius:11px;font-size:10px">
+      Security rule: withdrawals should require backend balance validation, admin re-authentication/2FA, and an immutable audit record.
+    </div>`;
+  document.getElementById('modalFoot').innerHTML=
+    `<button class="secondary" onclick="closeModal()">Cancel</button>
+     <button class="primary" onclick="submitWithdraw()">Review Withdrawal</button>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+function submitWithdraw(){
+  const amount=Number(document.getElementById('withdrawAmount').value);
+  if(!amount || amount<=0){alert('Enter a valid withdrawal amount.');return}
+  if(amount>withdrawableProfit){alert('Withdrawal exceeds settled withdrawable profit.');return}
+  const destination=document.getElementById('withdrawDestination').value;
+  const reason=document.getElementById('withdrawReason').value.trim() || 'Profit withdrawal';
+  document.getElementById('modalTitle').textContent='Confirm Profit Withdrawal';
+  document.getElementById('modalBody').innerHTML=`
+    <div style="padding:15px;border:1px solid var(--line);border-radius:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Amount</span><b>${money(amount)}</b></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Destination</span><b>${destination}</b></div>
+      <div style="display:flex;justify-content:space-between"><span>Reason</span><b>${reason}</b></div>
+    </div>
+    <div class="field"><label>Admin Password / Re-authentication</label><input id="reauth" type="password" placeholder="Required in production backend"></div>`;
+  document.getElementById('modalFoot').innerHTML=
+    `<button class="secondary" onclick="closeModal()">Cancel</button>
+     <button class="primary" onclick="confirmWithdraw(${amount})">Confirm Withdrawal</button>`;
+}
+
+function confirmWithdraw(amount){
+  const auth=document.getElementById('reauth').value;
+  if(!auth){alert('Admin re-authentication is required.');return}
+  if(amount>withdrawableProfit){alert('Balance changed. Recalculate withdrawal before continuing.');return}
+  closeModal();
+  alert('Withdrawal request received. This feature requires a backend withdrawal API endpoint (/api/admin/withdrawals) to be connected before funds can be transferred. Please contact the development team to complete this integration.');
+}
+
+
+function refreshProviderBalances(){
+  alert('Provider balance refresh requires backend provider API integration. Configure provider credentials in the backend to enable live balance syncing.');
+}
+function filterProviders(){
+  const q=(document.getElementById('providerSearch')?.value||'').toLowerCase();
+  document.querySelectorAll('#providerTable tbody tr').forEach(row=>{
+    row.style.display=row.textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
+function viewProvider(name){
+  document.getElementById('modalTitle').textContent=name+' — Provider Balance';
+  document.getElementById('modalBody').innerHTML=`
+    <div class="grid4" style="grid-template-columns:1fr 1fr">
+      <div class="stat"><small>Available Balance</small><strong>₦0</strong></div>
+      <div class="stat"><small>Status</small><strong style="font-size:18px">Healthy</strong></div>
+    </div>
+    <div style="margin-top:14px;padding:13px;border:1px solid var(--line);border-radius:12px">
+      <b>Operational Controls</b>
+      <p style="font-size:10px;color:var(--muted)">Provider balance should be read from the provider's authenticated API. Admin should not manually edit the live provider balance.</p>
+    </div>`;
+  document.getElementById('modalFoot').innerHTML='<button class="secondary" onclick="closeModal()">Close</button>';
+  document.getElementById('modal').classList.add('show');
+}
+
+
+function openKpiPage(page){
+  const pages = {
+    'registered-accounts': ['Registered Accounts', 'users'],
+    'active-today': ['Active Today', 'users'],
+    'wallet-liability': ['Wallet Liability', 'wallet-funding'],
+    'revenue-today': ['Revenue Today', 'revenue'],
+    'profit-today': ['Profit Today', 'profit'],
+    'successful-txn': ['Successful Transactions', 'transactions'],
+    'failed-txns': ['Failed Transactions', 'transactions'],
+    'withdrawable-profit': ['Withdrawable Profit', 'profit'],
+    'provider-balance': ['Providers Balance', 'provider-balance']
+  };
+  const item = pages[page];
+  if(item) go(item[1]);
+}
+
+function closeKpiDetail(){
+  const m=document.getElementById('kpiDetailModal');
+  if(m){m.classList.remove('show');m.setAttribute('aria-hidden','true');}
+}
+
+function openProviderIntelligence(){
+  go('provider-balance');
+}
+
+async function updateRequestStatus(ref) {
+  const sel = document.getElementById('updateStatusSelect');
+  if (!sel) { alert('Status selector not found.'); return; }
+  const newStatus = sel.value;
+  if (!newStatus) { alert('Please select a status.'); return; }
+  const token = localStorage.getItem('gv_admin_token');
+  const btn = sel.nextElementSibling;
+  if (btn) { btn.textContent = 'Updating...'; btn.disabled = true; }
+  try {
+    const res = await fetch('../api/admin/requests/' + ref + '/status', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ status: newStatus, notes: 'Status updated by admin' })
+    });
+    const json = await res.json();
+    if (res.ok && json.success) {
+      await openRequest(ref, '');
+      loadRequests();
+    } else {
+      alert('Status update failed: ' + (json.message || 'Unknown error'));
+      if (btn) { btn.textContent = 'Update Status'; btn.disabled = false; }
+    }
+  } catch (e) {
+    alert('Network error updating status.');
+    if (btn) { btn.textContent = 'Update Status'; btn.disabled = false; }
+  }
+}
+
+async function uploadResultFile(ref) {
+  const input = document.getElementById('resultFileInput');
+  if (!input || !input.files || !input.files[0]) {
+    alert('Please select a result file first.');
+    return;
+  }
+  const file = input.files[0];
+  const token = localStorage.getItem('gv_admin_token');
+  const btn = input.nextElementSibling;
+  if (btn) { btn.textContent = 'Uploading...'; btn.disabled = true; }
+  const formData = new FormData();
+  formData.append('result_file', file);
+  try {
+    const res = await fetch('../api/admin/requests/' + ref + '/result', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: formData
+    });
+    const json = await res.json();
+    if (res.ok && json.success) {
+      await openRequest(ref, '');
+      loadRequests();
+    } else {
+      alert('Upload failed: ' + (json.message || 'Unknown error'));
+      if (btn) { btn.textContent = 'Upload Result File'; btn.disabled = false; }
+    }
+  } catch (e) {
+    alert('Network error uploading result file.');
+    if (btn) { btn.textContent = 'Upload Result File'; btn.disabled = false; }
+  }
+}
+
+async function addAdminNote(ref) {
+  const ta = document.getElementById('adminNoteText');
+  if (!ta || !ta.value.trim()) { alert('Please enter a note.'); return; }
+  const note = ta.value.trim();
+  const token = localStorage.getItem('gv_admin_token');
+  try {
+    const res = await fetch('../api/admin/requests/' + ref + '/notes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ note })
+    });
+    const json = await res.json();
+    if (res.ok && json.success) {
+      await openRequest(ref, '');
+    } else {
+      alert('Failed to save note: ' + (json.message || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Network error saving note.');
+  }
+}
+
+async function adminDownloadDoc(secureUrl) {
+  const token = localStorage.getItem('gv_admin_token');
+  if (!token) { alert('Admin session expired. Please log in again.'); return; }
+  try {
+    const res = await fetch('../api' + secureUrl, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      alert('Download failed: ' + (json.message || 'Document not accessible.'));
+      return;
+    }
+    const blob = await res.blob();
+    const contentDisp = res.headers.get('Content-Disposition') || '';
+    let filename = 'document.pdf';
+    const match = contentDisp.match(/filename="?([^"]+)"?/);
+    if (match) filename = match[1];
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('Network error downloading document.');
+  }
+}
+
+let gpAdminData = { products: [], orders: [], print_jobs: [], delivery_fee: 1500, enabled: true };
+
+async function fetchGemPrintAdminData() {
+  let token = localStorage.getItem("gv_admin_token");
+  if (!token) return;
+  try {
+    let res = await fetch("../api/admin/gemprint/config", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+    let json = await res.json();
+    if (json.success && json.data) {
+      gpAdminData = json.data;
+      renderGemPrintProducts();
+      renderGemPrintOrders();
+      renderGemPrintJobs();
+      renderGemPrintInventory();
+      updateGemPrintDashboardStats();
+
+      // Update Settings fields
+      let statusSelect = document.getElementById("settingGemPrintStatus");
+      if (statusSelect) statusSelect.value = gpAdminData.enabled ? "enabled" : "coming_soon";
+      let deliveryInput = document.getElementById("settingGemPrintDeliveryFee");
+      if (deliveryInput) deliveryInput.value = gpAdminData.delivery_fee;
+    }
+  } catch(e) {
+    console.error("Failed to fetch GemPrint admin config", e);
+  }
+}
+
+function updateGemPrintDashboardStats() {
+  let statProducts = document.getElementById("gpStatProducts");
+  if (statProducts) statProducts.textContent = gpAdminData.products.length;
+
+  let statPending = document.getElementById("gpStatPendingOrders");
+  if (statPending) statPending.textContent = gpAdminData.orders.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled').length;
+
+  let statJobs = document.getElementById("gpStatJobs");
+  if (statJobs) statJobs.textContent = gpAdminData.print_jobs.length;
+
+  let statSales = document.getElementById("gpStatSales");
+  if (statSales) {
+    let totalSales = gpAdminData.orders.reduce((sum, o) => sum + o.total, 0) + gpAdminData.print_jobs.reduce((sum, j) => sum + j.price, 0);
+    statSales.textContent = "₦" + totalSales.toLocaleString();
+  }
+
+  let dashboardTbody = document.querySelector("#page-gemprint table tbody");
+  if (dashboardTbody) {
+    let activeJobs = gpAdminData.print_jobs.filter(j => j.status !== 'Completed' && j.status !== 'Cancelled');
+    if (activeJobs.length === 0) {
+      dashboardTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">No print jobs currently in production. All caught up!</td></tr>';
+    } else {
+      dashboardTbody.innerHTML = activeJobs.map(j => `
+        <tr>
+          <td data-label="Job"><b>${j.id}</b></td>
+          <td data-label="Customer">User ID #${j.user_id}</td>
+          <td data-label="Service">${j.service}</td>
+          <td data-label="Stage"><span class="pill amber">${j.status}</span></td>
+        </tr>
+      `).join('');
+    }
+  }
+}
+
+function renderGemPrintProducts() {
+  let tbody = document.querySelector("#page-products table tbody");
+  if (!tbody) return;
+  let items = gpAdminData.products || [];
+  if (items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No products found. Add products to populate.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(p => `
+    <tr>
+      <td data-label="ID"><b>${p.id}</b></td>
+      <td data-label="Name">${p.name}</td>
+      <td data-label="SKU"><code style="font-size:11px">${p.sku}</code></td>
+      <td data-label="Category">${p.category}</td>
+      <td data-label="Price">₦${p.price.toLocaleString()}</td>
+      <td data-label="Stock">${p.stock} units</td>
+      <td data-label="Action" style="white-space:nowrap">
+        <button class="secondary" onclick="openEditProductModal('${p.id}')">Edit</button>
+        <button class="secondary" style="color:var(--red);border-color:var(--red);margin-left:4px;" onclick="deleteProduct('${p.id}')">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderGemPrintInventory() {
+  let tbody = document.querySelector("#page-inventory table tbody");
+  if (!tbody) return;
+  let items = gpAdminData.products || [];
+  if (items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No products found in inventory.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(p => {
+    let status = p.stock > 50 ? 'green' : (p.stock > 10 ? 'amber' : 'red');
+    let label = p.stock > 50 ? 'In Stock' : (p.stock > 10 ? 'Low Stock' : 'Out of Stock');
+    return `
+      <tr>
+        <td data-label="SKU"><code style="font-size:11px">${p.sku}</code></td>
+        <td data-label="Product Name"><b>${p.name}</b></td>
+        <td data-label="Stock Level">${p.stock} units</td>
+        <td data-label="Status"><span class="pill ${status}">${label}</span></td>
+        <td data-label="Action"><button class="secondary" onclick="openUpdateStockModal('${p.id}', ${p.stock})">Adjust</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderGemPrintOrders() {
+  let tbody = document.querySelector("#page-orders table tbody");
+  if (!tbody) return;
+  let items = gpAdminData.orders || [];
+  if (items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No customer orders placed yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(o => {
+    let statusColor = o.status === 'Delivered' ? 'green' : (o.status === 'Cancelled' ? 'red' : 'amber');
+    let itemsSummary = o.items.map(it => `${it.name} (x${it.qty})`).join(', ');
+    if (itemsSummary.length > 50) itemsSummary = itemsSummary.substring(0, 47) + '...';
+    return `
+      <tr>
+        <td data-label="Order ID"><b>${o.id}</b><br><small style="opacity:.6">${o.date}</small></td>
+        <td data-label="Customer Name">${o.customer}</td>
+        <td data-label="Items Summary" title="${o.items.map(it => `${it.name} (x${it.qty})`).join(', ')}">${itemsSummary}</td>
+        <td data-label="Total Paid"><b>₦${o.total.toLocaleString()}</b></td>
+        <td data-label="Payment"><span class="pill green">${o.paymentStatus}</span></td>
+        <td data-label="Status"><span class="pill ${statusColor}">${o.status}</span></td>
+        <td data-label="Action"><button class="secondary" onclick="openChangeOrderStatusModal('${o.id}', '${o.status}')">Manage</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderGemPrintJobs() {
+  let tbody = document.querySelector("#page-print-jobs table tbody");
+  if (!tbody) return;
+  let items = gpAdminData.print_jobs || [];
+  if (items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No print jobs submitted yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(j => {
+    let statusColor = j.status === 'Completed' ? 'green' : (j.status === 'Cancelled' ? 'red' : 'amber');
+    let specs = `${j.size} · ${j.type} · 	ext{${j.color}} · Qty: ${j.qty} · Finish: ${j.finishing}`;
+    return `
+      <tr>
+        <td data-label="Job ID"><b>${j.id}</b><br><small style="opacity:.6">${j.date}</small></td>
+        <td data-label="Service Type"><b>${j.service}</b></td>
+        <td data-label="Specs" style="font-size:10px;opacity:.8">${specs}</td>
+        <td data-label="Price"><b>₦${j.price.toLocaleString()}</b></td>
+        <td data-label="Payment"><span class="pill green">${j.paymentStatus}</span></td>
+        <td data-label="Stage"><span class="pill ${statusColor}">${j.status}</span></td>
+        <td data-label="Action"><button class="secondary" onclick="openChangeJobStatusModal('${j.id}', '${j.status}')">Manage</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function saveAdminSettings() {
+  let token = localStorage.getItem("gv_admin_token");
+  let statusVal = document.getElementById("settingGemPrintStatus").value;
+  let deliveryFee = Number(document.getElementById("settingGemPrintDeliveryFee").value) || 0;
+  try {
+    let res = await fetch("../api/admin/gemprint/config", {
+      method: "PATCH",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        enabled: statusVal === "enabled",
+        delivery_fee: deliveryFee
+      })
+    });
+    let json = await res.json();
+    if (json.success) {
+      alert("✓ Settings saved successfully!");
+      fetchGemPrintAdminData();
+    } else {
+      alert("Error saving settings: " + json.message);
+    }
+  } catch(e) {
+    alert("Connection error saving settings.");
+  }
+}
+
+function openAddProductModal() {
+  document.getElementById('modalTitle').textContent = 'Add GemPrint Product';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field"><label>Product Name</label><input id="pName" placeholder="e.g. Glossy Card Stock 300gsm"></div>
+    <div class="field"><label>Description</label><textarea id="pDesc" placeholder="Product details..."></textarea></div>
+    <div class="field"><label>Category</label><select id="pCat"><option>Paper</option><option>Cards & IDs</option><option>Ink & Toner</option><option>Binding</option><option>Business Materials</option><option>Accessories</option></select></div>
+    <div class="field"><label>Price (₦)</label><input id="pPrice" type="number" placeholder="Price"></div>
+    <div class="field"><label>Stock Level</label><input id="pStock" type="number" value="100" placeholder="Initial stock"></div>
+    <div class="field"><label>SKU</label><input id="pSku" placeholder="e.g. GP-PAP-GLS"></div>
+  `;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="secondary" onclick="closeModal()">Cancel</button>
+    <button class="primary" onclick="submitAddProduct()">Add Product</button>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+async function submitAddProduct() {
+  let token = localStorage.getItem("gv_admin_token");
+  let name = document.getElementById("pName").value.trim();
+  let desc = document.getElementById("pDesc").value.trim();
+  let cat = document.getElementById("pCat").value;
+  let price = Number(document.getElementById("pPrice").value) || 0;
+  let stock = Number(document.getElementById("pStock").value) || 0;
+  let sku = document.getElementById("pSku").value.trim();
+
+  if (!name || price <= 0) { alert("Please enter valid name and price."); return; }
+
+  try {
+    let res = await fetch("../api/admin/gemprint/products", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ name, description: desc, category: cat, price, stock, sku })
+    });
+    let json = await res.json();
+    if (json.success) {
+      closeModal();
+      alert("✓ Product added successfully!");
+      fetchGemPrintAdminData();
+    } else {
+      alert("Error: " + json.message);
+    }
+  } catch(e) {
+    alert("Connection error.");
+  }
+}
+
+function openEditProductModal(id) {
+  let p = gpAdminData.products.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('modalTitle').textContent = 'Edit GemPrint Product';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field"><label>Product Name</label><input id="pName" value="${p.name}"></div>
+    <div class="field"><label>Description</label><textarea id="pDesc">${p.description || ""}</textarea></div>
+    <div class="field"><label>Category</label><select id="pCat"><option ${p.category==="Paper"?"selected":""}>Paper</option><option ${p.category==="Cards & IDs"?"selected":""}>Cards & IDs</option><option ${p.category==="Ink & Toner"?"selected":""}>Ink & Toner</option><option ${p.category==="Binding"?"selected":""}>Binding</option><option ${p.category==="Business Materials"?"selected":""}>Business Materials</option><option ${p.category==="Accessories"?"selected":""}>Accessories</option></select></div>
+    <div class="field"><label>Price (₦)</label><input id="pPrice" type="number" value="${p.price}"></div>
+    <div class="field"><label>Stock Level</label><input id="pStock" type="number" value="${p.stock}"></div>
+    <div class="field"><label>SKU</label><input id="pSku" value="${p.sku}"></div>
+  `;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="secondary" onclick="closeModal()">Cancel</button>
+    <button class="primary" onclick="submitEditProduct('${id}')">Save Changes</button>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+async function submitEditProduct(id) {
+  let token = localStorage.getItem("gv_admin_token");
+  let name = document.getElementById("pName").value.trim();
+  let desc = document.getElementById("pDesc").value.trim();
+  let cat = document.getElementById("pCat").value;
+  let price = Number(document.getElementById("pPrice").value) || 0;
+  let stock = Number(document.getElementById("pStock").value) || 0;
+  let sku = document.getElementById("pSku").value.trim();
+
+  try {
+    let res = await fetch("../api/admin/gemprint/products/" + id, {
+      method: "PATCH",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ name, description: desc, category: cat, price, stock, sku })
+    });
+    let json = await res.json();
+    if (json.success) {
+      closeModal();
+      alert("✓ Product updated successfully!");
+      fetchGemPrintAdminData();
+    } else {
+      alert("Error: " + json.message);
+    }
+  } catch(e) {
+    alert("Connection error.");
+  }
+}
+
+async function deleteProduct(id) {
+  if (!confirm("Are you sure you want to delete this product?")) return;
+  let token = localStorage.getItem("gv_admin_token");
+  try {
+    let res = await fetch("../api/admin/gemprint/products/" + id, {
+      method: "DELETE",
+      headers: { "Authorization": "Bearer " + token }
+    });
+    let json = await res.json();
+    if (json.success) {
+      alert("✓ Product deleted successfully!");
+      fetchGemPrintAdminData();
+    }
+  } catch(e) {
+    alert("Connection error.");
+  }
+}
+
+function openUpdateStockModal(id, currentStock) {
+  document.getElementById('modalTitle').textContent = 'Quick Adjust Stock';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field"><label>Adjust Stock Level</label><input id="pStockVal" type="number" value="${currentStock}"></div>
+  `;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="secondary" onclick="closeModal()">Cancel</button>
+    <button class="primary" onclick="submitStockVal('${id}')">Save</button>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+async function submitStockVal(id) {
+  let token = localStorage.getItem("gv_admin_token");
+  let stock = Number(document.getElementById("pStockVal").value) || 0;
+  try {
+    let res = await fetch("../api/admin/gemprint/products/" + id, {
+      method: "PATCH",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ stock })
+    });
+    let json = await res.json();
+    if (json.success) {
+      closeModal();
+      fetchGemPrintAdminData();
+    }
+  } catch(e) {
+    alert("Connection error.");
+  }
+}
+
+function openChangeOrderStatusModal(id, currentStatus) {
+  document.getElementById('modalTitle').textContent = 'Manage Order ' + id;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field"><label>Update Order Status</label><select id="orderStatusVal"><option ${currentStatus==="Pending Payment"?"selected":""}>Pending Payment</option><option ${currentStatus==="Payment Confirmed"?"selected":""}>Payment Confirmed</option><option ${currentStatus==="Processing"?"selected":""}>Processing</option><option ${currentStatus==="Out for Delivery"?"selected":""}>Out for Delivery</option><option ${currentStatus==="Delivered"?"selected":""}>Delivered</option><option ${currentStatus==="Cancelled"?"selected":""}>Cancelled</option></select></div>
+  `;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="secondary" onclick="closeModal()">Cancel</button>
+    <button class="primary" onclick="submitOrderStatus('${id}')">Update Status</button>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+async function submitOrderStatus(id) {
+  let token = localStorage.getItem("gv_admin_token");
+  let status = document.getElementById("orderStatusVal").value;
+  try {
+    let res = await fetch("../api/admin/gemprint/orders/" + id + "/status", {
+      method: "PATCH",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ status })
+    });
+    let json = await res.json();
+    if (json.success) {
+      closeModal();
+      fetchGemPrintAdminData();
+    }
+  } catch(e) {
+    alert("Connection error.");
+  }
+}
+
+function openChangeJobStatusModal(id, currentStatus) {
+  document.getElementById('modalTitle').textContent = 'Manage Print Job ' + id;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field"><label>Update Printing Stage</label><select id="jobStatusVal"><option ${currentStatus==="Submitted"?"selected":""}>Submitted</option><option ${currentStatus==="Payment Confirmed"?"selected":""}>Payment Confirmed</option><option ${currentStatus==="Queued"?"selected":""}>Queued</option><option ${currentStatus==="Processing"?"selected":""}>Processing</option><option ${currentStatus==="Printing"?"selected":""}>Printing</option><option ${currentStatus==="Finishing"?"selected":""}>Finishing</option><option ${currentStatus==="Ready"?"selected":""}>Ready</option><option ${currentStatus==="Out for Delivery"?"selected":""}>Out for Delivery</option><option ${currentStatus==="Completed"?"selected":""}>Completed</option><option ${currentStatus==="Cancelled"?"selected":""}>Cancelled</option></select></div>
+  `;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="secondary" onclick="closeModal()">Cancel</button>
+    <button class="primary" onclick="submitJobStatus('${id}')">Update Status</button>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+async function submitJobStatus(id) {
+  let token = localStorage.getItem("gv_admin_token");
+  let status = document.getElementById("jobStatusVal").value;
+  try {
+    let res = await fetch("../api/admin/gemprint/jobs/" + id + "/status", {
+      method: "PATCH",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ status })
+    });
+    let json = await res.json();
+    if (json.success) {
+      closeModal();
+      fetchGemPrintAdminData();
+    }
+  } catch(e) {
+    alert("Connection error.");
+  }
+}
+
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+</script>
+</body>
+</html>

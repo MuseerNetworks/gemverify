@@ -1,0 +1,16 @@
+<FilesMatch "^\.env">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Disable Directory Listings
+Options -Indexes
+
+# Suppress PHP Error Outputs
+php_flag display_errors Off
+php_flag log_errors On
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]

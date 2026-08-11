@@ -1,0 +1,70 @@
+/**
+ * GemVerify Shared Components
+ * Buttons, Inputs, Cards, Badges, Pills, Modals
+ */
+
+.gv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-weight: 800;
+  font-size: 14px;
+  transition: all .18s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.gv-btn-primary {
+  background: linear-gradient(135deg, var(--gv-blue) 0%, #0040cc 100%);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(0, 80, 255, .22);
+}
+
+.gv-btn-primary:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(0, 80, 255, .32);
+}
+
+.gv-btn-secondary {
+  border: 1px solid var(--gv-line);
+  background: var(--gv-card);
+  color: var(--gv-text);
+}
+
+.gv-btn-secondary:hover {
+  background: var(--gv-surface);
+}
+
+.gv-card {
+  background: var(--gv-card);
+  border: 1px solid var(--gv-line);
+  border-radius: var(--gv-radius);
+  box-shadow: var(--gv-shadow);
+  overflow: hidden;
+}
+
+.gv-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 99px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.gv-pill-green { background: #eaf8ef; color: #15803d; }
+.gv-pill-amber { background: #fff7e6; color: #b45309; }
+.gv-pill-blue  { background: #eaf4ff; color: #0369a1; }
+.gv-pill-red   { background: #fff0f0; color: #b91c1c; }
+
+body.dark-mode .gv-pill-green { background: #064e3b; color: #6ee7b7; }
+body.dark-mode .gv-pill-amber { background: #451a03; color: #fcd34d; }
+body.dark-mode .gv-pill-blue  { background: #0c4a6e; color: #7dd3fc; }
+body.dark-mode .gv-pill-red   { background: #450a0a; color: #fca5a5; }
