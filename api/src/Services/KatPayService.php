@@ -12,19 +12,24 @@ use RuntimeException;
  */
 class KatPayService {
 
-    private string $publicKey;
+    private string $apiKey;
     private string $secretKey;
     private string $merchantId;
+    private array $bankCodes;
     private string $webhookSecret;
     private string $baseUrl;
 
     public function __construct() {
-        $this->publicKey     = KATPAY_PUBLIC_KEY;
+        $this->apiKey        = KATPAY_API_KEY;
         $this->secretKey     = KATPAY_SECRET_KEY;
         $this->merchantId    = KATPAY_MERCHANT_ID;
         $this->webhookSecret = KATPAY_WEBHOOK_SECRET;
         $this->baseUrl       = KATPAY_BASE_URL;
+        
+        $rawCodes = KATPAY_BANK_CODES;
+        $this->bankCodes     = !empty($rawCodes) ? array_map('trim', explode(',', $rawCodes)) : ['PALMPAY'];
     }
+
 
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -99,9 +104,10 @@ class KatPayService {
             'name'        => $params['customer_name'],
             'email'       => $params['customer_email'],
             'phoneNumber' => $params['customer_phone'] ?? '',
-            'bankCode'    => $params['bankCode'] ?? ['PALMPAY'],
+            'bankCode'    => $this->bankCodes,
             'merchantID'  => $this->merchantId,
         ];
+
 
         // Undocumented but safe to pass for backward compatibility or future use
         if (!empty($params['merchant_reference'])) {
@@ -218,6 +224,7 @@ class KatPayService {
             'Authorization: Bearer ' . $this->secretKey,
             'Content-Type: application/json',
             'Accept: application/json',
+            'api-key: ' . $this->apiKey,
         ];
 
         $ch = curl_init();
@@ -272,11 +279,12 @@ class KatPayService {
                 'KatPay is not configured. Please set KATPAY_SECRET_KEY in your .env file.'
             );
         }
-        if (empty($this->publicKey) || $this->publicKey === 'your_katpay_public_key_here') {
+        if (empty($this->apiKey) || $this->apiKey === 'your_katpay_api_key_here') {
             throw new RuntimeException(
-                'KatPay is not configured. Please set KATPAY_PUBLIC_KEY in your .env file.'
+                'KatPay is not configured. Please set KATPAY_API_KEY in your .env file.'
             );
         }
+
         if (empty($this->merchantId) || $this->merchantId === 'your_katpay_merchant_id_here') {
             throw new RuntimeException(
                 'KatPay is not configured. Please set KATPAY_MERCHANT_ID in your .env file.'
