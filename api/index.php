@@ -41,8 +41,8 @@ if (strpos($uri, '?') !== false) {
     $uri = substr($uri, 0, strpos($uri, '?'));
 }
 
-// Strip base path: /gemverify/api
-$basePath = '/gemverify/api';
+// Strip base path
+$basePath = API_BASE_PATH;
 if (strpos($uri, $basePath) === 0) {
     $uri = substr($uri, strlen($basePath));
 }
