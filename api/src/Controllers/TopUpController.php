@@ -176,11 +176,11 @@ class TopUpController {
             return;
         }
 
-        $callbackEvent = $payload['event'] ?? '';
+        $callbackEvent = $payload['event'] ?? $payload['event_type'] ?? '';
         $data          = $payload['data'];
 
         // 6. Route by event type
-        if ($callbackEvent === 'virtual_account.credit') {
+        if ($callbackEvent === 'virtual_account.credit' || $callbackEvent === 'virtual_account.payment_received') {
             // Static virtual account deposit
             $this->handleVirtualAccountCredit($data, $rawBody, $deliveryId, $katpay);
             return;
@@ -192,6 +192,7 @@ class TopUpController {
             echo json_encode(['received' => true, 'note' => 'Unhandled event type: ' . $callbackEvent]);
             return;
         }
+
 
         $merchantRef    = $data['merchant_reference'] ?? '';
         $callbackStatus = $data['status']             ?? '';
@@ -440,10 +441,18 @@ class TopUpController {
     ): void {
         $db = db();
 
-        // Expected fields from KatPay virtual_account.credit payload:
-        // merchant_reference (= "GVU_{user_id}"), amount_credited, account_number, status
-        $merchantRef    = $data['merchant_reference'] ?? '';
-        $amountCredited = (float) ($data['amount_credited'] ?? $data['amount'] ?? 0);
+        // Extract merchant reference with robust fallbacks (supports documented and undocumented keys)
+        $merchantRef = $data['merchant_reference'] 
+            ?? ($data['transaction']['reference'] ?? '')
+            ?? ($data['virtual_account']['provider_reference'] ?? '');
+
+        // Extract amount credited with robust fallbacks
+        $amountCredited = (float) (
+            $data['amount_credited'] 
+            ?? ($data['amount'] ?? 0)
+            ?? ($data['transaction']['order_amount'] ?? 0)
+        );
+
 
         if (empty($merchantRef) || $amountCredited <= 0) {
             http_response_code(400);

@@ -12,15 +12,20 @@ use RuntimeException;
  */
 class KatPayService {
 
+    private string $publicKey;
     private string $secretKey;
+    private string $merchantId;
     private string $webhookSecret;
     private string $baseUrl;
 
     public function __construct() {
+        $this->publicKey     = KATPAY_PUBLIC_KEY;
         $this->secretKey     = KATPAY_SECRET_KEY;
+        $this->merchantId    = KATPAY_MERCHANT_ID;
         $this->webhookSecret = KATPAY_WEBHOOK_SECRET;
         $this->baseUrl       = KATPAY_BASE_URL;
     }
+
 
     // ──────────────────────────────────────────────────────────────────────────
     // PUBLIC METHODS
@@ -91,21 +96,23 @@ class KatPayService {
         $this->assertConfigured();
 
         $body = [
-            'customer_name'      => $params['customer_name'],
-            'customer_email'     => $params['customer_email'],
-            'callback_url'       => $params['callback_url'],
-            'merchant_reference' => $params['merchant_reference'],
-            'currency'           => 'NGN',
+            'name'        => $params['customer_name'],
+            'email'       => $params['customer_email'],
+            'phoneNumber' => $params['customer_phone'] ?? '',
+            'bankCode'    => $params['bankCode'] ?? ['PALMPAY'],
+            'merchantID'  => $this->merchantId,
         ];
 
-        if (!empty($params['customer_phone'])) {
-            $body['customer_phone'] = $params['customer_phone'];
+        // Undocumented but safe to pass for backward compatibility or future use
+        if (!empty($params['merchant_reference'])) {
+            $body['merchant_reference'] = $params['merchant_reference'];
         }
         if (!empty($params['metadata']) && is_array($params['metadata'])) {
             $body['metadata'] = $params['metadata'];
         }
 
         $response = $this->post('/virtual-accounts', $body);
+
 
         if (empty($response['success']) || empty($response['data'])) {
             throw new RuntimeException(
@@ -265,5 +272,16 @@ class KatPayService {
                 'KatPay is not configured. Please set KATPAY_SECRET_KEY in your .env file.'
             );
         }
+        if (empty($this->publicKey) || $this->publicKey === 'your_katpay_public_key_here') {
+            throw new RuntimeException(
+                'KatPay is not configured. Please set KATPAY_PUBLIC_KEY in your .env file.'
+            );
+        }
+        if (empty($this->merchantId) || $this->merchantId === 'your_katpay_merchant_id_here') {
+            throw new RuntimeException(
+                'KatPay is not configured. Please set KATPAY_MERCHANT_ID in your .env file.'
+            );
+        }
     }
+
 }

@@ -83,11 +83,14 @@ define('TECHHUB_TIMEOUT',   (int)(getenv('TECHHUB_TIMEOUT') ?: 30));
 
 // ── KatPay Payment Gateway Configuration ────────────────────────────────────
 // These values come exclusively from .env — never hardcoded, never exposed to frontend.
+define('KATPAY_PUBLIC_KEY',   getenv('KATPAY_PUBLIC_KEY')   ?: '');
 define('KATPAY_SECRET_KEY',   getenv('KATPAY_SECRET_KEY')   ?: '');
+define('KATPAY_MERCHANT_ID',  getenv('KATPAY_MERCHANT_ID')  ?: '');
 define('KATPAY_WEBHOOK_SECRET', getenv('KATPAY_WEBHOOK_SECRET') ?: '');
 define('KATPAY_BASE_URL',     rtrim(getenv('KATPAY_BASE_URL') ?: 'https://api.katpay.co/v1', '/'));
 define('KATPAY_CALLBACK_URL', getenv('KATPAY_CALLBACK_URL') ?: '');
 define('KATPAY_MIN_TOPUP',    (float)(getenv('KATPAY_MIN_TOPUP') ?: 100));
+
 
 if (APP_DEBUG) {
     ini_set('display_errors', 1);
