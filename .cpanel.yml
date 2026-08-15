@@ -2,4 +2,9 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/yyrigitd/gemverify.com.ng/
-    - rsync -av --delete --exclude='.git/' --exclude='.gitignore' --exclude='tools/' --exclude='api/.env' --exclude='api/database/test_db.php' --exclude='api/check.php' --exclude='api/debug_*.php' --exclude='api/debug_*.ps1' --exclude='api/test_*.php' --exclude='api/test_*.ps1' --exclude='api/audit_*.ps1' --exclude='api/run_*.ps1' --exclude='api/verify_fresh_flow.ps1' --exclude='api/verify_pricing_flow.php' --exclude='logs/' --exclude='storage/' . $DEPLOYPATH
+    - /bin/cp index.html $DEPLOYPATH
+    - /bin/cp .htaccess $DEPLOYPATH
+    - /bin/cp -R admin $DEPLOYPATH
+    - /bin/cp -R api $DEPLOYPATH
+    - /bin/cp -R assets $DEPLOYPATH
+    - /bin/cp -R user $DEPLOYPATH
