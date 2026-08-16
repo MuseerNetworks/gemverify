@@ -315,6 +315,42 @@ class AuthController {
         $token = JWT::encode($payload);
         Response::success(['token' => $token]);
     }
+
+    public function changePassword(): void {
+        $userId = AuthMiddleware::getUserId();
+        $data = $this->getJsonInput();
+        
+        $v = new \Helpers\Validator($data);
+        $v->required('current_password')
+          ->required('new_password')
+          ->password('new_password', 8);
+
+        if (($data['new_password'] ?? '') !== ($data['confirm_new_password'] ?? '')) {
+            Response::error('New passwords do not match', ['confirm_new_password' => ['New passwords do not match']], 422);
+            return;
+        }
+
+        if ($v->fails()) {
+            Response::error('Validation failed', $v->errors(), 422);
+            return;
+        }
+        
+        $db = db();
+        $stmt = $db->prepare("SELECT password_hash FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$user || !password_verify($data['current_password'], $user['password_hash'])) {
+            Response::error('Current password is incorrect', [], 400);
+            return;
+        }
+        
+        $passwordHash = password_hash($data['new_password'], PASSWORD_BCRYPT);
+        $stmt = $db->prepare("UPDATE users SET password_hash = ? WHERE id = ?");
+        $stmt->execute([$passwordHash, $userId]);
+        
+        Response::success([], 'Password changed successfully');
+    }
 }
 
 
