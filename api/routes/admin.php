@@ -13,6 +13,12 @@ use Controllers\Admin\ApiTransactionController;
 addRoute('GET',  '/admin/setup', function () { (new \Controllers\AuthController())->checkSetupRequired(); });
 addRoute('POST', '/admin/setup', function () { (new \Controllers\AuthController())->createFirstAdmin(); });
 
+// ── Admin Account Management (super_admin only) ───────────────────────────────
+addRoute('GET',   '/admin/admins',                 function ()    { (new \Controllers\Admin\AdminManagementController())->listAdmins(); });
+addRoute('POST',  '/admin/admins',                 function ()    { (new \Controllers\Admin\AdminManagementController())->createAdmin(); });
+addRoute('PATCH', '/admin/admins/{id}/role',       function ($p)  { (new \Controllers\Admin\AdminManagementController())->updateRole((int)$p['id']); });
+addRoute('PATCH', '/admin/admins/{id}/active',     function ($p)  { (new \Controllers\Admin\AdminManagementController())->toggleActive((int)$p['id']); });
+
 // Admin Stats & Services Management
 addRoute('GET',   '/admin/stats',                           function () { (new StatsController())->getStats(); });
 addRoute('GET',   '/admin/services',                        function () { (new StatsController())->getServices(); });

@@ -410,18 +410,18 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     </div>
     </div>
   </nav>
-  <div class="admin-mini"><div class="user-chip"><div class="avatar">SA</div><div><b>Super Admin</b><small>Full access</small></div></div></div>
+  <div class="admin-mini"><div class="user-chip" id="sidebarAdminChip" onclick="go('admin-profile',this)" title="Admin Profile" style="cursor:pointer"><div class="avatar" style="background:#dbeafe;color:var(--blue)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div><div><b id="sidebarAdminName">Administrator</b><small id="sidebarAdminRole">Loading...</small></div></div></div>
 </aside>
 
 <main class="main">
 <header class="top">
   <div class="top-left"><button class="hamb" aria-label="Toggle navigation" onclick="toggleSidebar()">☰</button><input class="search" placeholder="Search users, requests, reference..."></div>
-  <div class="top-actions"><button class="icon-btn" id="darkToggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button><button class="icon-btn">⌕</button><button class="icon-btn">♧</button><div class="avatar">SA</div></div>
+  <div class="top-actions"><button class="icon-btn" id="darkToggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button><button class="icon-btn">⌕</button><button class="icon-btn">♧</button><div class="avatar" id="navAdminAvatar" onclick="go('admin-profile',this)" title="Admin Profile" style="cursor:pointer;background:#dbeafe;color:var(--blue)"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div></div>
 </header>
 
 <div class="content">
 <section id="page-dashboard" class="page active">
-  <div class="heading"><div><h1>Good morning, Admin</h1><p>Here's what is happening across GemVerify today.</p></div><button class="primary" onclick="go('requests')">View Manual Queue</button></div>
+  <div class="heading"><div><h1 id="dashGreeting">Good morning, Admin</h1><p>Here's what is happening across GemVerify today.</p></div><button class="primary" onclick="go('requests')">View Manual Queue</button></div>
   <div class="grid4">
     <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Registered Accounts" onclick="openKpiPage('registered-accounts')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('registered-accounts')"><div class="stat-top"><small>Registered Accounts</small><div class="ico">♙</div></div><strong id="statRegUsers">0</strong><span class="delta">Live accounts</span></div>
     <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Active Today" onclick="openKpiPage('active-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('active-today')"><div class="stat-top"><small>Active Today</small><div class="ico">●</div></div><strong id="statActiveUsers">0</strong><span class="delta">Active sessions</span></div>
@@ -534,9 +534,9 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 </section>
 <section id="page-gemprint" class="page"><div class="heading"><div><h1>GemPrint</h1><p>Materials, orders, inventory and printing jobs.</p></div><button class="primary">+ Add Product</button></div><div class="grid4"><div class="stat"><small>Products</small><strong>0</strong></div><div class="stat"><small>Pending Orders</small><strong>0</strong></div><div class="stat"><small>Print Jobs</small><strong>0</strong></div><div class="stat"><small>Today's Sales</small><strong>₦0</strong></div></div><div class="card" style="margin-top:16px"><div class="card-head"><h3>Printing Job Queue</h3><span>Payment Confirmed → Queued → Processing → Printing → Finishing → Ready → Out for Delivery → Completed</span></div><table><thead><tr><th>Job</th><th>Customer</th><th>Service</th><th>Stage</th></tr></thead><tbody><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">No print jobs in queue.</td></tr></tbody></table></div></section>
 
-<section id="page-analytics" class="page"><div class="heading"><div><h1>Analytics</h1><p>Platform performance overview.</p></div></div><div class="grid4"><div class="stat"><small>Verification Volume</small><strong>0</strong><span class="delta">0%</span></div><div class="stat"><small>Manual Completion</small><strong>100%</strong><span class="delta">0%</span></div><div class="stat"><small>GemPrint Orders</small><strong>0</strong><span class="delta">0%</span></div><div class="stat"><small>Avg. Processing</small><strong>0m</strong><span class="delta">0m</span></div></div></section>
+<section id="page-analytics" class="page"><div class="heading"><div><h1>Analytics</h1><p>Platform performance overview.</p></div></div><div class="grid4"><div class="stat"><small>Verification Volume</small><strong>0</strong><span class="delta">0%</span></div><div class="stat"><small>Manual Completion</small><strong id="statManualCompletion">0%</strong><span class="delta">0%</span></div><div class="stat"><small>GemPrint Orders</small><strong>0</strong><span class="delta">0%</span></div><div class="stat"><small>Avg. Processing</small><strong>0m</strong><span class="delta">0m</span></div></div></section>
 
-<section id="page-admins" class="page"><div class="heading"><div><h1>Admin Users</h1><p>Roles and access control.</p></div><button class="primary">+ Add Admin</button></div><div class="card"><table><thead><tr><th>Admin</th><th>Role</th><th>Last Active</th><th>Status</th></tr></thead><tbody><tr><td data-label="Admin"><b>Super Admin</b></td><td data-label="Role">Full Access</td><td data-label="Last Active">Now</td><td data-label="Status"><span class="pill green">Active</span></td></tr><tr><td data-label="Admin">Operations Admin</td><td data-label="Role">Manual Processing</td><td data-label="Last Active">Active</td><td data-label="Status"><span class="pill green">Active</span></td></tr><tr><td data-label="Admin">Support Admin</td><td data-label="Role">Support</td><td data-label="Last Active">Active</td><td data-label="Status"><span class="pill green">Active</span></td></tr></tbody></table></div></section>
+<section id="page-admins" class="page"><div class="heading"><div><h1>Admin Users</h1><p>Roles and access control.</p></div></div><div class="card"><table><thead><tr><th>Admin</th><th>Role</th><th>Last Active</th><th>Status</th></tr></thead><tbody id="adminOverviewTbody"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">Loading administrators...</td></tr></tbody></table></div></section>
 
 <section id="page-audit" class="page"><div class="heading"><div><h1>Audit Logs</h1><p>Track sensitive administrative actions.</p></div></div><div class="card"><table><thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th></tr></thead><tbody><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">No audit actions logged. Clean installation state.</td></tr></tbody></table></div></section>
 
@@ -899,6 +899,67 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     </tbody></table>
   </div>
 </section>
+
+<!-- ── Admin Profile Page ─────────────────────────────────────────── -->
+<section id="page-admin-profile" class="page">
+  <div class="heading"><div><h1>Admin Profile</h1><p>Your account details and administrator management.</p></div></div>
+
+  <!-- My Profile Card -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:20px;padding:8px 0 20px">
+      <div style="width:64px;height:64px;border-radius:16px;background:var(--blue);display:grid;place-items:center;color:#fff;flex-shrink:0">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </div>
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--text)" id="profileName">—</div>
+        <div style="font-size:13px;color:var(--muted)" id="profileEmail">—</div>
+        <div style="margin-top:6px"><span class="pill green" id="profileRole">—</span></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;border-top:1px solid var(--line);padding-top:16px">
+      <div><small style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px">Last Login</small><div style="font-weight:600;font-size:13px;margin-top:3px" id="profileLastLogin">—</div></div>
+      <div><small style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px">Account Status</small><div style="font-weight:600;font-size:13px;margin-top:3px;color:#16a34a">Active</div></div>
+    </div>
+  </div>
+
+  <!-- All Administrators Table -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div><h2 style="font-size:15px;margin:0">All Administrators</h2><p style="font-size:12px;color:var(--muted);margin:2px 0 0">Manage admin accounts and access levels.</p></div>
+    </div>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th id="adminTableActionsHeader" style="display:none">Actions</th></tr></thead>
+      <tbody id="adminListTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading administrators...</td></tr></tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- Create New Admin Card (super_admin only) -->
+  <div class="card" id="createAdminCard" style="display:none">
+    <h2 style="font-size:15px;margin:0 0 4px">Create New Administrator</h2>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 20px">Add a new admin or support user to your team.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="field"><label>Full Name</label><input type="text" id="newAdminName" placeholder="e.g. Jane Doe"></div>
+      <div class="field"><label>Email Address</label><input type="email" id="newAdminEmail" placeholder="e.g. jane@gemverify.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="newAdminPassword" placeholder="Min. 8 characters"></div>
+      <div class="field"><label>Confirm Password</label><input type="password" id="newAdminConfirm" placeholder="Repeat password"></div>
+      <div class="field"><label>Role</label>
+        <select id="newAdminRole">
+          <option value="admin">Administrator — Full operations access</option>
+          <option value="support">Support — Notes and document access only</option>
+        </select>
+      </div>
+    </div>
+    <div id="createAdminErr" style="display:none;background:#fef2f2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px"></div>
+    <div id="createAdminOk" style="display:none;background:#eaf8ef;color:#15803d;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px"></div>
+    <div style="margin-top:16px">
+      <button class="primary" id="createAdminBtn" onclick="gvCreateAdmin()" style="padding:10px 24px;font-size:13px">Create Administrator</button>
+    </div>
+  </div>
+</section>
+<!-- ── End Admin Profile Page ─────────────────────────────────────── -->
+
 </div>
 </main>
 </section>
@@ -1312,6 +1373,7 @@ async function login(){
     }
     localStorage.setItem('gv_admin_token', json.data.token);
     localStorage.setItem('gv_admin', JSON.stringify(json.data.admin));
+    setTimeout(gvInitProfileUI, 50);
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').classList.add('on');
     fetchDashboardData();
@@ -1514,6 +1576,7 @@ function go(page,btn){
  if(page === "rejected") renderRequestsQueue("rejected", "rejected");
  if(page === "services") fetchAdminServices();
   if(page === "wallet-funding") fetchWalletTopups(1);
+  if(page === "admin-profile") { gvInitProfileUI(); gvLoadAdminList(); }
 }
 function toggleSidebar(){
  const side=document.getElementById('side');
@@ -2703,6 +2766,133 @@ async function submitJobStatus(id) {
 
 function closeModal(){document.getElementById('modal').classList.remove('show')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+
+// ── Admin Profile Page Logic ───────────────────────────────────────────────
+var GV_ROLE_LABELS = { 'super_admin': 'Super Administrator', 'admin': 'Administrator', 'support': 'Support' };
+
+function gvInitProfileUI() {
+  try {
+    var admin = JSON.parse(localStorage.getItem('gv_admin') || '{}');
+    if (!admin.name) return;
+    var nameEl = document.getElementById('sidebarAdminName');
+    var roleEl = document.getElementById('sidebarAdminRole');
+    if (nameEl) nameEl.textContent = admin.name;
+    if (roleEl) roleEl.textContent = GV_ROLE_LABELS[admin.role] || admin.role;
+    var greetEl = document.getElementById('dashGreeting');
+    if (greetEl) {
+      var firstName = admin.name.split(' ')[0];
+      var hr = new Date().getHours();
+      var greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+      greetEl.textContent = greet + ', ' + firstName;
+    }
+    var pName = document.getElementById('profileName');
+    var pEmail = document.getElementById('profileEmail');
+    var pRole = document.getElementById('profileRole');
+    if (pName) pName.textContent = admin.name;
+    if (pEmail) pEmail.textContent = admin.email || '';
+    if (pRole) pRole.textContent = GV_ROLE_LABELS[admin.role] || admin.role;
+    if (admin.role === 'super_admin') {
+      var cc = document.getElementById('createAdminCard');
+      var ah = document.getElementById('adminTableActionsHeader');
+      if (cc) cc.style.display = 'block';
+      if (ah) ah.style.display = '';
+    }
+  } catch(e) {}
+}
+
+async function gvLoadAdminList() {
+  var tbody = document.getElementById('adminListTbody');
+  if (!tbody) return;
+  try {
+    var admin = JSON.parse(localStorage.getItem('gv_admin') || '{}');
+    var token = localStorage.getItem('gv_admin_token') || '';
+    var res = await fetch('../api/admin/admins', { headers: { 'Authorization': 'Bearer ' + token } });
+    var json = await res.json();
+    if (!res.ok || !json.success) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Could not load administrators.</td></tr>'; return; }
+    var admins = json.data || [];
+    if (!admins.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">No administrators found.</td></tr>'; return; }
+    var isSuperAdmin = admin.role === 'super_admin';
+    var currentId = admin.id;
+    var rows = '';
+    for (var i = 0; i < admins.length; i++) {
+      var a = admins[i];
+      var roleLabel = GV_ROLE_LABELS[a.role] || a.role;
+      var statusPill = a.is_active ? '<span class="pill green">Active</span>' : '<span class="pill red">Inactive</span>';
+      var lastLogin = a.last_login_at ? new Date(a.last_login_at).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Never';
+      var isSelf = a.id === currentId;
+      var actionsTd = '<td></td>';
+      if (isSuperAdmin) {
+        if (isSelf) {
+          actionsTd = '<td><span style="color:var(--muted);font-size:12px">You</span></td>';
+        } else {
+          var opts = '';
+          var rlist = ['super_admin','admin','support'];
+          for (var r = 0; r < rlist.length; r++) {
+            opts += '<option value="' + rlist[r] + '"' + (a.role === rlist[r] ? ' selected' : '') + '>' + GV_ROLE_LABELS[rlist[r]] + '</option>';
+          }
+          var tLabel = a.is_active ? 'Deactivate' : 'Activate';
+          var tColor = a.is_active ? '#dc2626' : '#16a34a';
+          actionsTd = '<td style="white-space:nowrap"><select onchange="gvUpdateRole(' + a.id + ',this.value)" style="font-size:12px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);margin-right:8px">' + opts + '</select><button onclick="gvToggleActive(' + a.id + ',' + (a.is_active?1:0) + ')" style="font-size:12px;background:none;border:none;cursor:pointer;font-weight:600;color:' + tColor + '">' + tLabel + '</button></td>';
+        }
+      }
+      rows += '<tr><td><b>' + a.name + '</b></td><td>' + a.email + '</td><td><span class="pill blue" style="font-size:11px">' + roleLabel + '</span></td><td>' + statusPill + '</td><td style="font-size:12px;color:var(--muted)">' + lastLogin + '</td>' + actionsTd + '</tr>';
+    }
+    tbody.innerHTML = rows;
+    // Also refresh the overview admins page tbody if visible
+    var ovTbody = document.getElementById('adminOverviewTbody');
+    if (ovTbody) ovTbody.innerHTML = rows;
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Error loading administrators.</td></tr>'; }
+}
+
+async function gvUpdateRole(adminId, newRole) {
+  var token = localStorage.getItem('gv_admin_token') || '';
+  try {
+    var res = await fetch('../api/admin/admins/' + adminId + '/role', { method:'PATCH', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify({role:newRole}) });
+    var json = await res.json();
+    if (!res.ok) { alert(json.message || 'Failed to update role.'); gvLoadAdminList(); }
+  } catch(e) { alert('Connection error.'); }
+}
+
+async function gvToggleActive(adminId, currentlyActive) {
+  if (!confirm((currentlyActive ? 'Deactivate' : 'Activate') + ' this administrator?')) return;
+  var token = localStorage.getItem('gv_admin_token') || '';
+  try {
+    var res = await fetch('../api/admin/admins/' + adminId + '/active', { method:'PATCH', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'} });
+    var json = await res.json();
+    if (res.ok && json.success) { gvLoadAdminList(); }
+    else { alert(json.message || 'Failed to update status.'); }
+  } catch(e) { alert('Connection error.'); }
+}
+
+async function gvCreateAdmin() {
+  var name = (document.getElementById('newAdminName').value || '').trim();
+  var email = (document.getElementById('newAdminEmail').value || '').trim();
+  var pass = document.getElementById('newAdminPassword').value || '';
+  var confirm = document.getElementById('newAdminConfirm').value || '';
+  var role = document.getElementById('newAdminRole').value;
+  var errEl = document.getElementById('createAdminErr');
+  var okEl = document.getElementById('createAdminOk');
+  var btn = document.getElementById('createAdminBtn');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+  if (!name || !email || !pass || !confirm) { errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return; }
+  if (pass.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
+  if (pass !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Creating...';
+  var token = localStorage.getItem('gv_admin_token') || '';
+  try {
+    var res = await fetch('../api/admin/admins', { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify({name:name,email:email,password:pass,confirm_password:confirm,role:role}) });
+    var json = await res.json();
+    if (!res.ok || !json.success) { errEl.textContent = json.message || 'Failed to create administrator.'; errEl.style.display = 'block'; }
+    else { okEl.textContent = 'Administrator "' + name + '" created successfully!'; okEl.style.display = 'block'; document.getElementById('newAdminName').value=''; document.getElementById('newAdminEmail').value=''; document.getElementById('newAdminPassword').value=''; document.getElementById('newAdminConfirm').value=''; gvLoadAdminList(); }
+  } catch(e) { errEl.textContent = 'Connection error.'; errEl.style.display = 'block'; }
+  btn.disabled = false; btn.textContent = 'Create Administrator';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var t = localStorage.getItem('gv_admin_token');
+  if (t) { setTimeout(gvInitProfileUI, 150); }
+});
+// ── End Admin Profile Page Logic ──────────────────────────────────────────
 </script>
 </body>
 </html>
