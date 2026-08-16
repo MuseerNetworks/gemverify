@@ -140,10 +140,10 @@ class AuthController {
             'email' => $user['email'],
             'business_name' => $user['business_name'],
             'type' => 'user'
-        ]);
+        ], JWT_SECRET, 28800); // 8 hours absolute expiry
 
         setcookie("gv_token", $token, [
-            'expires' => time() + 86400 * 30, // 30 days
+            'expires' => time() + 28800, // 8 hours absolute cookie expiry
             'path' => '/',
             'secure' => isset($_SERVER['HTTPS']),
             'httponly' => true,
@@ -197,10 +197,10 @@ class AuthController {
             'name' => $admin['name'],
             'role' => $admin['role'],
             'type' => 'admin'
-        ]);
+        ], JWT_SECRET, 7200); // 2 hours absolute expiry
 
         setcookie("gv_admin_token", $token, [
-            'expires' => time() + 86400 * 30, // 30 days
+            'expires' => time() + 7200, // 2 hours absolute cookie expiry
             'path' => '/',
             'secure' => isset($_SERVER['HTTPS']),
             'httponly' => true,
@@ -309,10 +309,14 @@ class AuthController {
     public function refreshToken(): void {
         $payload = AuthMiddleware::getPayload();
         
-        // Exclude exp/iat from old payload
-        unset($payload['iat'], $payload['exp']);
-        
-        $token = JWT::encode($payload);
+        $expiry = 86400; // default fallback (24h)
+        if (($payload['type'] ?? '') === 'user') {
+            $expiry = 28800; // 8h
+        } elseif (($payload['type'] ?? '') === 'admin') {
+            $expiry = 7200; // 2h
+        }
+
+        $token = JWT::encode($payload, JWT_SECRET, $expiry);
         Response::success(['token' => $token]);
     }
 

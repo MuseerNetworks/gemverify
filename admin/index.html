@@ -909,6 +909,39 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 <div id="modal" class="modal"><div class="modal-box"><div class="modal-head"><h3 id="modalTitle">Edit</h3><button class="secondary" onclick="closeModal()">✕</button></div><div id="modalBody" class="modal-body"></div><div id="modalFoot" class="modal-foot"></div></div></div>
 
 <script>
+  // Global inactivity detector (10 minutes for Admin)
+  (function() {
+    let idleTime = 0;
+    const idleLimit = 10 * 60 * 1000; // 10 minutes
+
+    function resetTimer() {
+      idleTime = 0;
+    }
+
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach(name => {
+      window.addEventListener(name, resetTimer, true);
+    });
+
+    setInterval(() => {
+      const token = localStorage.getItem('gv_admin_token');
+      if (token) {
+        idleTime += 1000;
+        if (idleTime >= idleLimit) {
+          console.warn("Admin session expired due to inactivity.");
+          localStorage.removeItem('gv_admin_token');
+          localStorage.removeItem('gv_admin');
+          if (typeof logout === 'function') {
+            logout();
+          }
+          idleTime = 0;
+        }
+      } else {
+        idleTime = 0;
+      }
+    }, 1000);
+  })();
+
 // ── API Transactions Admin (TH-27/28/29) ─────────────────────────────────────
 let atxnCurrentPage = 1;
 let atxnCurrentRef  = null;

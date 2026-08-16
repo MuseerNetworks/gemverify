@@ -892,6 +892,37 @@ aside .mt-1.space-y-1 {
   <div id="root"></div>
   
   <script type="module">
+  // Global inactivity detector (15 minutes for Portal User)
+  (function() {
+    let idleTime = 0;
+    const idleLimit = 15 * 60 * 1000; // 15 minutes
+
+    function resetTimer() {
+      idleTime = 0;
+    }
+
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach(name => {
+      window.addEventListener(name, resetTimer, true);
+    });
+
+    setInterval(() => {
+      const token = localStorage.getItem('gv_token');
+      if (token) {
+        idleTime += 1000;
+        if (idleTime >= idleLimit) {
+          console.warn("Session expired due to inactivity.");
+          if (typeof window.gvLogout === 'function') {
+            window.gvLogout();
+          }
+          idleTime = 0;
+        }
+      } else {
+        idleTime = 0;
+      }
+    }, 1000);
+  })();
+
 window.getServicePrice = (slug, variantKey = null) => {
   let db = window.gvDbPricing || {};
   let svc = db[slug];
