@@ -218,6 +218,63 @@ class AuthController {
         ], 'Admin login successful');
     }
 
+    // ── First-Admin Setup ────────────────────────────────────────────────────
+
+    /**
+     * GET /admin/setup
+     * Returns whether first-admin setup is required (zero admins in DB).
+     * Public endpoint — no authentication required.
+     */
+    public function checkSetupRequired(): void {
+        $db    = db();
+        $count = (int) $db->query("SELECT COUNT(*) FROM admins")->fetchColumn();
+        Response::success(['setup_required' => $count === 0]);
+    }
+
+    /**
+     * POST /admin/setup
+     * Creates the very first super_admin account.
+     * Returns 403 immediately if any admin already exists — no exceptions.
+     * Public endpoint — no authentication required.
+     */
+    public function createFirstAdmin(): void {
+        $db    = db();
+        $count = (int) $db->query("SELECT COUNT(*) FROM admins")->fetchColumn();
+
+        // Hard server-side guard — cannot be bypassed by any frontend trick
+        if ($count > 0) {
+            Response::forbidden('Setup is disabled: an administrator account already exists.');
+            return;
+        }
+
+        $data = $this->getJsonInput();
+
+        $v = new Validator($data);
+        $v->required('name')
+          ->required('email')->email('email')
+          ->required('password')->password('password', 8)
+          ->required('confirm_password');
+
+        if ($v->fails()) {
+            Response::error('Validation failed', $v->errors(), 422);
+            return;
+        }
+
+        if (($data['password'] ?? '') !== ($data['confirm_password'] ?? '')) {
+            Response::error('Passwords do not match', ['confirm_password' => ['Passwords do not match']], 422);
+            return;
+        }
+
+        $hash = password_hash($data['password'], PASSWORD_BCRYPT);
+
+        $stmt = $db->prepare(
+            "INSERT INTO admins (name, email, password_hash, role, is_active) VALUES (?, ?, ?, 'super_admin', 1)"
+        );
+        $stmt->execute([trim($data['name']), trim($data['email']), $hash]);
+
+        Response::success([], 'Administrator account created successfully. Please sign in.');
+    }
+
     public function setPin(): void {
         $userId = AuthMiddleware::getUserId();
         $data = $this->getJsonInput();

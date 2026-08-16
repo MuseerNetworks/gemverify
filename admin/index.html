@@ -264,12 +264,23 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
       <p class="sub">Sign in to manage GemVerify operations.</p>
       <div class="field"><label>Admin Email</label><input id="email" type="email" placeholder="admin@gemverify.com"></div>
       <div class="field"><label>Password</label><input id="password" type="password" placeholder="Enter your password"></div>
+
+      <!-- ── First-Admin Setup Panel (hidden by default) ─────────────── -->
+      <div id="gv-setup-panel" style="display:none">
+        <div class="field"><label>Full Name</label><input id="setup-name" type="text" placeholder="e.g. John Doe" autocomplete="off"></div>
+        <div class="field"><label>Email Address</label><input id="setup-email" type="email" placeholder="e.g. admin@yourdomain.com" autocomplete="off"></div>
+        <div class="field"><label>Password <span style="font-weight:400;opacity:.7">(min. 8 characters)</span></label><input id="setup-password" type="password" placeholder="Choose a secure password"></div>
+        <div class="field"><label>Confirm Password</label><input id="setup-confirm" type="password" placeholder="Confirm your password"></div>
+        <div id="setup-err" class="err" style="display:none"></div>
+        <div id="setup-ok" style="display:none;background:#eaf8ef;color:#15803d;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:4px;"></div>
+      </div>
+      <!-- ── End Setup Panel ─────────────────────────────────────────── -->
       <div id="loginError" style="display:none;font-size:11px;color:#dc2626;background:#fff0f0;padding:8px 12px;border-radius:8px;margin-bottom:12px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 22px;font-size:11px">
         <label><input type="checkbox"> Remember this device</label>
         <a href="#" style="color:var(--blue);font-weight:800">Forgot password?</a>
       </div>
-      <button id="loginBtn" class="primary" style="width:100%" onclick="login()">Sign In to Admin</button>
+      <button id="loginBtn" class="primary" style="width:100%" onclick="gvAdminAction()">Sign In to Admin</button>
       <p style="font-size:10px;color:#94a3b8;text-align:center;margin-top:18px">Authenticated administrative access only.</p>
     </div>
   </div>
@@ -909,6 +920,116 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 <div id="modal" class="modal"><div class="modal-box"><div class="modal-head"><h3 id="modalTitle">Edit</h3><button class="secondary" onclick="closeModal()">✕</button></div><div id="modalBody" class="modal-body"></div><div id="modalFoot" class="modal-foot"></div></div></div>
 
 <script>
+  // ── First-Admin Setup Boot Check ──────────────────────────────────────────
+  let __gvSetupMode = false;
+
+  async function gvCheckSetup() {
+    try {
+      const res = await fetch('../api/admin/setup');
+      const json = await res.json();
+      if (json.success && json.data && json.data.setup_required === true) {
+        __gvSetupMode = true;
+        // Show setup panel, hide login fields
+        document.getElementById('gv-setup-panel').style.display = 'block';
+        document.getElementById('email').closest('.field').style.display = 'none';
+        document.getElementById('password').closest('.field').style.display = 'none';
+        document.getElementById('loginBtn').textContent = 'Create Administrator Account';
+        // Update heading text
+        var h2 = document.querySelector('#login .login-form h2');
+        if (h2) h2.textContent = 'First-Time Setup';
+        var sub = document.querySelector('#login .login-form .sub');
+        if (sub) sub.textContent = 'No administrators found. Create your first admin account below.';
+      }
+    } catch(e) {
+      // If check fails (network error), silently fall through to login mode
+    }
+  }
+
+  async function gvAdminAction() {
+    if (__gvSetupMode) {
+      await gvCreateFirstAdmin();
+    } else {
+      login();
+    }
+  }
+
+  async function gvCreateFirstAdmin() {
+    const name    = (document.getElementById('setup-name').value || '').trim();
+    const email   = (document.getElementById('setup-email').value || '').trim();
+    const pass    = document.getElementById('setup-password').value || '';
+    const confirm = document.getElementById('setup-confirm').value || '';
+    const errEl   = document.getElementById('setup-err');
+    const okEl    = document.getElementById('setup-ok');
+    const btn     = document.getElementById('loginBtn');
+
+    errEl.style.display = 'none';
+    okEl.style.display = 'none';
+
+    if (!name || !email || !pass || !confirm) {
+      errEl.textContent = 'Please fill in all fields.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (pass.length < 8) {
+      errEl.textContent = 'Password must be at least 8 characters.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (pass !== confirm) {
+      errEl.textContent = 'Passwords do not match.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creating account...';
+
+    try {
+      const res = await fetch('../api/admin/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password: pass, confirm_password: confirm })
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        errEl.textContent = json.message || 'Failed to create account. Please try again.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Create Administrator Account';
+        return;
+      }
+
+      // Success — switch to login mode
+      __gvSetupMode = false;
+      okEl.textContent = '✓ Admin account created! Please sign in with your credentials.';
+      okEl.style.display = 'block';
+      document.getElementById('gv-setup-panel').style.display = 'none';
+      document.getElementById('email').closest('.field').style.display = 'block';
+      document.getElementById('password').closest('.field').style.display = 'block';
+      document.getElementById('email').value = email;
+      document.getElementById('password').value = '';
+      document.getElementById('password').focus();
+      btn.disabled = false;
+      btn.textContent = 'Sign In to Admin';
+
+      var h2 = document.querySelector('#login .login-form h2');
+      if (h2) h2.textContent = 'Welcome back';
+      var sub = document.querySelector('#login .login-form .sub');
+      if (sub) sub.textContent = 'Sign in to manage GemVerify operations.';
+
+    } catch(e) {
+      errEl.textContent = 'Connection error. Please check your internet and try again.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Create Administrator Account';
+    }
+  }
+
+  // Run setup check on page load
+  document.addEventListener('DOMContentLoaded', gvCheckSetup);
+  // ── End First-Admin Setup ─────────────────────────────────────────────────
+
   // Global inactivity detector (10 minutes for Admin)
   (function() {
     let idleTime = 0;

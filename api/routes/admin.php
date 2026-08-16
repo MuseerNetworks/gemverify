@@ -9,6 +9,10 @@ use Controllers\Admin\RefundController;
 use Controllers\Admin\StatsController;
 use Controllers\Admin\ApiTransactionController;
 
+// ── First-Admin Setup (PUBLIC — no auth required) ────────────────────────────
+addRoute('GET',  '/admin/setup', function () { (new \Controllers\AuthController())->checkSetupRequired(); });
+addRoute('POST', '/admin/setup', function () { (new \Controllers\AuthController())->createFirstAdmin(); });
+
 // Admin Stats & Services Management
 addRoute('GET',   '/admin/stats',                           function () { (new StatsController())->getStats(); });
 addRoute('GET',   '/admin/services',                        function () { (new StatsController())->getServices(); });
