@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/config/app.php';
-require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/api/config/app.php';
+require_once __DIR__ . '/api/config/database.php';
 
 $errors = [];
 $success = false;
@@ -87,9 +87,9 @@ try {
                 <p>Your custom Super Admin account is ready.</p>
                 <p><strong>Email:</strong> <code><?php echo htmlspecialchars($email); ?></code></p>
                 <p style="background: #fff7e6; color: #b45309; padding: 10px; border-radius: 8px; font-size: 12px; margin-top: 15px; font-weight: bold;">
-                    CRITICAL: Delete the file <code>api/setup_admin.php</code> from your server right away!
+                    CRITICAL: Delete the file <code>setup_admin.php</code> from your server right away!
                 </p>
-                <a href="../admin/index.html" style="display: inline-block; background: #0050ff; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 15px; font-size: 13px;">Go to Admin Login</a>
+                <a href="admin/index.html" style="display: inline-block; background: #0050ff; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 15px; font-size: 13px;">Go to Admin Login</a>
             </div>
         <?php elseif ($count > 0): ?>
             <h1>Setup Disabled</h1>
@@ -98,14 +98,14 @@ try {
                 ⚠ Admin accounts already exist in the database. This setup tool is disabled to prevent security hijacking.
             </div>
             <div style="text-align:center;">
-                <a href="../admin/index.html" style="color: #0050ff; font-weight: 600; text-decoration: none; font-size: 14px;">Go to Admin Login</a>
+                <a href="admin/index.html" style="color: #0050ff; font-weight: 600; text-decoration: none; font-size: 14px;">Go to Admin Login</a>
             </div>
         <?php else: ?>
             <h1>Setup First Admin</h1>
             <div class="subtitle">Choose your own administrator credentials</div>
             
             <div class="warning">
-                ⚠ Note: After creating the account, you must delete this file (<code>api/setup_admin.php</code>) from your hosting server immediately.
+                ⚠ Note: After creating the account, you must delete this file (<code>setup_admin.php</code>) from your hosting server immediately.
             </div>
             
             <form method="POST">
