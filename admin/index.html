@@ -471,11 +471,12 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 </div>
 
 <div class="cols">
-    <div class="card"><div class="card-head"><h3>Manual Processing Queue</h3><span>Latest requests</span></div>
+    <div class="card" id="dash-queue-card"><div class="card-head"><h3>Manual Processing Queue</h3><span>Latest requests</span></div>
       <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th></th></tr></thead>
-      <tbody>
+      <tbody id="dash-queue-tbody">
         <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No requests currently submitted. Fresh installation state.</td></tr>
       </tbody></table>
+      <div id="dash-queue-pagination" style="display:none;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap"></div>
     </div>
     <div class="card"><div class="card-head"><h3>Workload by Service</h3><span>Live status</span></div>
       <div class="queue">
@@ -504,9 +505,51 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
  </tbody></table></div>
 </section>
 
-<section id="page-users" class="page"><div class="heading"><div><h1>Users</h1><p>Customer accounts and activity.</p></div><button class="secondary">Export</button></div><div class="card"><table><thead><tr><th>User</th><th>Phone</th><th>Wallet</th><th>Requests</th><th>Status</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No customer users registered yet.</td></tr></tbody></table></div></section>
+<section id="page-users" class="page">
+  <div class="heading"><div><h1>Users</h1><p>Customer accounts and activity.</p></div><button class="secondary" onclick="fetchAdminUsers(1,'all')">⟳ Refresh</button></div>
+  <div class="card"><div class="card-head"><h3>All Registered Users</h3><span id="usersCountLabel">Loading...</span></div>
+    <div style="overflow-x:auto"><table style="table-layout:fixed;width:100%">
+      <colgroup><col style="min-width:140px"><col style="width:200px"><col style="width:110px"><col style="width:90px"><col style="width:80px"><col style="width:70px"></colgroup>
+      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th></tr></thead>
+      <tbody id="usersTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading users...</td></tr></tbody>
+    </table></div>
+    <div id="usersPagination" style="display:flex;justify-content:center;gap:8px;margin-top:14px"></div>
+  </div>
+</section>
 
-<section id="page-transactions" class="page"><div class="heading"><div><h1>Transactions</h1><p>Wallet funding, service charges and refunds.</p></div></div><div class="card"><table><thead><tr><th>Reference</th><th>User</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No transactions recorded yet.</td></tr></tbody></table></div></section>
+<section id="page-active-users" class="page">
+  <div class="heading"><div><h1>Active Users</h1><p>Users active in the last 24 hours.</p></div><button class="secondary" onclick="go('users')">← All Users</button></div>
+  <div class="card"><div class="card-head"><h3>Active Users</h3><span id="activeUsersCountLabel">Loading...</span></div>
+    <div style="overflow-x:auto"><table style="table-layout:fixed;width:100%">
+      <colgroup><col style="min-width:140px"><col style="width:200px"><col style="width:110px"><col style="width:90px"><col style="width:80px"><col style="width:70px"></colgroup>
+      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th></tr></thead>
+      <tbody id="activeUsersTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr></tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="page-suspended-users" class="page">
+  <div class="heading"><div><h1>Suspended Users</h1><p>Inactive customer accounts.</p></div><button class="secondary" onclick="go('users')">← All Users</button></div>
+  <div class="card"><div class="card-head"><h3>Suspended Users</h3><span id="suspendedUsersCountLabel">Loading...</span></div>
+    <div style="overflow-x:auto"><table style="table-layout:fixed;width:100%">
+      <colgroup><col style="min-width:140px"><col style="width:200px"><col style="width:110px"><col style="width:90px"><col style="width:80px"><col style="width:70px"></colgroup>
+      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th></tr></thead>
+      <tbody id="suspendedUsersTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr></tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="page-transactions" class="page">
+  <div class="heading"><div><h1>Transactions</h1><p>Wallet credits, debits, refunds and holds.</p></div><button class="secondary" onclick="fetchAdminTransactions(1)">⟳ Refresh</button></div>
+  <div class="card"><div class="card-head"><h3>Wallet Transactions</h3><span id="txnCountLabel">Loading...</span></div>
+    <div style="overflow-x:auto"><table style="table-layout:fixed;width:100%">
+      <colgroup><col style="width:160px"><col style="min-width:140px"><col style="width:80px"><col style="width:90px"><col style="width:90px"><col style="width:80px"><col style="width:130px"></colgroup>
+      <thead><tr><th>Reference</th><th>User</th><th>Type</th><th>Amount (₦)</th><th>Balance After</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody id="txnTbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Loading transactions...</td></tr></tbody>
+    </table></div>
+    <div id="txnPagination" style="display:flex;justify-content:center;gap:8px;margin-top:14px"></div>
+  </div>
+</section>
 
 
 <section id="page-api-transactions" class="page"><div class="heading"><div><h1>API Transactions</h1><p>TechHub-powered service requests — NIN, BVN, Self-Service, Personalization, IPE.</p></div><div style="display:flex;gap:8px;align-items:center"><select id="atxn-filter-status" onchange="fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px"><option value="">All Statuses</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select><input id="atxn-search" type="text" placeholder="Search ref / ticket…" onkeydown="if(event.key==='Enter')fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;width:200px"><button class="primary" onclick="fetchApiTransactions(1)" style="height:36px;padding:0 14px;font-size:13px">🔄 Refresh</button></div></div><div id="atxn-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div><div class="card"><table id="atxn-table"><thead><tr><th>GV Reference</th><th>User</th><th>Service</th><th>Variant</th><th>Method</th><th>Status</th><th>Provider</th><th>Amount</th><th>Submitted</th><th>Actions</th></tr></thead><tbody id="atxn-body"><tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr></tbody></table></div><div id="atxn-pagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px"></div>
@@ -791,18 +834,8 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Refund transactions recorded.</td></tr></tbody></table></div>
 </section>
-<section id="page-active-users" class="page">
-  <div class="heading"><div><h1>Active Users</h1><p>Currently active customer accounts.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>Active Users Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No active user activity logged.</td></tr></tbody></table></div>
-</section>
-<section id="page-suspended-users" class="page">
-  <div class="heading"><div><h1>Suspended Users</h1><p>Suspended customer accounts.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>Suspended Users Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No suspended user accounts.</td></tr></tbody></table></div>
-</section>
+<section id="page-active-users" class="page" style="display:none"><!-- merged above --></section>
+<section id="page-suspended-users" class="page" style="display:none"><!-- merged above --></section>
 <section id="page-notifications" class="page">
   <div class="heading"><div><h1>Notifications</h1><p>Platform and administrative notifications.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Notifications Queue</h3><span>Admin controlled</span></div>
@@ -815,24 +848,9 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No custom roles configured. Standard RBAC active.</td></tr></tbody></table></div>
 </section>
-<section id="page-suspended-users" class="page">
-  <div class="heading"><div><h1>Suspended Users</h1><p>Suspended customer accounts.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>Suspended Users Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No suspended user accounts.</td></tr></tbody></table></div>
-</section>
-<section id="page-notifications" class="page">
-  <div class="heading"><div><h1>Notifications</h1><p>Platform and administrative notifications.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>Notifications Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No administrative notifications.</td></tr></tbody></table></div>
-</section>
-<section id="page-roles" class="page">
-  <div class="heading"><div><h1>Roles & Permissions</h1><p>Admin roles, permissions and access controls.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>Roles & Permissions Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No custom roles configured. Standard RBAC active.</td></tr></tbody></table></div>
-</section>
+<section id="page-suspended-users" class="page" style="display:none"><!-- duplicate --></section>
+<section id="page-notifications" class="page" style="display:none"><!-- duplicate --></section>
+<section id="page-roles" class="page" style="display:none"><!-- duplicate --></section>
 
 
 <section id="page-provider-balance" class="page">
@@ -900,42 +918,47 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   </div>
 </section>
 
-<!-- ── Admin Profile Page ─────────────────────────────────────────── -->
 <section id="page-admin-profile" class="page">
   <div class="heading"><div><h1>Admin Profile</h1><p>Your account details and administrator management.</p></div></div>
 
   <!-- My Profile Card -->
-  <div class="card" style="margin-bottom:20px">
-    <div style="display:flex;align-items:center;gap:20px;padding:8px 0 20px">
+  <div class="card" style="margin-bottom:20px;padding:24px">
+    <div style="display:flex;align-items:center;gap:18px;padding-bottom:20px;border-bottom:1px solid var(--line)">
       <div style="width:64px;height:64px;border-radius:16px;background:var(--blue);display:grid;place-items:center;color:#fff;flex-shrink:0">
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       </div>
-      <div>
-        <div style="font-size:20px;font-weight:700;color:var(--text)" id="profileName">—</div>
-        <div style="font-size:13px;color:var(--muted)" id="profileEmail">—</div>
-        <div style="margin-top:6px"><span class="pill green" id="profileRole">—</span></div>
+      <div style="min-width:0">
+        <div style="font-size:20px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="profileName">—</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="profileEmail">—</div>
+        <div style="margin-top:8px"><span class="pill blue" id="profileRole">—</span></div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;border-top:1px solid var(--line);padding-top:16px">
-      <div><small style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px">Last Login</small><div style="font-weight:600;font-size:13px;margin-top:3px" id="profileLastLogin">—</div></div>
-      <div><small style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px">Account Status</small><div style="font-weight:600;font-size:13px;margin-top:3px;color:#16a34a">Active</div></div>
+    <div style="display:flex;flex-wrap:wrap;gap:28px;padding-top:18px">
+      <div>
+        <small style="color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px">Last Login</small>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-top:4px" id="profileLastLogin">—</div>
+      </div>
+      <div>
+        <small style="color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px">Account Status</small>
+        <div style="font-size:14px;font-weight:600;color:#16a34a;margin-top:4px">Active</div>
+      </div>
     </div>
   </div>
 
   <!-- All Administrators Table -->
   <div class="card" style="margin-bottom:20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div><h2 style="font-size:15px;margin:0">All Administrators</h2><p style="font-size:12px;color:var(--muted);margin:2px 0 0">Manage admin accounts and access levels.</p></div>
+    <div class="card-head">
+      <div><h3>All Administrators</h3><span>Manage admin accounts and access levels.</span></div>
     </div>
     <div style="overflow-x:auto">
     <table style="table-layout:fixed;width:100%">
       <colgroup>
-        <col style="width:150px">
         <col style="min-width:160px">
-        <col style="width:170px">
-        <col style="width:90px">
-        <col style="width:150px">
         <col style="width:190px">
+        <col style="width:160px">
+        <col style="width:80px">
+        <col style="width:140px">
+        <col style="width:180px">
       </colgroup>
       <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th id="adminTableActionsHeader" style="display:none">Actions</th></tr></thead>
       <tbody id="adminListTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading administrators...</td></tr></tbody>
@@ -945,13 +968,14 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 
   <!-- Create New Admin Card (super_admin only) -->
   <div class="card" id="createAdminCard" style="display:none">
-    <h2 style="font-size:15px;margin:0 0 4px">Create New Administrator</h2>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 20px">Add a new admin or support user to your team.</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px">
-      <div class="field"><label>Full Name</label><input type="text" id="newAdminName" placeholder="e.g. Jane Doe"></div>
-      <div class="field"><label>Email Address</label><input type="email" id="newAdminEmail" placeholder="e.g. jane@gemverify.com"></div>
-      <div class="field"><label>Password</label><input type="password" id="newAdminPassword" placeholder="Min. 8 characters"></div>
-      <div class="field"><label>Confirm Password</label><input type="password" id="newAdminConfirm" placeholder="Repeat password"></div>
+    <div class="card-head">
+      <div><h3>Create New Administrator</h3><span>Add a new admin or support user to your team.</span></div>
+    </div>
+    <div style="padding:4px 0 8px;display:grid;grid-template-columns:1fr 1fr;gap:4px 20px">
+      <div class="field"><label>Full Name</label><input type="text" id="newAdminName" placeholder="e.g. Jane Doe" autocomplete="off"></div>
+      <div class="field"><label>Email Address</label><input type="email" id="newAdminEmail" placeholder="e.g. jane@gemverify.com" autocomplete="off"></div>
+      <div class="field"><label>Password</label><input type="password" id="newAdminPassword" placeholder="Min. 8 characters" autocomplete="new-password"></div>
+      <div class="field"><label>Confirm Password</label><input type="password" id="newAdminConfirm" placeholder="Repeat password" autocomplete="new-password"></div>
       <div class="field" style="grid-column:1 / -1"><label>Role</label>
         <select id="newAdminRole">
           <option value="admin">Administrator — Full operations access</option>
@@ -959,11 +983,9 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
         </select>
       </div>
     </div>
-    <div id="createAdminErr" style="display:none;background:#fef2f2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px"></div>
-    <div id="createAdminOk" style="display:none;background:#eaf8ef;color:#15803d;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px"></div>
-    <div style="margin-top:16px">
-      <button class="primary" id="createAdminBtn" onclick="gvCreateAdmin()" style="padding:10px 24px;font-size:13px">Create Administrator</button>
-    </div>
+    <div id="createAdminErr" style="display:none;background:#fef2f2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px"></div>
+    <div id="createAdminOk" style="display:none;background:#eaf8ef;color:#15803d;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px"></div>
+    <button class="primary" id="createAdminBtn" onclick="gvCreateAdmin()" style="padding:10px 28px;font-size:13px">Create Administrator</button>
   </div>
 </section>
 <!-- ── End Admin Profile Page ─────────────────────────────────────── -->
@@ -1424,141 +1446,160 @@ async function fetchDashboardData(){
   } catch(e){}
 }
 
-async function renderLiveQueue(){
-  const token = localStorage.getItem('gv_admin_token');
-  if(!token) return;
-  try {
-    const res = await fetch('../api/admin/requests?per_page=10', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const json = await res.json();
-    if(json.success && json.data) {
-      const rawData = json.data.data || json.data;
-      const list = Array.isArray(rawData) ? rawData : (rawData.requests || []);
-      const tbody = document.querySelector('#page-dashboard table tbody');
-      if(!tbody) return;
-      if(list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No requests currently submitted. Fresh installation state.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = list.map(r => {
-        const uName = (r.user && r.user.business_name) || r.user_name || r.business_name || ('User #' + (r.user_id || ''));
-        const sName = (r.service && r.service.name) || r.service_name || 'Service';
-        return `
-        <tr>
-          <td data-label="Reference"><b>${r.reference}</b></td>
-          <td data-label="User">${uName}</td>
-          <td data-label="Service">${sName}</td>
-          <td data-label="Status"><span class="pill ${r.status === 'completed' ? 'green' : r.status === 'rejected' ? 'red' : r.status === 'processing' ? 'blue' : 'amber'}">${r.status}</span></td>
-          <td data-label=""><button class="secondary" onclick="openRequest('${r.reference}','${sName}')">Open</button></td>
-        </tr>
-      `}).join('');
-    }
-  } catch(e){}
-}
-window.gvAdminPages = window.gvAdminPages || {};
+// Dashboard queue pagination state
+window._dashQueuePage = 1;
 
-async function renderRequestsQueue(page, statusFilter = "", pageNumber = 1) {
-  const token = localStorage.getItem("gv_admin_token");
-  if(!token) return;
-  
-  // Track page number globally
-  window.gvAdminPages[page] = pageNumber;
-  
-  const tbody = document.querySelector("#page-" + page + " table tbody");
-  if(!tbody) return;
-  
+async function renderLiveQueue(pageNumber) {
+  pageNumber = pageNumber || window._dashQueuePage || 1;
+  window._dashQueuePage = pageNumber;
+  const PER_PAGE = 4;
+  const token = localStorage.getItem('gv_admin_token');
+  if (!token) return;
+  const tbody = document.getElementById('dash-queue-tbody');
+  const paginEl = document.getElementById('dash-queue-pagination');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr>';
+  if (paginEl) paginEl.style.display = 'none';
   try {
-    tbody.innerHTML = '<tr><td colspan="' + (page === 'requests' ? '6' : '5') + '" style="text-align:center;padding:24px;color:var(--muted)">Loading requests...</td></tr>';
-    
-    // Request paginated data from backend (10 items per page)
-    let url = '../api/admin/requests?per_page=10&page=' + pageNumber;
-    if(statusFilter) {
-      url += '&status=' + statusFilter;
-    }
-    
-    const res = await fetch(url, {
+    const res = await fetch('../api/admin/requests?per_page=' + PER_PAGE + '&page=' + pageNumber, {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const json = await res.json();
-    
-    if(json.success && json.data) {
-      const rawData = json.data.data || json.data;
-      const list = Array.isArray(rawData) ? rawData : (rawData.requests || []);
-      
-      if(list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="' + (page === 'requests' ? '6' : '5') + '" style="text-align:center;padding:24px;color:var(--muted)">No requests currently in this queue.</td></tr>';
-        
-        // Remove pagination controls if queue is empty
-        const oldPagination = document.querySelector("#page-" + page + " .card-pagination");
-        if (oldPagination) oldPagination.remove();
+    if (json.success && json.data) {
+      const list = json.data.requests || [];
+      const pg   = json.data.pagination || {};
+      const totalPages = pg.total_pages || 1;
+
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No requests currently in queue.</td></tr>';
+        if (paginEl) paginEl.style.display = 'none';
         return;
       }
-      
       tbody.innerHTML = list.map(r => {
         const uName = r.business_name || r.user_name || (r.user && r.user.business_name) || ('User #' + (r.user_id || ''));
         const sName = r.service_name || (r.service && r.service.name) || 'Service';
-        
-        if (page === 'requests') {
-          const pricePaid = parseFloat(r.price_paid || 0);
-          return `
-          <tr>
-            <td data-label="Reference"><b>${r.reference}</b></td>
-            <td data-label="Customer">${uName}</td>
-            <td data-label="Service">${sName}</td>
-            <td data-label="Payment">₦${pricePaid.toLocaleString('en-NG', {minimumFractionDigits: 2})}</td>
-            <td data-label="Status"><span class="pill ${r.status === 'completed' ? 'green' : r.status === 'rejected' ? 'red' : r.status === 'processing' ? 'blue' : 'amber'}">${r.status}</span></td>
-            <td data-label=""><button class="secondary" onclick="openRequest('${r.reference}','${sName}')">Open</button></td>
-          </tr>
-          `;
-        } else {
-          return `
-          <tr>
-            <td data-label="Reference"><b>${r.reference}</b></td>
-            <td data-label="User">${uName}</td>
-            <td data-label="Service">${sName}</td>
-            <td data-label="Status"><span class="pill ${r.status === 'completed' ? 'green' : r.status === 'rejected' ? 'red' : r.status === 'processing' ? 'blue' : 'amber'}">${r.status}</span></td>
-            <td data-label=""><button class="secondary" onclick="openRequest('${r.reference}','${sName}')">Open</button></td>
-          </tr>
-          `;
-        }
+        const pillCls = r.status === 'completed' ? 'green' : r.status === 'rejected' ? 'red' : r.status === 'processing' ? 'blue' : 'amber';
+        return `<tr>
+          <td data-label="Reference"><b style="font-family:monospace;font-size:12px">${r.reference}</b></td>
+          <td data-label="User" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${uName}</td>
+          <td data-label="Service" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sName}</td>
+          <td data-label="Status"><span class="pill ${pillCls}">${r.status}</span></td>
+          <td><button class="secondary" style="font-size:12px;padding:5px 12px" onclick="openRequest('${r.reference}','${sName}')">Open</button></td>
+        </tr>`;
       }).join('');
-      
-      // Handle Pagination Controls dynamically
-      const paginationInfo = json.data.pagination || json.pagination;
-      const totalPages = paginationInfo ? paginationInfo.total_pages : 1;
-      
-      // Find or create pagination container inside the card
-      const cardEl = document.querySelector("#page-" + page + " .card");
-      if (cardEl) {
-        let paginationEl = cardEl.querySelector(".card-pagination");
-        if (!paginationEl) {
-          paginationEl = document.createElement("div");
-          paginationEl.className = "card-pagination";
-          paginationEl.style = "display:flex;gap:6px;padding:14px 18px;justify-content:center;border-top:1px solid var(--border);flex-wrap:wrap;";
-          cardEl.appendChild(paginationEl);
-        }
-        
-        if (totalPages > 1) {
-          let html = '';
-          // Previous button
-          html += `<button onclick="renderRequestsQueue('${page}', '${statusFilter}', ${Math.max(1, pageNumber - 1)})" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--card);font-size:12px;" ${pageNumber === 1 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>Previous</button>`;
-          
-          // Page X of Y indicator
-          html += `<span style="font-size:12px;opacity:0.8;display:flex;align-items:center;padding:0 8px;">Page ${pageNumber} of ${totalPages}</span>`;
-          
-          // Next button
-          html += `<button onclick="renderRequestsQueue('${page}', '${statusFilter}', ${Math.min(totalPages, pageNumber + 1)})" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--card);font-size:12px;" ${pageNumber === totalPages ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>Next</button>`;
-          
-          paginationEl.innerHTML = html;
-          paginationEl.style.display = 'flex';
+
+      // Pagination bar
+      if (paginEl) {
+        if (totalPages <= 1) {
+          paginEl.style.display = 'none';
         } else {
-          paginationEl.style.display = 'none';
+          const prevDis = pageNumber === 1 ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+          const nextDis = pageNumber >= totalPages ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+          paginEl.innerHTML = `
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderLiveQueue(${Math.max(1, pageNumber-1)})" ${prevDis}>← Prev</button>
+            <span style="font-size:12px;color:var(--muted);padding:0 4px">Page ${pageNumber} of ${totalPages}</span>
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderLiveQueue(${Math.min(totalPages, pageNumber+1)})" ${nextDis}>Next →</button>
+          `;
+          paginEl.style.display = 'flex';
         }
       }
     }
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="' + (page === 'requests' ? '6' : '5') + '" style="text-align:center;padding:24px;color:var(--muted)">Error loading requests.</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Error loading queue.</td></tr>';
+    console.error('[renderLiveQueue]', e);
+  }
+}
+window.gvAdminPages = window.gvAdminPages || {};
+
+async function renderRequestsQueue(page, statusFilter, pageNumber) {
+  statusFilter = statusFilter || '';
+  pageNumber   = pageNumber   || 1;
+  const token  = localStorage.getItem('gv_admin_token');
+  if (!token) return;
+
+  window.gvAdminPages[page] = pageNumber;
+
+  const cols  = (page === 'requests') ? 6 : 5;
+  const tbody = document.querySelector('#page-' + page + ' table tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr>`;
+
+  try {
+    let url = '../api/admin/requests?per_page=10&page=' + pageNumber;
+    if (statusFilter) url += '&status=' + statusFilter;
+
+    const res  = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    const json = await res.json();
+
+    if (json.success && json.data) {
+      const list       = json.data.requests || [];
+      const pg         = json.data.pagination || {};
+      const totalPages = pg.total_pages || 1;
+
+      // ── Empty state
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:var(--muted)">No requests in this queue.</td></tr>`;
+        const oldPgn = document.querySelector('#page-' + page + ' .card-pagination');
+        if (oldPgn) oldPgn.style.display = 'none';
+        return;
+      }
+
+      // ── Rows
+      tbody.innerHTML = list.map(r => {
+        const uName   = r.business_name || r.user_name || (r.user && r.user.business_name) || ('User #' + (r.user_id || ''));
+        const sName   = r.service_name  || (r.service  && r.service.name) || 'Service';
+        const pillCls = r.status === 'completed' ? 'green' : r.status === 'rejected' ? 'red' : r.status === 'processing' ? 'blue' : 'amber';
+        const pill    = `<span class="pill ${pillCls}">${r.status}</span>`;
+        const openBtn = `<button class="secondary" style="font-size:12px;padding:5px 12px" onclick="openRequest('${r.reference}','${sName}')">Open</button>`;
+        if (page === 'requests') {
+          const amt = '₦' + parseFloat(r.price_paid || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
+          return `<tr>
+            <td data-label="Reference" style="font-family:monospace;font-size:12px"><b>${r.reference}</b></td>
+            <td data-label="Customer" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${uName}</td>
+            <td data-label="Service"  style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sName}</td>
+            <td data-label="Payment">${amt}</td>
+            <td data-label="Status">${pill}</td>
+            <td>${openBtn}</td>
+          </tr>`;
+        } else {
+          return `<tr>
+            <td data-label="Reference" style="font-family:monospace;font-size:12px"><b>${r.reference}</b></td>
+            <td data-label="User"    style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${uName}</td>
+            <td data-label="Service" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sName}</td>
+            <td data-label="Status">${pill}</td>
+            <td>${openBtn}</td>
+          </tr>`;
+        }
+      }).join('');
+
+      // ── Pagination bar
+      const cardEl = document.querySelector('#page-' + page + ' .card');
+      if (cardEl) {
+        let paginEl = cardEl.querySelector('.card-pagination');
+        if (!paginEl) {
+          paginEl = document.createElement('div');
+          paginEl.className = 'card-pagination';
+          paginEl.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap';
+          cardEl.appendChild(paginEl);
+        }
+        if (totalPages <= 1) {
+          paginEl.style.display = 'none';
+        } else {
+          const prevDis = pageNumber === 1            ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+          const nextDis = pageNumber >= totalPages    ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+          paginEl.innerHTML = `
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderRequestsQueue('${page}','${statusFilter}',${Math.max(1, pageNumber-1)})" ${prevDis}>← Prev</button>
+            <span style="font-size:12px;color:var(--muted);padding:0 4px">Page ${pageNumber} of ${totalPages}</span>
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderRequestsQueue('${page}','${statusFilter}',${Math.min(totalPages, pageNumber+1)})" ${nextDis}>Next →</button>
+          `;
+          paginEl.style.display = 'flex';
+        }
+      }
+    }
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:var(--muted)">Error loading requests.</td></tr>`;
+    console.error('[renderRequestsQueue]', e);
   }
 }
 
@@ -1585,6 +1626,10 @@ function go(page,btn){
  if(page === "services") fetchAdminServices();
   if(page === "wallet-funding") fetchWalletTopups(1);
   if(page === "admin-profile") { gvInitProfileUI(); gvLoadAdminList(); }
+  if(page === "users") fetchAdminUsers(1, 'all');
+  if(page === "active-users") fetchAdminUsers(1, 'active');
+  if(page === "suspended-users") fetchAdminUsers(1, 'suspended');
+  if(page === "transactions") fetchAdminTransactions(1);
 }
 function toggleSidebar(){
  const side=document.getElementById('side');
@@ -1619,6 +1664,156 @@ function initTheme(){
  applyTheme(saved);
 }
 initTheme();
+
+// ── Users & Transactions Admin Fetch Functions ──────────────────────────────
+async function fetchAdminUsers(page, filter) {
+  filter = filter || 'all';
+  page   = page || 1;
+  const token = localStorage.getItem('gv_admin_token');
+  if (!token) return;
+
+  const tbodyId = filter === 'active'    ? 'activeUsersTbody'
+                : filter === 'suspended' ? 'suspendedUsersTbody'
+                                         : 'usersTbody';
+  const labelId = filter === 'active'    ? 'activeUsersCountLabel'
+                : filter === 'suspended' ? 'suspendedUsersCountLabel'
+                                         : 'usersCountLabel';
+  const paginId = filter === 'all' ? 'usersPagination' : null;
+
+  const tbody = document.getElementById(tbodyId);
+  const label = document.getElementById(labelId);
+  if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr>';
+  if (label) label.textContent = 'Loading...';
+
+  try {
+    const res  = await fetch('../api/admin/users?filter=' + filter + '&page=' + page, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (!json.success || !json.data) throw new Error('Bad response');
+
+    const { users, total, last_page } = json.data;
+    if (label) label.textContent = total + ' user' + (total !== 1 ? 's' : '');
+
+    if (!tbody) return;
+    if (!users || users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">No users found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = users.map(u => {
+      const name    = u.business_name || '—';
+      const email   = u.email || '—';
+      const phone   = u.phone || '—';
+      const wallet  = '₦' + parseFloat(u.wallet_balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
+      const reqs    = parseInt(u.request_count || 0);
+      const active  = parseInt(u.is_active) === 1;
+      const pill    = active ? '<span class="pill green">Active</span>' : '<span class="pill red">Suspended</span>';
+      return `<tr>
+        <td data-label="Business" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${name}">${name}</td>
+        <td data-label="Email"    style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${email}">${email}</td>
+        <td data-label="Phone">${phone}</td>
+        <td data-label="Wallet">${wallet}</td>
+        <td data-label="Requests">${reqs}</td>
+        <td data-label="Status">${pill}</td>
+      </tr>`;
+    }).join('');
+
+    if (paginId) {
+      const pagination = document.getElementById(paginId);
+      if (pagination) {
+        if (last_page <= 1) {
+          pagination.innerHTML = '';
+          pagination.style.display = 'none';
+        } else {
+          const prevDis = page === 1 ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+          const nextDis = page >= last_page ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+          pagination.innerHTML = `
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminUsers(${Math.max(1, page - 1)}, '${filter}')" ${prevDis}>← Prev</button>
+            <span style="font-size:12px;color:var(--muted);padding:0 4px">Page ${page} of ${last_page}</span>
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminUsers(${Math.min(last_page, page + 1)}, '${filter}')" ${nextDis}>Next →</button>
+          `;
+          pagination.style.display = 'flex';
+        }
+      }
+    }
+  } catch (e) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Failed to load users. Check connection.</td></tr>';
+    if (label) label.textContent = 'Error';
+    console.error('[fetchAdminUsers]', e);
+  }
+}
+
+async function fetchAdminTransactions(page) {
+  page = page || 1;
+  const token = localStorage.getItem('gv_admin_token');
+  if (!token) return;
+
+  const tbody     = document.getElementById('txnTbody');
+  const label     = document.getElementById('txnCountLabel');
+  const pagination= document.getElementById('txnPagination');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr>';
+  if (label) label.textContent = 'Loading...';
+
+  try {
+    const res  = await fetch('../api/admin/transactions?page=' + page, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (!json.success || !json.data) throw new Error('Bad response');
+
+    const { transactions, total, last_page } = json.data;
+    if (label) label.textContent = total + ' transaction' + (total !== 1 ? 's' : '');
+
+    if (!tbody) return;
+    if (!transactions || transactions.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No transactions recorded yet.</td></tr>';
+      return;
+    }
+
+    const typeColors = { credit:'green', debit:'amber', refund:'blue', hold:'amber', hold_release:'blue' };
+    const statusColors = { completed:'green', pending:'amber', failed:'red', reversed:'red' };
+
+    tbody.innerHTML = transactions.map(t => {
+      const user   = t.business_name || t.email || '—';
+      const type   = t.type || '—';
+      const tColor = typeColors[type] || 'amber';
+      const sColor = statusColors[t.status] || 'amber';
+      const amount = '₦' + parseFloat(t.amount || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
+      const balAfter = '₦' + parseFloat(t.balance_after || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
+      const date   = t.created_at ? new Date(t.created_at).toLocaleString('en-GB', { dateStyle:'short', timeStyle:'short' }) : '—';
+      return `<tr>
+        <td data-label="Reference" style="font-family:monospace;font-size:12px">${t.reference}</td>
+        <td data-label="User"      style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${user}">${user}</td>
+        <td data-label="Type"><span class="pill ${tColor}">${type}</span></td>
+        <td data-label="Amount">${amount}</td>
+        <td data-label="Balance After">${balAfter}</td>
+        <td data-label="Status"><span class="pill ${sColor}">${t.status}</span></td>
+        <td data-label="Date" style="font-size:12px">${date}</td>
+      </tr>`;
+    }).join('');
+
+    if (pagination) {
+      if (last_page <= 1) {
+        pagination.innerHTML = '';
+        pagination.style.display = 'none';
+      } else {
+        const prevDis = page === 1 ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+        const nextDis = page >= last_page ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+        pagination.innerHTML = `
+          <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminTransactions(${Math.max(1, page - 1)})" ${prevDis}>← Prev</button>
+          <span style="font-size:12px;color:var(--muted);padding:0 4px">Page ${page} of ${last_page}</span>
+          <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminTransactions(${Math.min(last_page, page + 1)})" ${nextDis}>Next →</button>
+        `;
+        pagination.style.display = 'flex';
+      }
+    }
+  } catch (e) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Failed to load transactions. Check connection.</td></tr>';
+    if (label) label.textContent = 'Error';
+    console.error('[fetchAdminTransactions]', e);
+  }
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Wallet Funding Admin Functions
@@ -2426,12 +2621,21 @@ function updateGemPrintDashboardStats() {
   }
 }
 
-function renderGemPrintProducts() {
+window._gpProductsPage = 1;
+function renderGemPrintProducts(pg) {
+  window._gpProductsPage = pg || window._gpProductsPage || 1;
+  const PER = 8;
   let tbody = document.querySelector("#page-products table tbody");
   if (!tbody) return;
-  let items = gpAdminData.products || [];
+  let all = gpAdminData.products || [];
+  const totalPages = Math.max(1, Math.ceil(all.length / PER));
+  window._gpProductsPage = Math.min(window._gpProductsPage, totalPages);
+  const p = window._gpProductsPage;
+  const items = all.slice((p - 1) * PER, p * PER);
+
   if (items.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No products found. Add products to populate.</td></tr>';
+    _gpHidePgn('products');
     return;
   }
   tbody.innerHTML = items.map(p => `
@@ -2448,14 +2652,24 @@ function renderGemPrintProducts() {
       </td>
     </tr>
   `).join('');
+  _gpRenderPgn('products', p, totalPages, 'renderGemPrintProducts');
 }
 
-function renderGemPrintInventory() {
+window._gpInventoryPage = 1;
+function renderGemPrintInventory(pg) {
+  window._gpInventoryPage = pg || window._gpInventoryPage || 1;
+  const PER = 8;
   let tbody = document.querySelector("#page-inventory table tbody");
   if (!tbody) return;
-  let items = gpAdminData.products || [];
+  let all = gpAdminData.products || [];
+  const totalPages = Math.max(1, Math.ceil(all.length / PER));
+  window._gpInventoryPage = Math.min(window._gpInventoryPage, totalPages);
+  const p = window._gpInventoryPage;
+  const items = all.slice((p - 1) * PER, p * PER);
+
   if (items.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No products found in inventory.</td></tr>';
+    _gpHidePgn('inventory');
     return;
   }
   tbody.innerHTML = items.map(p => {
@@ -2471,14 +2685,24 @@ function renderGemPrintInventory() {
       </tr>
     `;
   }).join('');
+  _gpRenderPgn('inventory', p, totalPages, 'renderGemPrintInventory');
 }
 
-function renderGemPrintOrders() {
+window._gpOrdersPage = 1;
+function renderGemPrintOrders(pg) {
+  window._gpOrdersPage = pg || window._gpOrdersPage || 1;
+  const PER = 10;
   let tbody = document.querySelector("#page-orders table tbody");
   if (!tbody) return;
-  let items = gpAdminData.orders || [];
+  let all = gpAdminData.orders || [];
+  const totalPages = Math.max(1, Math.ceil(all.length / PER));
+  window._gpOrdersPage = Math.min(window._gpOrdersPage, totalPages);
+  const p = window._gpOrdersPage;
+  const items = all.slice((p - 1) * PER, p * PER);
+
   if (items.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No customer orders placed yet.</td></tr>';
+    _gpHidePgn('orders');
     return;
   }
   tbody.innerHTML = items.map(o => {
@@ -2497,19 +2721,29 @@ function renderGemPrintOrders() {
       </tr>
     `;
   }).join('');
+  _gpRenderPgn('orders', p, totalPages, 'renderGemPrintOrders');
 }
 
-function renderGemPrintJobs() {
+window._gpJobsPage = 1;
+function renderGemPrintJobs(pg) {
+  window._gpJobsPage = pg || window._gpJobsPage || 1;
+  const PER = 10;
   let tbody = document.querySelector("#page-print-jobs table tbody");
   if (!tbody) return;
-  let items = gpAdminData.print_jobs || [];
+  let all = gpAdminData.print_jobs || [];
+  const totalPages = Math.max(1, Math.ceil(all.length / PER));
+  window._gpJobsPage = Math.min(window._gpJobsPage, totalPages);
+  const p = window._gpJobsPage;
+  const items = all.slice((p - 1) * PER, p * PER);
+
   if (items.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No print jobs submitted yet.</td></tr>';
+    _gpHidePgn('print-jobs');
     return;
   }
   tbody.innerHTML = items.map(j => {
     let statusColor = j.status === 'Completed' ? 'green' : (j.status === 'Cancelled' ? 'red' : 'amber');
-    let specs = `${j.size} · ${j.type} · 	ext{${j.color}} · Qty: ${j.qty} · Finish: ${j.finishing}`;
+    let specs = `${j.size} · ${j.type} · ${j.color} · Qty: ${j.qty} · Finish: ${j.finishing}`;
     return `
       <tr>
         <td data-label="Job ID"><b>${j.id}</b><br><small style="opacity:.6">${j.date}</small></td>
@@ -2522,6 +2756,34 @@ function renderGemPrintJobs() {
       </tr>
     `;
   }).join('');
+  _gpRenderPgn('print-jobs', p, totalPages, 'renderGemPrintJobs');
+}
+
+// ── Shared GemPrint client-side pagination helpers ──────────────────────────
+function _gpRenderPgn(pageId, current, total, fnName) {
+  const cardEl = document.querySelector('#page-' + pageId + ' .card');
+  if (!cardEl) return;
+  let paginEl = cardEl.querySelector('.gp-pgn');
+  if (!paginEl) {
+    paginEl = document.createElement('div');
+    paginEl.className = 'gp-pgn';
+    paginEl.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap';
+    cardEl.appendChild(paginEl);
+  }
+  if (total <= 1) { paginEl.style.display = 'none'; return; }
+  const prevDis = current <= 1     ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+  const nextDis = current >= total ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+  paginEl.innerHTML =
+    '<button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="' + fnName + '(' + Math.max(1, current - 1) + ')" ' + prevDis + '>← Prev</button>' +
+    '<span style="font-size:12px;color:var(--muted);padding:0 4px">Page ' + current + ' of ' + total + '</span>' +
+    '<button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="' + fnName + '(' + Math.min(total, current + 1) + ')" ' + nextDis + '>Next →</button>';
+  paginEl.style.display = 'flex';
+}
+function _gpHidePgn(pageId) {
+  const cardEl = document.querySelector('#page-' + pageId + ' .card');
+  if (!cardEl) return;
+  const paginEl = cardEl.querySelector('.gp-pgn');
+  if (paginEl) paginEl.style.display = 'none';
 }
 
 async function saveAdminSettings() {

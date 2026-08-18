@@ -39,16 +39,12 @@ class StatsController
             $stmtUsers = $this->db->query("
                 SELECT 
                     (SELECT COUNT(*) FROM users WHERE is_active = 1) as total_users,
-                    (SELECT COUNT(*) FROM users WHERE is_active = 1 AND created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)) as active_users,
+                    (SELECT COUNT(*) FROM users WHERE is_active = 1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)) as active_users,
                     (SELECT COALESCE(SUM(balance), 0) FROM wallets) as total_wallet_liability
             ");
             $userStats = $stmtUsers->fetch(PDO::FETCH_ASSOC);
             $stats = array_merge($stats, $userStats);
-            $stats['total_profit'] = (float)$stats['total_revenue'] * 0.25; // 25% margin estimate
-            $stats['withdrawable_profit'] = (float)$stats['total_revenue'] * 0.25;
-            $stats['provider_balance'] = 0.00;
-
-            // Today
+            // Today's stats
             $stmtToday = $this->db->query("
                 SELECT 
                     COUNT(*) as requests_today,
@@ -58,6 +54,11 @@ class StatsController
             ");
             $today = $stmtToday->fetch(PDO::FETCH_ASSOC);
             $stats = array_merge($stats, $today);
+            // Overwrite total_revenue on the KPI card with today's revenue so the label matches
+            $stats['total_revenue'] = (float)($stats['revenue_today'] ?? 0);
+            $stats['total_profit'] = (float)$stats['total_revenue'] * 0.25;
+            $stats['withdrawable_profit'] = (float)$stats['total_revenue'] * 0.25;
+            $stats['provider_balance'] = 0.00;
 
             // By status
             $stmtStatus = $this->db->query("SELECT status, COUNT(*) as count FROM manual_requests GROUP BY status");
@@ -92,7 +93,89 @@ class StatsController
             ");
             $stats['recent_requests'] = $stmtRecent->fetchAll(PDO::FETCH_ASSOC);
 
-            Response::success(['success' => true, 'data' => $stats]);
+            Response::success($stats);
+        } catch (Exception $e) {
+            Response::error($e->getMessage(), [], 500);
+        }
+    }
+
+    public function getUsers(): void
+    {
+        try {
+            $page    = max(1, (int) ($_GET['page'] ?? 1));
+            $perPage = 50;
+            $offset  = ($page - 1) * $perPage;
+            $filter  = $_GET['filter'] ?? 'all'; // all | active | suspended
+
+            $where = '';
+            if ($filter === 'active')    $where = 'WHERE u.is_active = 1';
+            if ($filter === 'suspended') $where = 'WHERE u.is_active = 0';
+
+            $total = (int) $this->db->query(
+                "SELECT COUNT(*) FROM users u $where"
+            )->fetchColumn();
+
+            $stmt = $this->db->prepare("
+                SELECT u.id, u.business_name, u.email, u.phone,
+                       u.is_active, u.created_at, u.updated_at,
+                       COALESCE(w.balance, 0) AS wallet_balance,
+                       (SELECT COUNT(*) FROM manual_requests WHERE user_id = u.id) AS request_count
+                FROM users u
+                LEFT JOIN wallets w ON w.user_id = u.id
+                $where
+                ORDER BY u.created_at DESC
+                LIMIT $perPage OFFSET $offset
+            ");
+            $stmt->execute();
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            Response::success([
+                'success' => true,
+                'data' => [
+                    'users'      => $users,
+                    'total'      => $total,
+                    'page'       => $page,
+                    'per_page'   => $perPage,
+                    'last_page'  => (int) ceil($total / $perPage),
+                ],
+            ]);
+        } catch (Exception $e) {
+            Response::error($e->getMessage(), [], 500);
+        }
+    }
+
+    public function getTransactions(): void
+    {
+        try {
+            $page    = max(1, (int) ($_GET['page'] ?? 1));
+            $perPage = 50;
+            $offset  = ($page - 1) * $perPage;
+
+            $total = (int) $this->db->query("SELECT COUNT(*) FROM transactions")->fetchColumn();
+
+            $stmt = $this->db->prepare("
+                SELECT t.id, t.reference, t.type, t.amount,
+                       t.balance_before, t.balance_after,
+                       t.description, t.status, t.created_at,
+                       u.business_name, u.email
+                FROM transactions t
+                JOIN users u ON u.id = t.user_id
+                ORDER BY t.created_at DESC
+                LIMIT $perPage OFFSET $offset
+            ");
+            $stmt->execute();
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            Response::success([
+                'success' => true,
+                'data' => [
+                    'transactions' => $rows,
+                    'total'        => $total,
+                    'page'         => $page,
+                    'per_page'     => $perPage,
+                    'last_page'    => (int) ceil($total / $perPage),
+                ],
+            ]);
         } catch (Exception $e) {
             Response::error($e->getMessage(), [], 500);
         }

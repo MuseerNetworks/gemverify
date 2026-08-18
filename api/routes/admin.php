@@ -21,6 +21,8 @@ addRoute('PATCH', '/admin/admins/{id}/active',     function ($p)  { (new \Contro
 
 // Admin Stats & Services Management
 addRoute('GET',   '/admin/stats',                           function () { (new StatsController())->getStats(); });
+addRoute('GET',   '/admin/users',                           function () { (new StatsController())->getUsers(); });
+addRoute('GET',   '/admin/transactions',                    function () { (new StatsController())->getTransactions(); });
 addRoute('GET',   '/admin/services',                        function () { (new StatsController())->getServices(); });
 addRoute('PATCH', '/admin/services/{id}',                   function ($p) { 
     \Middleware\AdminMiddleware::requireRole('admin'); 
