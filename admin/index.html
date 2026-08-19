@@ -1356,6 +1356,10 @@ let services = [];
 async function fetchAdminServices() {
   let token = localStorage.getItem("gv_admin_token");
   if (!token) return;
+  const gridEl = document.getElementById('serviceGrid');
+  if (gridEl && services.length === 0) {
+    gridEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">Loading service catalogue…</div>';
+  }
   try {
     const res = await fetch('../api/admin/services', {
       headers: { 'Authorization': 'Bearer ' + token }
@@ -1367,9 +1371,9 @@ async function fetchAdminServices() {
         let displayPrice = s.pricing && s.pricing.length > 0 ? Number(s.pricing[0].price) : 0;
         return {
           id: s.id,
-          cat: s.category,
-          name: s.name,
-          slug: s.slug,
+          cat: s.category || 'General',
+          name: s.name || '',
+          slug: s.slug || '',
           price: displayPrice,
           visible: s.is_active === 1 || s.is_active === '1' || s.is_active === true,
           active: s.is_active === 1 || s.is_active === '1' || s.is_active === true,
@@ -1379,9 +1383,17 @@ async function fetchAdminServices() {
         };
       });
       renderServices();
+    } else {
+      console.warn("Failed to load services:", json);
+      if (gridEl) {
+        gridEl.innerHTML = `<div style="padding:40px;text-align:center;color:#dc2626;grid-column:1/-1">Failed to load services: ${json.message || 'Unknown error'}</div>`;
+      }
     }
   } catch (e) {
     console.error("Failed to load services from backend", e);
+    if (gridEl) {
+      gridEl.innerHTML = '<div style="padding:40px;text-align:center;color:#dc2626;grid-column:1/-1">Connection error while loading services.</div>';
+    }
   }
 }
 
@@ -2035,15 +2047,33 @@ async function confirmWfCredit(ref, creditAmount, note) {
 
 function money(n){return n?new Intl.NumberFormat('en-NG',{style:'currency',currency:'NGN',maximumFractionDigits:0}).format(n):'—'}
 function renderServices(){
- const q=(document.getElementById('serviceSearch')?.value||'').toLowerCase(),cat=document.getElementById('catFilter')?.value||'';
- const arr=services.filter(s=>(!q||s.name.toLowerCase().includes(q))&&(!cat||s.cat===cat));
- document.getElementById('serviceGrid').innerHTML=arr.map(s=>`
- <div class="service">
-  <div class="service-top"><div class="ico">${s.cat==='NIN'?'N':s.cat==='BVN'?'B':s.cat==='JAMB'?'J':s.cat==='CAC'?'C':s.cat==='TIN'?'T':s.cat==='GemPrint'?'G':'A'}</div>
-  <button class="toggle ${s.visible?'on':''}" onclick="toggleVisible('${s.id}')"><i></i></button></div>
-  <h3>${s.name}</h3><p>${s.cat} · ${s.type} · ${s.visible?'Visible to users':'Hidden from users'}</p>
-  <div class="service-row"><div><small style="color:var(--muted);font-size:9px">USER PRICE</small><div class="price">${money(s.price)}</div></div><button class="secondary" onclick="openService('${s.id}')">Edit</button></div>
- </div>`).join('');
+ const q = (document.getElementById('serviceSearch')?.value || '').toLowerCase().trim();
+ const cat = (document.getElementById('catFilter')?.value || '').toLowerCase().trim();
+ const gridEl = document.getElementById('serviceGrid');
+ if (!gridEl) return;
+
+ const arr = services.filter(s => {
+   const nameMatch = !q || (s.name && s.name.toLowerCase().includes(q));
+   const catMatch  = !cat || (s.cat && s.cat.toLowerCase() === cat);
+   return nameMatch && catMatch;
+ });
+
+ if (arr.length === 0) {
+   gridEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">No services found matching your criteria.</div>';
+   return;
+ }
+
+ gridEl.innerHTML = arr.map(s => {
+   const catUpper = (s.cat || '').toUpperCase();
+   const iconChar = catUpper === 'NIN' ? 'N' : catUpper === 'BVN' ? 'B' : catUpper === 'JAMB' ? 'J' : catUpper === 'CAC' ? 'C' : catUpper === 'TIN' ? 'T' : catUpper === 'GEMPRINT' ? 'G' : 'A';
+   return `
+  <div class="service">
+   <div class="service-top"><div class="ico">${iconChar}</div>
+   <button class="toggle ${s.visible?'on':''}" onclick="toggleVisible('${s.id}')"><i></i></button></div>
+   <h3>${s.name}</h3><p>${s.cat} · ${s.type} · ${s.visible?'Visible to users':'Hidden from users'}</p>
+   <div class="service-row"><div><small style="color:var(--muted);font-size:9px">USER PRICE</small><div class="price">${money(s.price)}</div></div><button class="secondary" onclick="openService('${s.id}')">Edit</button></div>
+  </div>`;
+ }).join('');
 }
 
 async function toggleVisible(id){

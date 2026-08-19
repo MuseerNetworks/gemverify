@@ -179,14 +179,13 @@ class StatsController
     public function getServices(): void
     {
         try {
-            // NOTE: No GROUP BY — avoids ONLY_FULL_GROUP_BY failures on production MySQL/MariaDB.
-            // The aggregate columns (request_count, revenue) were unused by the frontend and
-            // required the manual_requests JOIN that caused the GROUP BY violation.
+            // NOTE: Uses LEFT JOIN + COALESCE so services with missing/null category_id are not excluded.
+            // Avoids GROUP BY to prevent ONLY_FULL_GROUP_BY issues on production MySQL.
             $stmt = $this->db->query("
                 SELECT s.id, s.name, s.slug, s.is_active, s.is_manual, s.est_time,
-                       c.name AS category
+                       COALESCE(c.name, 'General') AS category
                 FROM services s
-                JOIN service_categories c ON s.category_id = c.id
+                LEFT JOIN service_categories c ON s.category_id = c.id
                 ORDER BY c.name, s.name
             ");
             $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -196,6 +195,7 @@ class StatsController
                 $stmtPrice->execute([$service['id']]);
                 $service['pricing'] = $stmtPrice->fetchAll(PDO::FETCH_ASSOC);
             }
+            unset($service);
 
             Response::success($services);
         } catch (Exception $e) {
