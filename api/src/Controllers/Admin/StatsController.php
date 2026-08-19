@@ -179,14 +179,15 @@ class StatsController
     public function getServices(): void
     {
         try {
+            // NOTE: No GROUP BY — avoids ONLY_FULL_GROUP_BY failures on production MySQL/MariaDB.
+            // The aggregate columns (request_count, revenue) were unused by the frontend and
+            // required the manual_requests JOIN that caused the GROUP BY violation.
             $stmt = $this->db->query("
-                SELECT s.id, s.name, s.slug, s.is_active, s.is_manual, s.est_time, c.name as category, 
-                       COUNT(r.id) as request_count,
-                       COALESCE(SUM(CASE WHEN r.status = 'completed' THEN r.price_paid ELSE 0 END), 0) as revenue,
-                       0 as avg_processing_time
-                FROM services s JOIN service_categories c ON s.category_id = c.id
-                LEFT JOIN manual_requests r ON s.id = r.service_id
-                GROUP BY s.id
+                SELECT s.id, s.name, s.slug, s.is_active, s.is_manual, s.est_time,
+                       c.name AS category
+                FROM services s
+                JOIN service_categories c ON s.category_id = c.id
+                ORDER BY c.name, s.name
             ");
             $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -196,7 +197,7 @@ class StatsController
                 $service['pricing'] = $stmtPrice->fetchAll(PDO::FETCH_ASSOC);
             }
 
-            Response::success(['success' => true, 'data' => $services]);
+            Response::success($services);
         } catch (Exception $e) {
             Response::error($e->getMessage(), [], 500);
         }
