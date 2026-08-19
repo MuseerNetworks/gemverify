@@ -110,6 +110,7 @@ class StatsController
             $where = '';
             if ($filter === 'active')    $where = 'WHERE u.is_active = 1';
             if ($filter === 'suspended') $where = 'WHERE u.is_active = 0';
+            if ($filter === 'today')     $where = "WHERE u.is_active = 1 AND u.updated_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)";
 
             $total = (int) $this->db->query(
                 "SELECT COUNT(*) FROM users u $where"

@@ -1627,7 +1627,11 @@ function go(page,btn){
   if(page === "wallet-funding") fetchWalletTopups(1);
   if(page === "admin-profile") { gvInitProfileUI(); gvLoadAdminList(); }
   if(page === "users") fetchAdminUsers(1, 'all');
-  if(page === "active-users") fetchAdminUsers(1, 'active');
+  if(page === "active-users") {
+    const filter = window._nextActiveUsersFilter || 'active';
+    window._nextActiveUsersFilter = null;
+    fetchAdminUsers(1, filter);
+  }
   if(page === "suspended-users") fetchAdminUsers(1, 'suspended');
   if(page === "transactions") fetchAdminTransactions(1);
 }
@@ -1672,12 +1676,12 @@ async function fetchAdminUsers(page, filter) {
   const token = localStorage.getItem('gv_admin_token');
   if (!token) return;
 
-  const tbodyId = filter === 'active'    ? 'activeUsersTbody'
-                : filter === 'suspended' ? 'suspendedUsersTbody'
-                                         : 'usersTbody';
-  const labelId = filter === 'active'    ? 'activeUsersCountLabel'
-                : filter === 'suspended' ? 'suspendedUsersCountLabel'
-                                         : 'usersCountLabel';
+  const tbodyId = (filter === 'active' || filter === 'today') ? 'activeUsersTbody'
+                : filter === 'suspended'                      ? 'suspendedUsersTbody'
+                                                              : 'usersTbody';
+  const labelId = (filter === 'active' || filter === 'today') ? 'activeUsersCountLabel'
+                : filter === 'suspended'                      ? 'suspendedUsersCountLabel'
+                                                              : 'usersCountLabel';
   const paginId = filter === 'all' ? 'usersPagination' : null;
 
   const tbody = document.getElementById(tbodyId);
@@ -2424,9 +2428,14 @@ function viewProvider(name){
 
 
 function openKpiPage(page){
+  // Active Today must use the same 24-hour window as the dashboard stat
+  if (page === 'active-today') {
+    window._nextActiveUsersFilter = 'today';
+    go('active-users');
+    return;
+  }
   const pages = {
     'registered-accounts': ['Registered Accounts', 'users'],
-    'active-today':        ['Active Today', 'active-users'],
     'wallet-liability':    ['Wallet Liability', 'wallet-funding'],
     'revenue-today':       ['Revenue Today', 'completed'],
     'profit-today':        ['Profit Today', 'profit'],
