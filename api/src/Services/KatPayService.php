@@ -108,7 +108,6 @@ class KatPayService {
             'merchantID'  => $this->merchantId,
         ];
 
-
         // Undocumented but safe to pass for backward compatibility or future use
         if (!empty($params['merchant_reference'])) {
             $body['merchant_reference'] = $params['merchant_reference'];
@@ -119,14 +118,110 @@ class KatPayService {
 
         $response = $this->post('/virtual-accounts', $body);
 
-
-        if (empty($response['success']) || empty($response['data'])) {
-            throw new RuntimeException(
-                'KatPay virtual account creation failed: ' . ($response['message'] ?? 'Unknown error')
-            );
+        // Success path — account was freshly created
+        if (!empty($response['success']) && !empty($response['data'])) {
+            return $response['data'];
         }
 
-        return $response['data'];
+        // ── Duplicate / already-exists recovery ──────────────────────────────
+        // When a user is deleted from GemVerify but their KatPay account still
+        // exists, re-registration triggers a duplicate error. Most payment APIs
+        // include the existing account in the error response body, or expose a
+        // lookup endpoint. Try three recovery strategies in order.
+
+        $errorMsg = strtolower($response['message'] ?? '');
+        $isDuplicate = str_contains($errorMsg, 'exist')
+                    || str_contains($errorMsg, 'duplicate')
+                    || str_contains($errorMsg, 'already')
+                    || str_contains($errorMsg, 'found');
+
+        if ($isDuplicate) {
+            // Strategy 1: KatPay included the existing account in the error body
+            if (!empty($response['data']) && is_array($response['data'])) {
+                error_log('[KatPay] Duplicate VA detected — recovered from error response data for: ' . ($params['customer_email'] ?? ''));
+                return $response['data'];
+            }
+
+            // Strategy 2: Fetch by customer email
+            try {
+                $existing = $this->getVirtualAccountByEmail($params['customer_email']);
+                error_log('[KatPay] Duplicate VA detected — recovered via email lookup for: ' . ($params['customer_email'] ?? ''));
+                return $existing;
+            } catch (RuntimeException) {
+                // Email lookup failed or not supported — try next strategy
+            }
+
+            // Strategy 3: Fetch by merchant reference (works if user_id is unchanged)
+            if (!empty($params['merchant_reference'])) {
+                try {
+                    $existing = $this->getVirtualAccountByMerchantRef($params['merchant_reference']);
+                    error_log('[KatPay] Duplicate VA detected — recovered via merchant_ref lookup for: ' . $params['merchant_reference']);
+                    return $existing;
+                } catch (RuntimeException) {
+                    // Merchant ref lookup also failed
+                }
+            }
+        }
+
+        // All recovery strategies exhausted — throw the original error
+        throw new RuntimeException(
+            'KatPay virtual account creation failed: ' . ($response['message'] ?? 'Unknown error')
+        );
+    }
+
+    /**
+     * Look up an existing virtual account by customer email.
+     * Used to recover when a user is deleted and re-registered with the same email.
+     *
+     * @throws RuntimeException if not found or API does not support this lookup
+     */
+    public function getVirtualAccountByEmail(string $email): array {
+        $this->assertConfigured();
+
+        // Try common KatPay lookup patterns
+        $response = $this->get('/virtual-accounts?email=' . urlencode($email));
+
+        if (!empty($response['success']) && !empty($response['data'])) {
+            // Response may be paginated — return the first matching record
+            $data = $response['data'];
+            if (isset($data[0])) {
+                return $data[0];
+            }
+            return $data;
+        }
+
+        throw new RuntimeException('KatPay VA email lookup failed: ' . ($response['message'] ?? 'Not found'));
+    }
+
+    /**
+     * Look up an existing virtual account by our merchant reference (e.g. "GVU_42").
+     * Useful when a user's GemVerify record was deleted but KatPay still holds the account.
+     *
+     * @throws RuntimeException if not found or API does not support this lookup
+     */
+    public function getVirtualAccountByMerchantRef(string $merchantRef): array {
+        $this->assertConfigured();
+
+        // Try the most common path patterns — KatPay may use any of these
+        $paths = [
+            '/virtual-accounts/' . urlencode($merchantRef),
+            '/virtual-accounts/merchant/' . urlencode($merchantRef),
+            '/virtual-accounts?merchant_reference=' . urlencode($merchantRef),
+        ];
+
+        foreach ($paths as $path) {
+            try {
+                $response = $this->get($path);
+                if (!empty($response['success']) && !empty($response['data'])) {
+                    $data = $response['data'];
+                    return isset($data[0]) ? $data[0] : $data;
+                }
+            } catch (RuntimeException) {
+                continue;
+            }
+        }
+
+        throw new RuntimeException('KatPay VA merchant_ref lookup failed for: ' . $merchantRef);
     }
 
     /**

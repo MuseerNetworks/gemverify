@@ -80,26 +80,12 @@ class WalletController {
         $cStmt = $db->prepare("SELECT COUNT(*) FROM transactions WHERE user_id = ?");
         $cStmt->execute([$userId]);
         $total = (int) $cStmt->fetchColumn();
-        
+
         $tStmt = $db->prepare("
-            SELECT reference, type, amount, description, status, created_at 
-            FROM transactions 
-            WHERE user_id = ? 
-            ORDER BY created_at DESC 
-            LIMIT :limit OFFSET :offset
-        ");
-        $tStmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
-        $tStmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $tStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $tStmt->execute([$userId]); // bind params carefully or pass array
-        
-        // Wait, execute with array overrides bindValue in PDO. Let's fix that.
-        // Re-prepare:
-        $tStmt = $db->prepare("
-            SELECT reference, type, amount, description, status, created_at 
-            FROM transactions 
-            WHERE user_id = :user_id 
-            ORDER BY created_at DESC 
+            SELECT reference, type, amount, description, status, created_at
+            FROM transactions
+            WHERE user_id = :user_id
+            ORDER BY created_at DESC
             LIMIT :limit OFFSET :offset
         ");
         $tStmt->bindValue(':user_id', $userId, PDO::PARAM_INT);

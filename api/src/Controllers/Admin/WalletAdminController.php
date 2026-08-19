@@ -255,6 +255,72 @@ class WalletAdminController {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // PATCH /admin/users/{id}/virtual-account
+    // Super-admin manually sets account details for a user stuck in 'pending'.
+    // Use this when the user was deleted+re-registered and KatPay can't auto-
+    // provision a new account because the customer already exists on their side.
+    // Paste the account_number from the KatPay merchant dashboard.
+    // ──────────────────────────────────────────────────────────────────────────
+    public function manualResolveVirtualAccount(int $userId): void {
+        AdminMiddleware::requireRole('super_admin');
+
+        $db   = db();
+        $body = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        $accountNumber = trim($body['account_number'] ?? '');
+        $accountName   = trim($body['account_name']   ?? '');
+        $bankName      = trim($body['bank_name']       ?? '');
+        $bankCode      = trim($body['bank_code']       ?? '');
+
+        if (!$accountNumber) {
+            Response::error('account_number is required', 422);
+            return;
+        }
+
+        // Verify user exists
+        $uStmt = $db->prepare("SELECT id, business_name, email FROM users WHERE id = ?");
+        $uStmt->execute([$userId]);
+        $user = $uStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$user) {
+            Response::error('User not found', 404);
+            return;
+        }
+
+        // Upsert the virtual_accounts row, marking it active
+        $db->prepare("
+            INSERT INTO virtual_accounts
+              (user_id, katpay_va_id, account_number, account_name, bank_name, bank_code, currency, status, raw_response, created_at, updated_at)
+            VALUES
+              (?, NULL, ?, ?, ?, ?, 'NGN', 'active', ?, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE
+              account_number = VALUES(account_number),
+              account_name   = VALUES(account_name),
+              bank_name      = VALUES(bank_name),
+              bank_code      = VALUES(bank_code),
+              status         = 'active',
+              raw_response   = VALUES(raw_response),
+              updated_at     = NOW()
+        ")->execute([
+            $userId,
+            $accountNumber,
+            $accountName  ?: ($user['business_name'] . ' / GemVerify'),
+            $bankName     ?: 'Manual',
+            $bankCode     ?: '',
+            json_encode(['source' => 'admin_manual', 'set_by' => 'super_admin', 'at' => date('c')]),
+        ]);
+
+        error_log('[Admin] Virtual account manually resolved for user #' . $userId . ' (' . $user['email'] . ') — acct: ' . $accountNumber);
+
+        Response::success([
+            'message'        => 'Virtual account set successfully.',
+            'user_id'        => $userId,
+            'account_number' => $accountNumber,
+            'account_name'   => $accountName,
+            'bank_name'      => $bankName,
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // PRIVATE: Summary counts for dashboard cards
     // ──────────────────────────────────────────────────────────────────────────
     private function getSummary(object $db): array {

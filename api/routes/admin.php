@@ -119,6 +119,14 @@ addRoute('PATCH',  '/admin/gemprint/jobs/{id}/status',            function ($p) 
     (new \Controllers\GemPrintController())->updateJobStatus($p);
 });
 
+// ── Virtual Account — Manual Resolution (super_admin only) ───────────────────
+// Use when a user is stuck at "Setting up account..." because KatPay already
+// has their details from a previous registration. Paste the account details
+// from the KatPay merchant dashboard.
+addRoute('PATCH', '/admin/users/{id}/virtual-account', function ($p) {
+    (new \Controllers\Admin\WalletAdminController())->manualResolveVirtualAccount((int) $p['id']);
+});
+
 // ── Wallet Top-up Orders (Admin) ─────────────────────────────────────────────
 addRoute('GET',  '/admin/wallet/topups',                          function ()    { (new \Controllers\Admin\WalletAdminController())->listTopUps(); });
 addRoute('GET',  '/admin/wallet/topups/{ref}',                    function ($p)  { (new \Controllers\Admin\WalletAdminController())->getTopUp($p['ref']); });

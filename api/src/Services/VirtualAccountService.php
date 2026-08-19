@@ -34,11 +34,23 @@ class VirtualAccountService {
             return $existing;
         }
 
-        // If pending (creation previously failed/pending), retry
+        // Throttle retries: only attempt KatPay provisioning once every 5 minutes
+        // to avoid flooding the error log on every wallet page load.
+        if ($existing && !empty($existing['updated_at'])) {
+            $lastAttempt = strtotime($existing['updated_at']);
+            if ($lastAttempt !== false && (time() - $lastAttempt) < 300) {
+                return $existing; // Too soon — return pending row without retrying
+            }
+        }
+
+        // Touch updated_at immediately so concurrent requests don't pile up
+        $this->db->prepare(
+            "UPDATE virtual_accounts SET updated_at = NOW() WHERE user_id = ? AND status = 'pending'"
+        )->execute([$userId]);
+
         try {
             return $this->createForUser($userId, $userInfo);
         } catch (RuntimeException $e) {
-            // Log failure but don't crash the request
             error_log('[VirtualAccount] Failed to create for user ' . $userId . ': ' . $e->getMessage());
             return $existing; // return the pending row if it exists
         }
