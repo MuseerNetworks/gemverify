@@ -1738,7 +1738,11 @@ async function fetchAdminUsers(page, filter) {
       }
     }
   } catch (e) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Failed to load users. Check connection.</td></tr>';
+    const isAuth = e.message && (e.message.includes('401') || e.message.includes('403') || e.message.toLowerCase().includes('unauthori'));
+    const msg = isAuth
+      ? 'Not authorised to view users. Please log in again.'
+      : 'Unable to load users. Please refresh or try again. (' + (e.message || 'Network error') + ')';
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--red);font-weight:600">${msg}</td></tr>`;
     if (label) label.textContent = 'Error';
     console.error('[fetchAdminUsers]', e);
   }
@@ -1809,7 +1813,11 @@ async function fetchAdminTransactions(page) {
       }
     }
   } catch (e) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Failed to load transactions. Check connection.</td></tr>';
+    const isAuth = e.message && (e.message.includes('401') || e.message.includes('403') || e.message.toLowerCase().includes('unauthori'));
+    const msg = isAuth
+      ? 'Not authorised to view transactions. Please log in again.'
+      : 'Unable to load transactions. Please refresh or try again. (' + (e.message || 'Network error') + ')';
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--red);font-weight:600">${msg}</td></tr>`;
     if (label) label.textContent = 'Error';
     console.error('[fetchAdminTransactions]', e);
   }
@@ -2418,14 +2426,14 @@ function viewProvider(name){
 function openKpiPage(page){
   const pages = {
     'registered-accounts': ['Registered Accounts', 'users'],
-    'active-today': ['Active Today', 'users'],
-    'wallet-liability': ['Wallet Liability', 'wallet-funding'],
-    'revenue-today': ['Revenue Today', 'revenue'],
-    'profit-today': ['Profit Today', 'profit'],
-    'successful-txn': ['Successful Transactions', 'transactions'],
-    'failed-txns': ['Failed Transactions', 'transactions'],
+    'active-today':        ['Active Today', 'active-users'],
+    'wallet-liability':    ['Wallet Liability', 'wallet-funding'],
+    'revenue-today':       ['Revenue Today', 'completed'],
+    'profit-today':        ['Profit Today', 'profit'],
+    'successful-txn':      ['Successful Transactions', 'completed'],
+    'failed-txns':         ['Failed Transactions', 'rejected'],
     'withdrawable-profit': ['Withdrawable Profit', 'profit'],
-    'provider-balance': ['Providers Balance', 'provider-balance']
+    'provider-balance':    ['Providers Balance', 'provider-balance']
   };
   const item = pages[page];
   if(item) go(item[1]);

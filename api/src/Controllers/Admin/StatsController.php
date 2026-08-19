@@ -130,14 +130,11 @@ class StatsController
             $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             Response::success([
-                'success' => true,
-                'data' => [
-                    'users'      => $users,
-                    'total'      => $total,
-                    'page'       => $page,
-                    'per_page'   => $perPage,
-                    'last_page'  => (int) ceil($total / $perPage),
-                ],
+                'users'      => $users,
+                'total'      => $total,
+                'page'       => $page,
+                'per_page'   => $perPage,
+                'last_page'  => (int) ceil($total / $perPage),
             ]);
         } catch (Exception $e) {
             Response::error($e->getMessage(), [], 500);
@@ -167,14 +164,11 @@ class StatsController
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             Response::success([
-                'success' => true,
-                'data' => [
-                    'transactions' => $rows,
-                    'total'        => $total,
-                    'page'         => $page,
-                    'per_page'     => $perPage,
-                    'last_page'    => (int) ceil($total / $perPage),
-                ],
+                'transactions' => $rows,
+                'total'        => $total,
+                'page'         => $page,
+                'per_page'     => $perPage,
+                'last_page'    => (int) ceil($total / $perPage),
             ]);
         } catch (Exception $e) {
             Response::error($e->getMessage(), [], 500);
