@@ -250,6 +250,12 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 </head>
 <body>
 
+<!-- ── Session restore overlay — visible only while token is being validated ── -->
+<div id="gv-session-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#f1f5f9;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <img src="../assets/img/auth-shield.png" style="width:52px;height:52px;object-fit:contain;border-radius:14px;opacity:.85" alt="">
+  <p style="font-size:13px;font-weight:600;color:#64748b;margin:0;letter-spacing:.02em">Restoring session…</p>
+</div>
+
 <section id="login" class="login">
   <div class="login-box">
     <div class="login-brand">
@@ -1117,8 +1123,11 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     }
   }
 
-  // Run setup check on page load
-  document.addEventListener('DOMContentLoaded', gvCheckSetup);
+  // Run setup check and session restore on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    gvCheckSetup();
+    gvRestoreSession();
+  });
   // ── End First-Admin Setup ─────────────────────────────────────────────────
 
   // Global inactivity detector (10 minutes for Admin)
@@ -1408,6 +1417,7 @@ async function login(){
     document.getElementById('app').classList.add('on');
     fetchDashboardData();
     fetchAdminServices();
+    gvScheduleTokenRefresh(json.data.token); // Phase 3: auto-refresh before expiry
   } catch(e) {
     errEl.textContent = 'Connection error connecting to backend API.';
     errEl.style.display = 'block';
@@ -3187,11 +3197,105 @@ async function gvCreateAdmin() {
   btn.disabled = false; btn.textContent = 'Create Administrator';
 }
 
+// ── Session Management (Phases 1, 2, 3) ──────────────────────────────────
+
+// Phase 2 — Fetch wrapper: auto-logout on 401/403
+async function gvAdminFetch(url, options) {
+  const token = localStorage.getItem('gv_admin_token');
+  const opts  = Object.assign({}, options);
+  opts.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, opts.headers || {});
+  const res = await fetch(url, opts);
+  if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem('gv_admin_token');
+    localStorage.removeItem('gv_admin');
+    if (typeof logout === 'function') logout();
+    throw new Error('Session expired (' + res.status + '). Please sign in again.');
+  }
+  return res;
+}
+
+// Phase 1 — Validate stored token and restore session on page load/refresh
+async function gvRestoreSession() {
+  const token = localStorage.getItem('gv_admin_token');
+  if (!token) return; // No token → stay on login (default state)
+
+  const overlay = document.getElementById('gv-session-overlay');
+  if (overlay) overlay.style.display = 'flex';
+
+  try {
+    const res = await gvAdminFetch('../api/auth/me');
+
+    if (res.ok) {
+      // Token valid — restore the session without a page reload
+      if (overlay) overlay.style.display = 'none';
+      document.getElementById('login').style.display  = 'none';
+      document.getElementById('app').classList.add('on');
+      fetchDashboardData();
+      fetchAdminServices();
+      setTimeout(gvInitProfileUI, 150);
+      gvScheduleTokenRefresh(token); // Phase 3
+    } else {
+      // Non-401 error (e.g. 500) — clear token to be safe, show login
+      localStorage.removeItem('gv_admin_token');
+      localStorage.removeItem('gv_admin');
+      if (overlay) overlay.style.display = 'none';
+    }
+  } catch (e) {
+    // 401/403 already handled by gvAdminFetch (token cleared, logout called)
+    // Network error falls here too — just hide overlay and show login
+    if (overlay) overlay.style.display = 'none';
+    console.warn('[gvRestoreSession]', e.message || e);
+  }
+}
+
+// Phase 3 — Schedule a silent token refresh 30 minutes before JWT expiry
+function gvScheduleTokenRefresh(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return;
+    // base64url → base64 → JSON
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const exp = payload.exp; // seconds since epoch
+    if (!exp) return;
+
+    const now       = Math.floor(Date.now() / 1000);
+    const refreshIn = Math.max(0, (exp - now - 1800)) * 1000; // 30 min before expiry
+
+    console.log('[gvSession] Token refresh in', Math.round(refreshIn / 60000), 'min');
+    setTimeout(gvDoTokenRefresh, refreshIn);
+  } catch (e) {
+    console.warn('[gvSession] Could not schedule token refresh:', e);
+  }
+}
+
+async function gvDoTokenRefresh() {
+  const token = localStorage.getItem('gv_admin_token');
+  if (!token) return; // Logged out in the meantime
+
+  try {
+    const res  = await fetch('../api/auth/refresh', {
+      method:  'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+
+    if (res.ok && json.success && json.data && json.data.token) {
+      localStorage.setItem('gv_admin_token', json.data.token);
+      console.log('[gvSession] Token refreshed silently');
+      gvScheduleTokenRefresh(json.data.token); // schedule next refresh
+    } else {
+      console.warn('[gvSession] Refresh failed — admin will need to re-login at expiry');
+    }
+  } catch (e) {
+    console.warn('[gvSession] Refresh network error:', e);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   var t = localStorage.getItem('gv_admin_token');
   if (t) { setTimeout(gvInitProfileUI, 150); }
 });
-// ── End Admin Profile Page Logic ──────────────────────────────────────────
+// ── End Session Management ────────────────────────────────────────────────
 </script>
 </body>
 </html>
