@@ -1,6 +1,8 @@
 <?php
 namespace Services;
 
+require_once __DIR__ . '/ReferenceService.php';
+
 use PDO;
 use RuntimeException;
 use PDOException;
@@ -132,7 +134,9 @@ class WalletService {
                 'userId' => $userId
             ]);
 
-            $txRef = ReferenceService::generateTransactionReference();
+            $txRef = class_exists('\Services\ReferenceService') 
+                ? ReferenceService::generateTransactionReference() 
+                : ('GVT-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(5))));
             $stmt = $this->db->prepare("
                 INSERT INTO transactions (user_id, related_request_id, reference, type, amount, balance_before, balance_after, description, status, created_at)
                 VALUES (:userId, :requestId, :ref, 'credit', :amount, :bBefore, :bAfter, :description, 'completed', NOW())

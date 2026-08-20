@@ -569,7 +569,7 @@ class TopUpController {
             if ($db->inTransaction()) $db->rollBack();
             $this->logCallback('VA_CREDIT_EXCEPTION:' . $e->getMessage(), $rawBody, $deliveryId);
             http_response_code(500);
-            echo json_encode(['error' => 'Internal error — will retry']);
+            echo json_encode(['error' => 'Internal error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()]);
         }
     }
 
