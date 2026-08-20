@@ -24,6 +24,7 @@ addRoute('GET',   '/admin/stats',                           function () { (new S
 addRoute('GET',   '/admin/users',                           function () { (new StatsController())->getUsers(); });
 addRoute('GET',   '/admin/transactions',                    function () { (new StatsController())->getTransactions(); });
 addRoute('GET',   '/admin/services',                        function () { (new StatsController())->getServices(); });
+addRoute('POST',  '/admin/services/seed',                   function () { (new StatsController())->seedDatabase(); });
 addRoute('PATCH', '/admin/services/{id}',                   function ($p) { 
     \Middleware\AdminMiddleware::requireRole('admin'); 
     (new StatsController())->updateService((int)$p['id']); 

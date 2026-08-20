@@ -496,7 +496,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 </section>
 
 <section id="page-services" class="page">
-  <div class="heading"><div><h1>Services & Pricing</h1><p>Control what users see, how services are named, and what they pay.</p></div><button class="primary" onclick="openService()">+ Add Service</button></div>
+  <div class="heading"><div><h1>Services & Pricing</h1><p>Control what users see, how services are named, and what they pay.</p></div><div style="display:flex;gap:8px"><button class="secondary" onclick="seedServices()">⚡ Seed Default Services</button><button class="primary" onclick="openService()">+ Add Service</button></div></div>
   <div class="card" style="margin-bottom:16px"><div class="card-head"><h3>Service Catalogue</h3><span>Loaded from database — prices and status are authoritative</span></div>
     <div style="padding:15px"><div class="toolbar"><input id="serviceSearch" oninput="renderServices()" placeholder="Search services..."><select id="catFilter" onchange="renderServices()"><option value="">All categories</option><option>NIN</option><option>BVN</option><option>JAMB</option><option>CAC</option><option>TIN</option><option>Attestation</option><option>GemPrint</option></select></div></div>
     <div id="serviceGrid" class="service-grid" style="padding:0 15px 18px"></div>
@@ -2075,6 +2075,31 @@ function updateCategoryDropdown() {
   catSelect.innerHTML = html;
 }
 
+async function seedServices() {
+  let token = localStorage.getItem("gv_admin_token");
+  if (!token) return;
+  const gridEl = document.getElementById('serviceGrid');
+  if (gridEl) {
+    gridEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">Seeding 22 default services & pricing variants into database…</div>';
+  }
+  try {
+    const res = await fetch('../api/admin/services/seed', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (json.success) {
+      await fetchAdminServices();
+    } else {
+      alert('Seeding failed: ' + (json.message || 'Unknown error'));
+      if (gridEl) gridEl.innerHTML = `<div style="padding:40px;text-align:center;color:#dc2626;grid-column:1/-1">Seeding error: ${json.message || 'Failed'}</div>`;
+    }
+  } catch (e) {
+    console.error("Failed to seed services", e);
+    alert('Connection error while seeding database.');
+  }
+}
+
 function renderServices(){
  const q = (document.getElementById('serviceSearch')?.value || '').toLowerCase().trim();
  const cat = (document.getElementById('catFilter')?.value || '').toLowerCase().trim();
@@ -2082,7 +2107,11 @@ function renderServices(){
  if (!gridEl) return;
 
  if (!services || services.length === 0) {
-   gridEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">No services found in database.</div>';
+   gridEl.innerHTML = `
+     <div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">
+       <p style="font-size:14px;margin-bottom:12px">No services found in database.</p>
+       <button class="primary" onclick="seedServices()" style="padding:8px 16px;cursor:pointer">+ Seed Default Services (22 Services & Pricing)</button>
+     </div>`;
    return;
  }
 
