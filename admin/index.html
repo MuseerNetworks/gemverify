@@ -1366,7 +1366,20 @@ async function fetchAdminServices() {
     });
     const json = await res.json();
     if (json.success && json.data) {
-      let svcArray = Array.isArray(json.data) ? json.data : (json.data.data || []);
+      let svcArray = [];
+      if (Array.isArray(json.data)) {
+        svcArray = json.data;
+      } else if (json.data && Array.isArray(json.data.data)) {
+        svcArray = json.data.data;
+      } else if (json.data && typeof json.data === 'object') {
+        const vals = Object.values(json.data);
+        if (vals.length > 0 && Array.isArray(vals[0])) {
+          svcArray = vals.flat();
+        } else {
+          svcArray = vals.filter(item => item && typeof item === 'object');
+        }
+      }
+
       services = svcArray.map(s => {
         let displayPrice = s.pricing && s.pricing.length > 0 ? Number(s.pricing[0].price) : 0;
         return {
@@ -1382,6 +1395,7 @@ async function fetchAdminServices() {
           est_time: s.est_time || ''
         };
       });
+      updateCategoryDropdown();
       renderServices();
     } else {
       console.warn("Failed to load services:", json);
@@ -2046,11 +2060,31 @@ async function confirmWfCredit(ref, creditAmount, note) {
 }
 
 function money(n){return n?new Intl.NumberFormat('en-NG',{style:'currency',currency:'NGN',maximumFractionDigits:0}).format(n):'—'}
+
+function updateCategoryDropdown() {
+  const catSelect = document.getElementById('catFilter');
+  if (!catSelect) return;
+  const currentVal = (catSelect.value || '').toLowerCase().trim();
+  const cats = Array.from(new Set(services.map(s => s.cat).filter(Boolean))).sort();
+  if (cats.length === 0) return;
+  let html = '<option value="">All categories</option>';
+  cats.forEach(c => {
+    const sel = c.toLowerCase() === currentVal ? 'selected' : '';
+    html += `<option value="${c}" ${sel}>${c}</option>`;
+  });
+  catSelect.innerHTML = html;
+}
+
 function renderServices(){
  const q = (document.getElementById('serviceSearch')?.value || '').toLowerCase().trim();
  const cat = (document.getElementById('catFilter')?.value || '').toLowerCase().trim();
  const gridEl = document.getElementById('serviceGrid');
  if (!gridEl) return;
+
+ if (!services || services.length === 0) {
+   gridEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">No services found in database.</div>';
+   return;
+ }
 
  const arr = services.filter(s => {
    const nameMatch = !q || (s.name && s.name.toLowerCase().includes(q));
@@ -2059,7 +2093,8 @@ function renderServices(){
  });
 
  if (arr.length === 0) {
-   gridEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">No services found matching your criteria.</div>';
+   const filterInfo = q ? `matching "${q}"` : cat ? `in category "${cat}"` : '';
+   gridEl.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">No services found ${filterInfo}.</div>`;
    return;
  }
 
