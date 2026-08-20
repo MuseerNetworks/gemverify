@@ -38,6 +38,7 @@ addRoute('GET',  '/manual/requests/{reference}/result', function ($p) { (new Man
 
 // API Services (TechHub-backed — sync PDF + async ticket)
 addRoute('POST', '/api-services/submit',                          function ()    { (new ApiRequestController())->submit(); });
+addRoute('POST', '/api/api-services/submit',                      function ()    { (new ApiRequestController())->submit(); });
 addRoute('GET',  '/api-services/requests',                        function ()    { (new ApiStatusController())->listRequests(); });
 addRoute('GET',  '/api-services/requests/{ref}',                  function ($p)  { (new ApiStatusController())->getRequest($p['ref']); });
 addRoute('POST', '/api-services/requests/{ref}/poll',             function ($p)  { (new ApiStatusController())->pollStatus($p['ref']); });

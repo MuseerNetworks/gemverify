@@ -1439,7 +1439,13 @@ let K=(F,L,j)=>{E({open:!0,service:F,amount:L,meta:j})};/* gv-auth-removed */;le
     let variantKey = meta.variantKey || null;
     let pin = meta.pin || null;
     let isBulk = Boolean(meta.count || meta.items);
-    let endpoint = isBulk ? "../api/manual/submit/bulk" : "../api/manual/submit";
+
+    const apiServices = ["nin-verification", "bvn-verification", "personalization", "bvn-retrieval", "ipe-clearance-single", "self-service"];
+    let isApiService = apiServices.includes(serviceSlug) && !isBulk;
+
+    let endpoint = isApiService 
+      ? "../api/api-services/submit" 
+      : (isBulk ? "../api/manual/submit/bulk" : "../api/manual/submit");
 
     let idempotencyKey = "IDEM-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9);
     // Scan meta for any File objects and extract them
@@ -1486,6 +1492,14 @@ let K=(F,L,j)=>{E({open:!0,service:F,amount:L,meta:j})};/* gv-auth-removed */;le
           pin: pin,
           idempotency_key: idempotencyKey
         };
+      } else if (isApiService) {
+        body = {
+          service_slug: serviceSlug,
+          variant_key: variantKey,
+          idempotency_key: idempotencyKey,
+          pin: pin,
+          form_data: metaCleaned
+        };
       } else {
         body = isBulk ? {
           service_slug: serviceSlug,
@@ -1527,6 +1541,21 @@ let K=(F,L,j)=>{E({open:!0,service:F,amount:L,meta:j})};/* gv-auth-removed */;le
 
       if (meta.type === "gemprint-job") {
         fetchGemPrintData();
+      }
+
+      // If instant PDF slip is returned, auto-download or trigger PDF view
+      let pdfData = json.data?.pdf_base64 || json.pdf_base64;
+      if (pdfData) {
+        try {
+          let link = document.createElement("a");
+          link.href = "data:application/pdf;base64," + pdfData;
+          link.download = (serviceSlug || "verification") + "_slip_" + (json.data?.gv_reference || Date.now()) + ".pdf";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } catch(pdfErr) {
+          console.error("Auto download PDF error:", pdfErr);
+        }
       }
       E({ open: false });
       f({

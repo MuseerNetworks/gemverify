@@ -118,12 +118,28 @@ class ApiRequestController
      */
     public function submit(): void
     {
-        $input        = json_decode(file_get_contents('php://input'), true) ?? [];
-        $serviceSlug  = trim($input['service_slug']  ?? '');
-        $variantKey   = isset($input['variant_key']) ? trim($input['variant_key']) : null;
-        $inputMethod  = isset($input['input_method']) ? trim($input['input_method']) : null;
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        if (isset($input['form_data']) && is_array($input['form_data'])) {
+            $input = array_merge($input['form_data'], $input);
+            unset($input['form_data']);
+        }
+
+        $serviceSlug    = trim($input['service_slug']  ?? '');
+        $variantKey     = isset($input['variant_key']) ? trim($input['variant_key']) : null;
+        $inputMethod    = isset($input['input_method']) ? trim($input['input_method']) : null;
         $idempotencyKey = trim($input['idempotency_key'] ?? '');
-        $pin          = $input['pin'] ?? null;
+        $pin            = $input['pin'] ?? null;
+
+        // Auto-detect input_method if not explicitly passed
+        if (empty($inputMethod)) {
+            if (!empty($input['nin'])) {
+                $inputMethod = 'by_nin';
+            } elseif (!empty($input['phone'])) {
+                $inputMethod = 'by_phone';
+            } elseif (!empty($input['firstname']) || !empty($input['first_name'])) {
+                $inputMethod = 'by_demo';
+            }
+        }
 
         // Strip meta-fields from formData passed to provider
         $formData = $input;
