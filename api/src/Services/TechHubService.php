@@ -305,9 +305,21 @@ class TechHubService
         }
 
         $data = $clientResult['data'];
-        $pdf  = $data['pdf_base64'] ?? null;
+        $pdf  = $this->extractPdfFromData($data);
 
         if (empty($pdf)) {
+            error_log("[TechHub Sync Result] No PDF found in response. Keys: " . json_encode(is_array($data) ? array_keys($data) : gettype($data)));
+            
+            // Check if there's an explicit error status in response
+            if (isset($data['status']) && strtolower((string)$data['status']) === 'error') {
+                return [
+                    'success'       => false,
+                    'error_message' => $data['message'] ?? 'Provider returned an error',
+                    'error_code'    => $data['error_code'] ?? 'PROVIDER_ERROR',
+                    'http_code'     => $clientResult['http_code'],
+                ];
+            }
+
             return [
                 'success'       => false,
                 'error_message' => $data['message'] ?? 'Provider returned success but no PDF',
@@ -319,12 +331,90 @@ class TechHubService
         return [
             'success'         => true,
             'pdf_base64'      => $pdf,
-            'user_data'       => $data['user_data'] ?? [],
+            'user_data'       => $data['user_data'] ?? $data['data'] ?? $data,
             'message'         => $data['message']   ?? 'PDF generated successfully',
-            'provider_txn_id' => null,  // TechHub slip endpoints do not return a transaction_id
+            'provider_txn_id' => $data['transaction_id'] ?? $data['reference'] ?? null,
             'error_message'   => null,
             'error_code'      => null,
         ];
+    }
+
+    /**
+     * Resiliently extract PDF base64 or download URL from TechHub response data.
+     */
+    private function extractPdfFromData(mixed $data): ?string
+    {
+        if (empty($data)) {
+            return null;
+        }
+
+        if (is_string($data)) {
+            $trimmed = trim($data);
+            if (str_starts_with($trimmed, 'JVBER') || str_starts_with($trimmed, 'data:application/pdf') || (strlen($trimmed) > 500 && base64_decode($trimmed, true) !== false)) {
+                return $trimmed;
+            }
+            return null;
+        }
+
+        if (!is_array($data)) {
+            return null;
+        }
+
+        // Direct candidate keys check
+        $candidateKeys = [
+            'pdf_base64', 'slip', 'pdf', 'base64', 'file', 'document', 'image',
+            'slip_base64', 'nin_slip', 'bvn_slip', 'slip_data', 'base64_data',
+            'base64_pdf', 'result_pdf', 'pdf_data', 'slip_url', 'download_url', 'url', 'link'
+        ];
+
+        foreach ($candidateKeys as $k) {
+            if (!empty($data[$k]) && is_string($data[$k])) {
+                $val = trim($data[$k]);
+                if (preg_match('#^https?://#i', $val)) {
+                    try {
+                        $remote = @file_get_contents($val);
+                        if ($remote !== false && strlen($remote) > 100) {
+                            return base64_encode($remote);
+                        }
+                    } catch (\Throwable $e) {}
+                    return $val;
+                }
+                if (str_starts_with($val, 'JVBER') || str_starts_with($val, 'data:application/pdf') || strlen($val) > 200) {
+                    return $val;
+                }
+            }
+        }
+
+        // Sub-array keys
+        $subKeys = ['data', 'response', 'response_data', 'result', 'payload', 'slip_details', 'user_data'];
+        foreach ($subKeys as $sub) {
+            if (isset($data[$sub]) && is_array($data[$sub])) {
+                $found = $this->extractPdfFromData($data[$sub]);
+                if ($found) {
+                    return $found;
+                }
+            }
+        }
+
+        // Recursive fallback across all array values
+        foreach ($data as $k => $v) {
+            if (is_string($v)) {
+                $val = trim($v);
+                if (str_starts_with($val, 'JVBER') || str_starts_with($val, 'data:application/pdf;base64,')) {
+                    return $val;
+                }
+                if (strlen($val) > 1000 && !preg_match('/\s/', $val)) {
+                    return $val;
+                }
+            } elseif (is_array($v)) {
+                $found = $this->extractPdfFromData($v);
+                if ($found) {
+                    return $found;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
