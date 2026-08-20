@@ -57,7 +57,7 @@ class WalletAdminController {
               wt.merchant_reference,
               wt.katpay_uuid,
               wt.user_id,
-              u.full_name        AS user_name,
+              u.business_name    AS user_name,
               u.email            AS user_email,
               wt.amount,
               wt.amount_received,
@@ -112,9 +112,9 @@ class WalletAdminController {
         $stmt = $db->prepare("
             SELECT
               wt.*,
-              u.full_name  AS user_name,
-              u.email      AS user_email,
-              u.phone      AS user_phone
+              u.business_name AS user_name,
+              u.email         AS user_email,
+              u.phone         AS user_phone
             FROM wallet_topups wt
             LEFT JOIN users u ON u.id = wt.user_id
             WHERE wt.merchant_reference = ?

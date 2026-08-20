@@ -48,7 +48,7 @@ class TopUpController {
         }
 
         // Fetch user details for KatPay
-        $stmt = $db->prepare("SELECT full_name, email, phone FROM users WHERE id = ?");
+        $stmt = $db->prepare("SELECT business_name AS full_name, email, phone FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
