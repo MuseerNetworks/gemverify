@@ -139,10 +139,10 @@ class TopUpController {
 
         // 1. Read raw body BEFORE any parsing
         $rawBody   = file_get_contents('php://input');
-        $signature = $_SERVER['HTTP_X_KATPAY_SIGNATURE']  ?? '';
-        $timestamp = $_SERVER['HTTP_X_KATPAY_TIMESTAMP']  ?? '';
-        $deliveryId= $_SERVER['HTTP_X_KATPAY_DELIVERY_ID'] ?? '';
-        $event     = $_SERVER['HTTP_X_KATPAY_EVENT']      ?? '';
+        $signature = $this->getHeader('X-KatPay-Signature');
+        $timestamp = $this->getHeader('X-KatPay-Timestamp');
+        $deliveryId= $this->getHeader('X-KatPay-Delivery-ID');
+        $event     = $this->getHeader('X-KatPay-Event');
 
         // 2. Validate required headers exist
         if (empty($signature) || empty($timestamp)) {
@@ -556,5 +556,21 @@ class TopUpController {
         } catch (\Throwable $e) {
             // Logging must never crash the response
         }
+    }
+
+    private function getHeader(string $name): string {
+        $key = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+        if (!empty($_SERVER[$key])) {
+            return $_SERVER[$key];
+        }
+        if (function_exists('getallheaders')) {
+            $headers = getallheaders();
+            foreach ($headers as $k => $v) {
+                if (strcasecmp($k, $name) === 0) {
+                    return $v;
+                }
+            }
+        }
+        return '';
     }
 }

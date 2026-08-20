@@ -262,14 +262,17 @@ class KatPayService {
         string $signature,
         string $timestamp
     ): bool {
-        if (empty($this->webhookSecret) || $this->webhookSecret === 'your_katpay_webhook_secret_here') {
-            return false; // Misconfigured — refuse all callbacks
+        $secret = !empty($this->webhookSecret) && $this->webhookSecret !== 'your_katpay_webhook_secret_here'
+            ? $this->webhookSecret
+            : $this->secretKey;
+
+        if (empty($secret)) {
+            return false;
         }
 
-        $signedPayload       = $timestamp . '.' . $rawBody;
-        $expectedSignature   = hash_hmac('sha256', $signedPayload, $this->webhookSecret);
+        $signedPayload     = $timestamp . '.' . $rawBody;
+        $expectedSignature = hash_hmac('sha256', $signedPayload, $secret);
 
-        // Use timing-safe comparison to prevent timing attacks
         return hash_equals($expectedSignature, $signature);
     }
 

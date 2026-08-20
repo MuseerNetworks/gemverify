@@ -12,9 +12,13 @@ php_flag log_errors On
 
 RewriteEngine On
 
-# Pass Authorization header to PHP in CGI/FastCGI environments (cPanel/Apache)
+# Pass Authorization and KatPay headers to PHP in CGI/FastCGI environments (cPanel/Apache)
 SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+SetEnvIf X-KatPay-Signature "(.*)" HTTP_X_KATPAY_SIGNATURE=$1
+SetEnvIf X-KatPay-Timestamp "(.*)" HTTP_X_KATPAY_TIMESTAMP=$1
+SetEnvIf X-KatPay-Delivery-ID "(.*)" HTTP_X_KATPAY_DELIVERY_ID=$1
+SetEnvIf X-KatPay-Event "(.*)" HTTP_X_KATPAY_EVENT=$1
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
