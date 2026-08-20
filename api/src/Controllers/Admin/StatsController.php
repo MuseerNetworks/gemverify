@@ -618,14 +618,14 @@ class StatsController
             $stmt = $this->db->prepare("UPDATE services SET name = ?, is_active = ?, is_manual = ?, est_time = ? WHERE id = ?");
             $stmt->execute([$name, $isActive, $isManual, $estTime, $id]);
 
-            $adminId = $_SERVER['ADMIN_ID'] ?? 1;
+            $adminId = \Middleware\AdminMiddleware::getAdminId();
             $stmtAudit = $this->db->prepare("INSERT INTO audit_logs (actor_type, actor_id, action, notes) VALUES ('admin', ?, 'SERVICE_UPDATED', ?)");
             $stmtAudit->execute([$adminId, "Updated service $id settings: " . json_encode($input)]);
 
             $this->db->commit();
             Response::success(['success' => true, 'message' => 'Service updated successfully']);
         } catch (Exception $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) $this->db->rollBack();
             Response::error($e->getMessage(), [], 500);
         }
     }
@@ -645,7 +645,7 @@ class StatsController
             $stmt = $this->db->prepare("UPDATE service_pricing SET price = ? WHERE id = ? AND service_id = ?");
             $stmt->execute([$price, $pricingId, $id]);
 
-            $adminId = $_SERVER['ADMIN_ID'] ?? 1;
+            $adminId = \Middleware\AdminMiddleware::getAdminId();
             $stmtAudit = $this->db->prepare("INSERT INTO audit_logs (actor_type, actor_id, action, notes) VALUES ('admin', ?, 'PRICE_UPDATED', ?)");
             $stmtAudit->execute([$adminId, "Updated pricing $pricingId for service $id to $price"]);
 

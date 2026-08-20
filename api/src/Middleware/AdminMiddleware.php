@@ -8,9 +8,17 @@ class AdminMiddleware {
     public static function handle(): array {
         $token = $_COOKIE['gv_admin_token'] ?? '';
         if (!$token) {
-            $headers = getallheaders();
-            $authHeader = $headers['Authorization'] ?? '';
-            if ($authHeader && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+            if (!$authHeader && function_exists('getallheaders')) {
+                $headers = getallheaders();
+                foreach ($headers as $k => $v) {
+                    if (strcasecmp($k, 'Authorization') === 0) {
+                        $authHeader = $v;
+                        break;
+                    }
+                }
+            }
+            if ($authHeader && preg_match('/Bearer\s(\S+)/i', $authHeader, $matches)) {
                 $token = $matches[1];
             }
         }
