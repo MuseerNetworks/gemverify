@@ -35,9 +35,6 @@ class RequestService {
         if (!$priceInfo) {
             throw new Exception("Invalid service or pricing variant.");
         }
-        if (empty($priceInfo['is_manual'])) {
-            throw new Exception("This service is API-based and cannot be submitted through the Manual Request workflow.");
-        }
         $price = (float) $priceInfo['price'];
         $serviceId = $priceInfo['service_id'];
         $serviceName = $priceInfo['service_name'];
@@ -171,9 +168,6 @@ class RequestService {
         $priceInfo = $this->pricingService->getPrice($serviceSlug, $variantKey);
         if (!$priceInfo) {
             throw new Exception("Invalid service or pricing variant.");
-        }
-        if (empty($priceInfo['is_manual'])) {
-            throw new Exception("This service is API-based and cannot be submitted through the Manual Request workflow.");
         }
         $unitPrice = (float) $priceInfo['price'];
         $totalPrice = $unitPrice * $count;
