@@ -454,19 +454,52 @@ class TopUpController {
         );
 
 
-        if (empty($merchantRef) || $amountCredited <= 0) {
+        if ($amountCredited <= 0) {
             http_response_code(400);
-            echo json_encode(['error' => 'Invalid virtual account credit payload']);
+            echo json_encode(['error' => 'Invalid virtual account credit payload: amount must be > 0']);
             return;
         }
 
-        // Parse user_id from merchant_reference ("GVU_42" → 42)
-        if (!preg_match('/^GVU_(\d+)$/', $merchantRef, $m)) {
+        $userId = null;
+
+        // 1. Try parsing merchant_reference ("GVU_42" → 42)
+        if (!empty($merchantRef) && preg_match('/^GVU_(\d+)$/', $merchantRef, $m)) {
+            $userId = (int) $m[1];
+        }
+
+        // 2. Try metadata or direct user_id
+        if (!$userId) {
+            $userId = isset($data['metadata']['user_id']) ? (int) $data['metadata']['user_id'] : (isset($data['user_id']) ? (int) $data['user_id'] : null);
+        }
+
+        // 3. Try virtual account number lookup
+        if (!$userId) {
+            $accountNumber = $data['account_number'] ?? ($data['virtual_account']['account_number'] ?? ($data['payment_account']['account_number'] ?? ''));
+            if ($accountNumber) {
+                $vStmt = $db->prepare("SELECT user_id FROM virtual_accounts WHERE account_number = ?");
+                $vStmt->execute([$accountNumber]);
+                $resId = $vStmt->fetchColumn();
+                if ($resId) $userId = (int) $resId;
+            }
+        }
+
+        // 4. Try customer email lookup
+        if (!$userId) {
+            $email = $data['customer_email'] ?? ($data['customer']['email'] ?? ($data['email'] ?? ''));
+            if ($email) {
+                $uStmt = $db->prepare("SELECT id FROM users WHERE email = ?");
+                $uStmt->execute([$email]);
+                $resId = $uStmt->fetchColumn();
+                if ($resId) $userId = (int) $resId;
+            }
+        }
+
+        if (!$userId) {
             http_response_code(200);
-            echo json_encode(['received' => true, 'note' => 'Unknown virtual account reference']);
+            echo json_encode(['received' => true, 'note' => 'Could not resolve user for virtual account credit']);
+            $this->logCallback('UNRESOLVED_USER_VA_CREDIT', $rawBody, $deliveryId);
             return;
         }
-        $userId = (int) $m[1];
 
         // Idempotency check on delivery_id
         if (!empty($deliveryId)) {
