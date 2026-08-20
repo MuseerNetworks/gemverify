@@ -441,18 +441,38 @@ class TopUpController {
     ): void {
         $db = db();
 
-        // Extract merchant reference with robust fallbacks (supports documented and undocumented keys)
-        $merchantRef = $data['merchant_reference'] 
-            ?? ($data['transaction']['reference'] ?? '')
-            ?? ($data['virtual_account']['provider_reference'] ?? '');
+        // Extract merchant reference with multi-key fallbacks
+        $possibleRefs = [
+            $data['merchant_reference'] ?? null,
+            $data['reference'] ?? null,
+            $data['provider_reference'] ?? null,
+            $data['transaction']['reference'] ?? null,
+            $data['virtual_account']['provider_reference'] ?? null,
+        ];
+        $merchantRef = '';
+        foreach ($possibleRefs as $refVal) {
+            if (!empty($refVal) && is_string($refVal)) {
+                $merchantRef = trim($refVal);
+                break;
+            }
+        }
 
-        // Extract amount credited with robust fallbacks
-        $amountCredited = (float) (
-            $data['amount_credited'] 
-            ?? ($data['amount'] ?? 0)
-            ?? ($data['transaction']['order_amount'] ?? 0)
-        );
-
+        // Extract amount credited filtering out null/empty/zero values
+        $possibleAmounts = [
+            $data['amount'] ?? null,
+            $data['amount_credited'] ?? null,
+            $data['amount_received'] ?? null,
+            $data['transaction']['amount'] ?? null,
+            $data['transaction']['order_amount'] ?? null,
+            $data['order_amount'] ?? null,
+        ];
+        $amountCredited = 0.0;
+        foreach ($possibleAmounts as $val) {
+            if ($val !== null && $val !== '' && (float)$val > 0) {
+                $amountCredited = (float) $val;
+                break;
+            }
+        }
 
         if ($amountCredited <= 0) {
             http_response_code(400);
