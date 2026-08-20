@@ -23,84 +23,81 @@ class WalletAdminController {
     // List all top-up orders with optional filters
     // ──────────────────────────────────────────────────────────────────────────
     public function listTopUps(): void {
-        $db     = db();
-        $page   = max(1, (int) ($_GET['page'] ?? 1));
-        $limit  = 25;
-        $offset = ($page - 1) * $limit;
+        try {
+            $db     = db();
+            $page   = max(1, (int) ($_GET['page'] ?? 1));
+            $limit  = 25;
+            $offset = ($page - 1) * $limit;
 
-        $status = $_GET['status'] ?? '';
-        $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : null;
+            $status = $_GET['status'] ?? '';
+            $userId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : null;
 
-        $where  = [];
-        $params = [];
+            $where  = [];
+            $params = [];
 
-        if ($status && in_array($status, ['pending','processing','completed','partial','expired','cancelled','failed'], true)) {
-            $where[]  = 'wt.status = ?';
-            $params[] = $status;
+            if ($status && in_array($status, ['pending','processing','completed','partial','expired','cancelled','failed'], true)) {
+                $where[]  = 'wt.status = ?';
+                $params[] = $status;
+            }
+            if ($userId) {
+                $where[]  = 'wt.user_id = ?';
+                $params[] = $userId;
+            }
+
+            $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+            // Count
+            $cStmt = $db->prepare("SELECT COUNT(*) FROM wallet_topups wt $whereClause");
+            $cStmt->execute($params);
+            $total = (int) $cStmt->fetchColumn();
+
+            // Fetch with user join
+            $stmt = $db->prepare("
+                SELECT
+                  wt.id,
+                  wt.merchant_reference,
+                  wt.katpay_uuid,
+                  wt.user_id,
+                  u.business_name    AS user_name,
+                  u.email            AS user_email,
+                  wt.amount,
+                  wt.amount_received,
+                  wt.currency,
+                  wt.status,
+                  wt.credited_tx_id,
+                  wt.admin_note,
+                  wt.expires_at,
+                  wt.completed_at,
+                  wt.created_at,
+                  wt.updated_at
+                FROM wallet_topups wt
+                LEFT JOIN users u ON u.id = wt.user_id
+                $whereClause
+                ORDER BY wt.created_at DESC
+                LIMIT $limit OFFSET $offset
+            ");
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($rows as &$row) {
+                $row['amount']          = (float) $row['amount'];
+                $row['amount_received'] = $row['amount_received'] !== null ? (float) $row['amount_received'] : null;
+            }
+            unset($row);
+
+            Response::success([
+                'data'       => $rows,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page'     => $limit,
+                    'total'        => $total,
+                    'total_pages'  => (int) ceil($total / $limit),
+                ],
+                'summary'    => $this->getSummary($db),
+            ]);
+        } catch (\Exception $e) {
+            Response::error($e->getMessage(), 500);
         }
-        if ($userId) {
-            $where[]  = 'wt.user_id = ?';
-            $params[] = $userId;
-        }
-
-        $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-
-        // Count
-        $cStmt = $db->prepare("SELECT COUNT(*) FROM wallet_topups wt $whereClause");
-        $cStmt->execute($params);
-        $total = (int) $cStmt->fetchColumn();
-
-        // Fetch with user join
-        $stmt = $db->prepare("
-            SELECT
-              wt.id,
-              wt.merchant_reference,
-              wt.katpay_uuid,
-              wt.user_id,
-              u.business_name    AS user_name,
-              u.email            AS user_email,
-              wt.amount,
-              wt.amount_received,
-              wt.currency,
-              wt.status,
-              wt.credited_tx_id,
-              wt.admin_note,
-              wt.expires_at,
-              wt.completed_at,
-              wt.created_at,
-              wt.updated_at
-            FROM wallet_topups wt
-            LEFT JOIN users u ON u.id = wt.user_id
-            $whereClause
-            ORDER BY wt.created_at DESC
-            LIMIT :lim OFFSET :off
-        ");
-
-        // Bind named params separately since we have positional + named mix
-        foreach ($params as $i => $val) {
-            $stmt->bindValue($i + 1, $val);
-        }
-        $stmt->bindValue(':lim', $limit,  PDO::PARAM_INT);
-        $stmt->bindValue(':off', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($rows as &$row) {
-            $row['amount']          = (float) $row['amount'];
-            $row['amount_received'] = $row['amount_received'] !== null ? (float) $row['amount_received'] : null;
-        }
-        unset($row);
-
-        Response::success([
-            'data'       => $rows,
-            'pagination' => [
-                'current_page' => $page,
-                'per_page'     => $limit,
-                'total'        => $total,
-                'total_pages'  => (int) ceil($total / $limit),
-            ],
-            'summary'    => $this->getSummary($db),
-        ]);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
