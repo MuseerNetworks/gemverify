@@ -216,7 +216,7 @@ class TechHubService
         }
 
         // ── Async: IPE Clearance Single ───────────────────────────────────
-        if ($slug === 'ipe-clearance-single') {
+        if ($slug === 'ipe-clearance-single' || $slug === 'ipe-clearance') {
             return 'ipe_clearance.php';
         }
 
@@ -273,7 +273,7 @@ class TechHubService
                 'last_name'    => trim($formData['last_name']    ?? ''),
                 'phone_number' => $this->sanitisePhone($formData['phone_number'] ?? ''),
             ],
-            'ipe-clearance-single' => [
+            'ipe-clearance-single', 'ipe-clearance' => [
                 'tracking_id' => substr(preg_replace('/[^a-zA-Z0-9]/', '', $formData['tracking_id'] ?? ''), 0, 20),
             ],
             default => throw new \RuntimeException("buildAsyncPayload: unsupported slug '{$slug}'"),

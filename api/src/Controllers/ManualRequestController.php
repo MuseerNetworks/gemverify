@@ -108,34 +108,66 @@ class ManualRequestController
     {
         try {
             $page = (int)($_GET['page'] ?? 1);
-            $perPage = 20;
+            $perPage = 50;
             $offset = ($page - 1) * $perPage;
             $status = $_GET['status'] ?? null;
 
-            $query = "SELECT r.reference, r.status, r.price_paid, r.submitted_at, 
-                             s.name as service_name, c.name as category, s.est_time as est_time, s.slug as service_slug,
-                             CASE WHEN r.result_file_id IS NOT NULL THEN 1 ELSE 0 END as has_result
-                      FROM manual_requests r
-                      JOIN services s ON r.service_id = s.id
-                      JOIN service_categories c ON s.category_id = c.id
-                      WHERE r.user_id = ?";
-            $params = [$this->userId];
+            $statusClause1 = $status ? " AND r.status = :status1" : "";
+            $statusClause2 = $status ? " AND t.gv_status = :status2" : "";
 
-            if ($status) {
-                $query .= " AND r.status = ?";
-                $params[] = $status;
-            }
+            $query = "
+                SELECT 
+                    r.reference, 
+                    r.status, 
+                    r.price_paid, 
+                    r.submitted_at, 
+                    s.name as service_name, 
+                    c.name as category, 
+                    s.est_time as est_time, 
+                    s.slug as service_slug,
+                    CASE WHEN r.result_file_id IS NOT NULL THEN 1 ELSE 0 END as has_result,
+                    'manual' as request_type,
+                    NULL as provider_ticket_id
+                FROM manual_requests r
+                JOIN services s ON r.service_id = s.id
+                JOIN service_categories c ON s.category_id = c.id
+                WHERE r.user_id = :userId1 {$statusClause1}
 
-            $query .= " ORDER BY r.submitted_at DESC LIMIT ? OFFSET ?";
-            $params[] = $perPage;
-            $params[] = $offset;
+                UNION ALL
+
+                SELECT 
+                    t.gv_reference as reference, 
+                    t.gv_status as status, 
+                    COALESCE(tx.amount, 0) as price_paid, 
+                    t.submitted_at as submitted_at, 
+                    s.name as service_name, 
+                    c.name as category, 
+                    COALESCE(s.est_time, 'Instant') as est_time, 
+                    s.slug as service_slug,
+                    CASE WHEN t.result_data IS NOT NULL THEN 1 ELSE 0 END as has_result,
+                    'api' as request_type,
+                    t.provider_ticket_id
+                FROM api_transactions t
+                JOIN services s ON t.service_id = s.id
+                JOIN service_categories c ON s.category_id = c.id
+                LEFT JOIN transactions tx ON t.transaction_id = tx.id
+                WHERE t.user_id = :userId2 {$statusClause2}
+
+                ORDER BY submitted_at DESC 
+                LIMIT :perPage OFFSET :offset
+            ";
 
             $stmt = $this->db->prepare($query);
-            foreach ($params as $i => $param) {
-                $type = is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR;
-                $stmt->bindValue($i + 1, $param, $type);
+            $stmt->bindValue(':userId1', $this->userId, PDO::PARAM_INT);
+            $stmt->bindValue(':userId2', $this->userId, PDO::PARAM_INT);
+            if ($status) {
+                $stmt->bindValue(':status1', $status, PDO::PARAM_STR);
+                $stmt->bindValue(':status2', $status, PDO::PARAM_STR);
             }
+            $stmt->bindValue(':perPage', $perPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
+
             $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             Response::success($requests);

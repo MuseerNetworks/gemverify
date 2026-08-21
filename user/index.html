@@ -1440,7 +1440,7 @@ let K=(F,L,j)=>{E({open:!0,service:F,amount:L,meta:j})};/* gv-auth-removed */;le
     let pin = meta.pin || null;
     let isBulk = Boolean(meta.count || meta.items);
 
-    const apiServices = ["nin-verification", "bvn-verification", "personalization", "bvn-retrieval", "ipe-clearance-single", "self-service"];
+    const apiServices = ["nin-verification", "bvn-verification", "personalization", "bvn-retrieval", "ipe-clearance-single", "ipe-clearance", "self-service"];
     let isApiService = apiServices.includes(serviceSlug) && !isBulk;
 
     let endpoint = isApiService 
@@ -1611,6 +1611,9 @@ function ServiceHistoryTable({ serviceSlug, requests = [] }) {
     if (target === "cac-services") {
       return sSlug.startsWith("cac-");
     }
+    if (target === "ipe-clearance" || target === "ipe-clearance-single") {
+      return sSlug === "ipe-clearance" || sSlug === "ipe-clearance-single";
+    }
     return sSlug === target;
   });
 
@@ -1660,6 +1663,8 @@ function ServiceHistoryTable({ serviceSlug, requests = [] }) {
                 let statusClass = r.status === "completed" ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10" : r.status === "rejected" ? "text-rose-600 bg-rose-50 dark:bg-rose-500/10" : r.status === "processing" ? "text-blue-600 bg-blue-50 dark:bg-blue-500/10" : "text-amber-600 bg-amber-50 dark:bg-amber-500/10";
                 
                 let isCompleted = r.has_result || r.status === "completed" || String(r.status).toLowerCase() === "completed";
+                let isApiCheckable = r.request_type === "api" || r.provider_ticket_id || (r.reference && r.reference.startsWith("GVA-"));
+                let isPendingOrProcessing = !isCompleted && r.status !== "rejected" && r.status !== "failed";
                 
                 let actionBtn = isCompleted
                   ? i("button", {
@@ -1667,7 +1672,33 @@ function ServiceHistoryTable({ serviceSlug, requests = [] }) {
                       className: "px-3 py-1.5 bg-[#0050FF] text-white text-[11px] font-semibold rounded-lg hover:bg-blue-700 transition",
                       children: "Download Result"
                     })
-                  : i("span", { className: "opacity-50 text-[11px]", children: "In Progress" });
+                  : u("div", {
+                      className: "flex items-center gap-1.5",
+                      children: [
+                        i("span", { className: "opacity-50 text-[11px]", children: "In Progress" }),
+                        isApiCheckable && i("button", {
+                          onClick: async () => {
+                            let token = localStorage.getItem("gv_token");
+                            try {
+                              let res = await fetch("../api/api-services/" + r.reference + "/status", {
+                                headers: { "Authorization": "Bearer " + token }
+                              });
+                              let json = await res.json();
+                              if (json.success) {
+                                alert("Live Status Update: Request is currently " + (json.data?.status || "Processing").toUpperCase());
+                                if (typeof fetchUserRequests === "function") fetchUserRequests();
+                              } else {
+                                alert("Status Check: " + (json.message || "Failed to check status"));
+                              }
+                            } catch(e) {
+                              alert("Error checking status: " + e.message);
+                            }
+                          },
+                          className: "px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-semibold rounded-lg transition cursor-pointer",
+                          children: "Check Status 🔄"
+                        })
+                      ]
+                    });
 
                 let dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString("en-NG", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "—";
                 

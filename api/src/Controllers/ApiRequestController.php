@@ -77,6 +77,9 @@ class ApiRequestController
         'ipe-clearance-single' => [
             null => ['tracking_id'],
         ],
+        'ipe-clearance' => [
+            null => ['tracking_id'],
+        ],
     ];
 
     public function __construct()
@@ -646,5 +649,88 @@ class ApiRequestController
         } catch (Exception $e) {
             // Don't let logging break the error response
         }
+    }
+
+    /**
+     * Public method: Poll TechHub live for an async transaction status.
+     */
+    public function checkStatus(string $reference): void
+    {
+        $stmt = $this->db->prepare("
+            SELECT t.*, s.name as service_name, s.slug as service_slug
+            FROM api_transactions t
+            LEFT JOIN services s ON s.id = t.service_id
+            WHERE t.gv_reference = :ref AND t.user_id = :userId
+            LIMIT 1
+        ");
+        $stmt->execute(['ref' => $reference, 'userId' => $this->userId]);
+        $tx = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$tx) {
+            Response::error('Transaction not found.', [], 404);
+            return;
+        }
+
+        if (empty($tx['provider_ticket_id'])) {
+            Response::success([
+                'gv_reference' => $tx['gv_reference'],
+                'status'       => $tx['gv_status'],
+                'message'      => 'No provider ticket associated with this transaction.',
+                'tx'           => $tx
+            ]);
+            return;
+        }
+
+        // If already final state, return immediately
+        if (in_array($tx['gv_status'], ['completed', 'failed', 'refunded'], true)) {
+            Response::success([
+                'gv_reference' => $tx['gv_reference'],
+                'status'       => $tx['gv_status'],
+                'message'      => "Transaction is already {$tx['gv_status']}.",
+                'tx'           => $tx
+            ]);
+            return;
+        }
+
+        // Live check from TechHub
+        try {
+            $statusResult = $this->techHubService->checkAsyncStatus(
+                $tx['service_slug'] ?? 'ipe-clearance-single',
+                $tx['variant_key'] ?? null,
+                $tx['provider_ticket_id']
+            );
+
+            if ($statusResult['success']) {
+                $pStatus = $statusResult['provider_status'] ?? 'pending';
+                if ($statusResult['is_complete']) {
+                    if ($pStatus === 'success') {
+                        $upd = $this->db->prepare("
+                            UPDATE api_transactions
+                            SET gv_status = 'completed', provider_status = 'success', result_data = ?, completed_at = NOW()
+                            WHERE id = ?
+                        ");
+                        $upd->execute([json_encode($statusResult['result_data'] ?? []), $tx['id']]);
+                        $tx['gv_status'] = 'completed';
+                    } elseif ($pStatus === 'failed') {
+                        $upd = $this->db->prepare("
+                            UPDATE api_transactions
+                            SET gv_status = 'failed', provider_status = 'failed', error_message = ?
+                            WHERE id = ?
+                        ");
+                        $upd->execute([$statusResult['error_message'] ?? 'Provider failed request', $tx['id']]);
+                        $tx['gv_status'] = 'failed';
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[ApiRequestController] Live checkStatus error: ' . $e->getMessage());
+        }
+
+        Response::success([
+            'gv_reference' => $tx['gv_reference'],
+            'status'       => $tx['gv_status'],
+            'message'      => 'Status updated live from provider.',
+            'tx'           => $tx
+        ]);
     }
 }
