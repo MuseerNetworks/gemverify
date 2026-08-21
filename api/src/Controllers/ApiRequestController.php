@@ -355,7 +355,8 @@ class ApiRequestController
                     : "Your {$serviceName} request ({$gvReference}) has been submitted and is being processed.";
 
                 $this->notificationService->notify(
-                    $this->userId, $apiTxId,
+                    $this->userId,
+                    null,
                     'api_request_' . ($resultType === 'pdf_base64' ? 'completed' : 'submitted'),
                     'Request ' . ($resultType === 'pdf_base64' ? 'Completed' : 'Submitted'),
                     $notifMsg

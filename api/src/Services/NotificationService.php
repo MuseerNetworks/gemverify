@@ -11,17 +11,31 @@ class NotificationService {
     }
 
     public function notify(int $userId, ?int $requestId, string $type, string $title, string $body): void {
-        $stmt = $this->db->prepare("
-            INSERT INTO notifications (user_id, request_id, type, title, body, is_read, created_at)
-            VALUES (:userId, :requestId, :type, :title, :body, 0, NOW())
-        ");
-        $stmt->execute([
-            'userId' => $userId,
-            'requestId' => $requestId,
-            'type' => $type,
-            'title' => $title,
-            'body' => $body
-        ]);
+        try {
+            // Ensure $requestId exists in manual_requests before inserting to prevent FK constraint violations
+            $validRequestId = null;
+            if ($requestId !== null && $requestId > 0) {
+                $checkStmt = $this->db->prepare("SELECT id FROM manual_requests WHERE id = ? LIMIT 1");
+                $checkStmt->execute([$requestId]);
+                if ($checkStmt->fetchColumn()) {
+                    $validRequestId = $requestId;
+                }
+            }
+
+            $stmt = $this->db->prepare("
+                INSERT INTO notifications (user_id, request_id, type, title, body, is_read, created_at)
+                VALUES (:userId, :requestId, :type, :title, :body, 0, NOW())
+            ");
+            $stmt->execute([
+                'userId'    => $userId,
+                'requestId' => $validRequestId,
+                'type'      => $type,
+                'title'     => $title,
+                'body'      => $body
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[NotificationService] Failed to insert notification: ' . $e->getMessage());
+        }
     }
 
     public function notifyStatusChange(int $userId, int $requestId, string $serviceName, string $reference, string $newStatus): void {
