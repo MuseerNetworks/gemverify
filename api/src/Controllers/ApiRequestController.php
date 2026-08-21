@@ -378,6 +378,28 @@ class ApiRequestController
 
             if ($providerResult['success']) {
                 if ($resultType === 'pdf_base64') {
+                    $ts = time();
+                    $ident = preg_replace('/\D/', '', (string)($formData['nin'] ?? $formData['bvn'] ?? $formData['phone'] ?? $formData['number'] ?? ''));
+                    if (empty($ident)) {
+                        $ident = substr($gvReference, -8);
+                    }
+                    
+                    $computedFileName = null;
+                    if (!empty($providerResult['filename'])) {
+                        $computedFileName = $providerResult['filename'];
+                    } elseif ($variantKey === 'regular') {
+                        $computedFileName = "regular_{$ident}_{$ts}.pdf";
+                    } elseif ($variantKey === 'premium') {
+                        $computedFileName = "premium_{$ident}_{$ts}.pdf";
+                    } elseif ($variantKey === 'standard') {
+                        $computedFileName = "standard_{$ident}_{$ts}.pdf";
+                    } elseif ($serviceSlug === 'bvn-verification') {
+                        $computedFileName = "bvn_{$ident}_{$ts}.pdf";
+                    } else {
+                        $prefix = $variantKey ?: $serviceSlug;
+                        $computedFileName = "{$prefix}_{$ident}_{$ts}.pdf";
+                    }
+
                     Response::success([
                         'gv_reference'        => $gvReference,
                         'status'              => 'completed',
@@ -386,6 +408,7 @@ class ApiRequestController
                         'price_paid'          => $price,
                         'wallet_balance_after'=> $balanceAfter,
                         'pdf_base64'          => $providerResult['pdf_base64'],
+                        'file_name'           => $computedFileName,
                         'message'             => 'PDF generated successfully.',
                     ]);
                 } else {

@@ -328,9 +328,20 @@ class TechHubService
             ];
         }
 
+        $fileName = $data['filename'] ?? $data['file_name'] ?? $data['slip_name'] ?? $data['name'] ?? null;
+        if (is_string($fileName)) {
+            $fileName = trim($fileName);
+            if (!empty($fileName) && !str_ends_with(strtolower($fileName), '.pdf')) {
+                $fileName .= '.pdf';
+            }
+        } else {
+            $fileName = null;
+        }
+
         return [
             'success'         => true,
             'pdf_base64'      => $pdf,
+            'filename'        => $fileName,
             'user_data'       => $data['user_data'] ?? $data['data'] ?? $data,
             'message'         => $data['message']   ?? 'PDF generated successfully',
             'provider_txn_id' => $data['transaction_id'] ?? $data['reference'] ?? null,
