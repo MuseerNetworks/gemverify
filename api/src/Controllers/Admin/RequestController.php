@@ -36,36 +36,80 @@ class RequestController
             $dateTo = $_GET['date_to'] ?? null;
             $assignedAdminId = $_GET['assigned_admin_id'] ?? null;
             
-            $query = "SELECT r.id, r.reference, r.status, r.price_paid, r.submitted_at, 
-                             u.business_name, u.email as user_email, 
-                             s.name as service_name, c.name as category,
-                             a.name as assigned_admin
-                      FROM manual_requests r
-                      JOIN users u ON r.user_id = u.id
-                      JOIN services s ON r.service_id = s.id
-                      JOIN service_categories c ON s.category_id = c.id
-                      LEFT JOIN admins a ON r.assigned_admin_id = a.id
-                      WHERE 1=1";
+            $query = "SELECT * FROM (
+                SELECT 
+                    r.id, 
+                    r.reference, 
+                    r.status, 
+                    r.price_paid, 
+                    r.submitted_at, 
+                    u.id as user_id,
+                    u.business_name, 
+                    u.email as user_email, 
+                    s.name as service_name, 
+                    s.slug as service_slug,
+                    c.name as category,
+                    a.name as assigned_admin,
+                    r.assigned_admin_id,
+                    'manual' as request_type
+                FROM manual_requests r
+                JOIN users u ON r.user_id = u.id
+                JOIN services s ON r.service_id = s.id
+                JOIN service_categories c ON s.category_id = c.id
+                LEFT JOIN admins a ON r.assigned_admin_id = a.id
+
+                UNION ALL
+
+                SELECT 
+                    at.id, 
+                    at.gv_reference as reference, 
+                    at.gv_status as status, 
+                    COALESCE(sp.price, t.amount, 0) as price_paid, 
+                    at.submitted_at, 
+                    u.id as user_id,
+                    u.business_name, 
+                    u.email as user_email, 
+                    s.name as service_name, 
+                    s.slug as service_slug,
+                    c.name as category,
+                    NULL as assigned_admin,
+                    NULL as assigned_admin_id,
+                    'api' as request_type
+                FROM api_transactions at
+                JOIN users u ON at.user_id = u.id
+                JOIN services s ON at.service_id = s.id
+                JOIN service_categories c ON s.category_id = c.id
+                LEFT JOIN service_pricing sp ON at.pricing_id = sp.id
+                LEFT JOIN transactions t ON at.transaction_id = t.id
+            ) unified_reqs
+            WHERE 1=1";
+            
             $params = [];
             
-            if ($status) { $query .= " AND r.status = ?"; $params[] = $status; }
-            if ($serviceSlug) { $query .= " AND s.slug = ?"; $params[] = $serviceSlug; }
-            if ($category) { $query .= " AND c.name = ?"; $params[] = $category; }
-            if ($userId) { $query .= " AND r.user_id = ?"; $params[] = $userId; }
-            if ($reference) { $query .= " AND r.reference = ?"; $params[] = $reference; }
-            if ($dateFrom) { $query .= " AND DATE(r.submitted_at) >= ?"; $params[] = $dateFrom; }
-            if ($dateTo) { $query .= " AND DATE(r.submitted_at) <= ?"; $params[] = $dateTo; }
-            if ($assignedAdminId) { $query .= " AND r.assigned_admin_id = ?"; $params[] = $assignedAdminId; }
+            if ($status) {
+                if ($status === 'rejected') {
+                    $query .= " AND status IN ('rejected', 'failed', 'cancelled', 'refunded')";
+                } elseif ($status === 'submitted' || $status === 'pending') {
+                    $query .= " AND status IN ('submitted', 'pending')";
+                } else {
+                    $query .= " AND status = ?";
+                    $params[] = $status;
+                }
+            }
+            if ($serviceSlug) { $query .= " AND service_slug = ?"; $params[] = $serviceSlug; }
+            if ($category) { $query .= " AND category = ?"; $params[] = $category; }
+            if ($userId) { $query .= " AND user_id = ?"; $params[] = $userId; }
+            if ($reference) { $query .= " AND reference = ?"; $params[] = $reference; }
+            if ($dateFrom) { $query .= " AND DATE(submitted_at) >= ?"; $params[] = $dateFrom; }
+            if ($dateTo) { $query .= " AND DATE(submitted_at) <= ?"; $params[] = $dateTo; }
+            if ($assignedAdminId) { $query .= " AND assigned_admin_id = ?"; $params[] = $assignedAdminId; }
             
-            $countQuery = str_replace("SELECT r.id, r.reference, r.status, r.price_paid, r.submitted_at, 
-                             u.business_name, u.email as user_email, 
-                             s.name as service_name, c.name as category,
-                             a.name as assigned_admin", "SELECT COUNT(r.id)", $query);
+            $countQuery = "SELECT COUNT(*) FROM (" . $query . ") count_tbl";
             $stmtCount = $this->db->prepare($countQuery);
             $stmtCount->execute($params);
             $total = (int)$stmtCount->fetchColumn();
             
-            $query .= " ORDER BY r.submitted_at DESC LIMIT ? OFFSET ?";
+            $query .= " ORDER BY submitted_at DESC LIMIT ? OFFSET ?";
             $params[] = $perPage;
             $params[] = $offset;
             
@@ -92,7 +136,8 @@ class RequestController
                     'status' => $req['status'],
                     'price_paid' => $req['price_paid'],
                     'submitted_at' => $req['submitted_at'],
-                    'assigned_admin' => $req['assigned_admin']
+                    'assigned_admin' => $req['assigned_admin'],
+                    'request_type' => $req['request_type']
                 ];
             }, $requests);
 
@@ -116,6 +161,7 @@ class RequestController
     public function getDetail(string $reference): void
     {
         try {
+            // First check manual_requests
             $stmt = $this->db->prepare("SELECT r.*, u.business_name, u.email as user_email, u.phone as user_phone, 
                                                s.name as service_name, c.name as service_category, s.description as service_desc,
                                                a.name as assigned_admin_name, a.email as assigned_admin_email,
@@ -132,82 +178,165 @@ class RequestController
             $stmt->execute([$reference]);
             $request = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$request) {
+            if ($request) {
+                // Get submitted form data
+                $stmtForm = $this->db->prepare("SELECT form_data FROM request_form_data WHERE request_id = ?");
+                $stmtForm->execute([$request['id']]);
+                $formDataRaw = $stmtForm->fetchColumn();
+                $formData = $formDataRaw ? json_decode($formDataRaw, true) : null;
+
+                // Get uploaded documents
+                $stmtDocs = $this->db->prepare("SELECT id, field_name, original_name, stored_name, mime_type, file_size, uploaded_at FROM request_documents WHERE request_id = ?");
+                $stmtDocs->execute([$request['id']]);
+                $documents = $stmtDocs->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($documents as &$doc) {
+                    $doc['secure_url'] = "/admin/requests/{$reference}/documents/{$doc['id']}";
+                }
+
+                // Get result files
+                $stmtRes = $this->db->prepare("SELECT id, version, uploaded_at, is_current FROM result_files WHERE request_id = ? AND is_current = 1");
+                $stmtRes->execute([$request['id']]);
+                $resultFiles = $stmtRes->fetchAll(PDO::FETCH_ASSOC);
+
+                // Get status history
+                $stmtHist = $this->db->prepare("SELECT old_status, new_status, notes, changed_at FROM request_status_history WHERE request_id = ? ORDER BY changed_at DESC");
+                $stmtHist->execute([$request['id']]);
+                $statusHistory = $stmtHist->fetchAll(PDO::FETCH_ASSOC);
+
+                // Get admin notes
+                $stmtNotes = $this->db->prepare("SELECT n.note, n.created_at, a.name as admin_name 
+                                                 FROM admin_notes n 
+                                                 JOIN admins a ON n.admin_id = a.id 
+                                                 WHERE n.request_id = ? ORDER BY n.created_at DESC");
+                $stmtNotes->execute([$request['id']]);
+                $adminNotes = $stmtNotes->fetchAll(PDO::FETCH_ASSOC);
+
+                $data = [
+                    'request' => [
+                        'id' => $request['id'],
+                        'reference' => $request['reference'],
+                        'status' => $request['status'],
+                        'price_paid' => $request['price_paid'],
+                        'form_data' => $formData,
+                        'additional_info_request' => $request['additional_info_request'],
+                        'additional_info_response' => $request['additional_info_response'],
+                        'rejection_reason' => $request['rejection_reason'],
+                        'submitted_at' => $request['submitted_at'],
+                        'completed_at' => $request['completed_at']
+                    ],
+                    'user' => [
+                        'business_name' => $request['business_name'],
+                        'email' => $request['user_email'],
+                        'phone' => $request['user_phone'],
+                    ],
+                    'service' => [
+                        'name' => $request['service_name'],
+                        'category' => $request['service_category'],
+                        'description' => $request['service_desc'],
+                    ],
+                    'assigned_admin' => $request['assigned_admin_name'] ? [
+                        'name' => $request['assigned_admin_name'],
+                        'email' => $request['assigned_admin_email']
+                    ] : null,
+                    'transaction' => $request['trx_reference'] ? [
+                        'reference' => $request['trx_reference'],
+                        'amount' => $request['trx_amount']
+                    ] : null,
+                    'refund' => $request['refund_reason'] ? [
+                        'reason' => $request['refund_reason'],
+                        'amount' => $request['refund_amount'],
+                        'status' => $request['refund_status']
+                    ] : null,
+                    'documents' => $documents,
+                    'result_files' => $resultFiles,
+                    'status_history' => $statusHistory,
+                    'admin_notes' => $adminNotes
+                ];
+
+                Response::success(['success' => true, 'data' => $data]);
+                return;
+            }
+
+            // If not found in manual_requests, check api_transactions
+            $stmtApi = $this->db->prepare("
+                SELECT at.*, 
+                       u.business_name, u.email as user_email, u.phone as user_phone,
+                       s.name as service_name, s.description as service_desc,
+                       c.name as service_category,
+                       COALESCE(sp.price, t.amount, 0) as price_paid,
+                       t.reference as trx_reference, t.amount as trx_amount
+                FROM api_transactions at
+                JOIN users u ON at.user_id = u.id
+                JOIN services s ON at.service_id = s.id
+                JOIN service_categories c ON s.category_id = c.id
+                LEFT JOIN service_pricing sp ON at.pricing_id = sp.id
+                LEFT JOIN transactions t ON at.transaction_id = t.id
+                WHERE at.gv_reference = ?
+            ");
+            $stmtApi->execute([$reference]);
+            $apiTx = $stmtApi->fetch(PDO::FETCH_ASSOC);
+
+            if (!$apiTx) {
                 Response::error('Request not found', [], 404);
+                return;
             }
 
-            // Get submitted form data
-            $stmtForm = $this->db->prepare("SELECT form_data FROM request_form_data WHERE request_id = ?");
-            $stmtForm->execute([$request['id']]);
-            $formDataRaw = $stmtForm->fetchColumn();
-            $formData = $formDataRaw ? json_decode($formDataRaw, true) : null;
+            $formData = [
+                'Input Method'       => $apiTx['input_method'] ?? 'N/A',
+                'Input Summary'      => $apiTx['input_summary'] ?? 'N/A',
+                'Variant Key'        => $apiTx['variant_key'] ?? 'Standard',
+                'Provider'           => $apiTx['provider'] ?? 'techhub',
+                'Provider Status'    => $apiTx['provider_status'] ?? 'N/A',
+                'Provider Ticket ID' => $apiTx['provider_ticket_id'] ?? 'N/A',
+                'Error Code'         => $apiTx['error_code'] ?? 'None',
+                'Error Message'      => $apiTx['error_message'] ?? 'None'
+            ];
 
-            // Get uploaded documents
-            $stmtDocs = $this->db->prepare("SELECT id, field_name, original_name, stored_name, mime_type, file_size, uploaded_at FROM request_documents WHERE request_id = ?");
-            $stmtDocs->execute([$request['id']]);
-            $documents = $stmtDocs->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($documents as &$doc) {
-                $doc['secure_url'] = "/admin/requests/{$reference}/documents/{$doc['id']}";
-            }
-
-            // Get result files
-            $stmtRes = $this->db->prepare("SELECT id, version, uploaded_at, is_current FROM result_files WHERE request_id = ? AND is_current = 1");
-            $stmtRes->execute([$request['id']]);
-            $resultFiles = $stmtRes->fetchAll(PDO::FETCH_ASSOC);
-
-            // Get status history
-            $stmtHist = $this->db->prepare("SELECT old_status, new_status, notes, changed_at FROM request_status_history WHERE request_id = ? ORDER BY changed_at DESC");
-            $stmtHist->execute([$request['id']]);
-            $statusHistory = $stmtHist->fetchAll(PDO::FETCH_ASSOC);
-
-            // Get admin notes
-            $stmtNotes = $this->db->prepare("SELECT n.note, n.created_at, a.name as admin_name 
-                                             FROM admin_notes n 
-                                             JOIN admins a ON n.admin_id = a.id 
-                                             WHERE n.request_id = ? ORDER BY n.created_at DESC");
-            $stmtNotes->execute([$request['id']]);
-            $adminNotes = $stmtNotes->fetchAll(PDO::FETCH_ASSOC);
+            $statusHistory = [
+                [
+                    'status' => $apiTx['gv_status'],
+                    'notes'  => $apiTx['provider_status'] ? 'Provider status: ' . $apiTx['provider_status'] : 'API request submission',
+                    'changed_at' => $apiTx['completed_at'] ?? $apiTx['submitted_at']
+                ]
+            ];
 
             $data = [
                 'request' => [
-                    'id' => $request['id'],
-                    'reference' => $request['reference'],
-                    'status' => $request['status'],
-                    'price_paid' => $request['price_paid'],
+                    'id' => $apiTx['id'],
+                    'reference' => $apiTx['gv_reference'],
+                    'status' => $apiTx['gv_status'],
+                    'price_paid' => $apiTx['price_paid'],
                     'form_data' => $formData,
-                    'additional_info_request' => $request['additional_info_request'],
-                    'additional_info_response' => $request['additional_info_response'],
-                    'rejection_reason' => $request['rejection_reason'],
-                    'submitted_at' => $request['submitted_at'],
-                    'completed_at' => $request['completed_at']
+                    'additional_info_request' => null,
+                    'additional_info_response' => null,
+                    'rejection_reason' => $apiTx['error_message'],
+                    'submitted_at' => $apiTx['submitted_at'],
+                    'completed_at' => $apiTx['completed_at']
                 ],
                 'user' => [
-                    'business_name' => $request['business_name'],
-                    'email' => $request['user_email'],
-                    'phone' => $request['user_phone'],
+                    'business_name' => $apiTx['business_name'],
+                    'email' => $apiTx['user_email'],
+                    'phone' => $apiTx['user_phone'],
                 ],
                 'service' => [
-                    'name' => $request['service_name'],
-                    'category' => $request['service_category'],
-                    'description' => $request['service_desc'],
+                    'name' => $apiTx['service_name'],
+                    'category' => $apiTx['service_category'],
+                    'description' => $apiTx['service_desc'],
                 ],
-                'assigned_admin' => $request['assigned_admin_name'] ? [
-                    'name' => $request['assigned_admin_name'],
-                    'email' => $request['assigned_admin_email']
+                'assigned_admin' => null,
+                'transaction' => $apiTx['trx_reference'] ? [
+                    'reference' => $apiTx['trx_reference'],
+                    'amount' => $apiTx['trx_amount']
                 ] : null,
-                'transaction' => $request['trx_reference'] ? [
-                    'reference' => $request['trx_reference'],
-                    'amount' => $request['trx_amount']
+                'refund' => $apiTx['refund_issued'] ? [
+                    'reason' => 'Refunded via API transaction',
+                    'amount' => $apiTx['price_paid'],
+                    'status' => 'completed'
                 ] : null,
-                'refund' => $request['refund_reason'] ? [
-                    'reason' => $request['refund_reason'],
-                    'amount' => $request['refund_amount'],
-                    'status' => $request['refund_status']
-                ] : null,
-                'documents' => $documents,
-                'result_files' => $resultFiles,
+                'documents' => [],
+                'result_files' => [],
                 'status_history' => $statusHistory,
-                'admin_notes' => $adminNotes
+                'admin_notes' => []
             ];
 
             Response::success(['success' => true, 'data' => $data]);

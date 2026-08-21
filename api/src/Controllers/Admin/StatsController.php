@@ -21,18 +21,23 @@ class StatsController
         try {
             $stats = [];
             
-            // Totals
-            $stmt = $this->db->query("
+            // Unified counts across manual_requests and api_transactions
+            $stmtTotals = $this->db->query("
                 SELECT 
-                    COUNT(*) as total_requests,
-                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as total_completed,
-                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as total_pending,
-                    SUM(CASE WHEN status = 'under_review' THEN 1 ELSE 0 END) as total_under_review,
-                    SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as total_rejected,
-                    COALESCE(SUM(CASE WHEN status = 'completed' THEN price_paid ELSE 0 END), 0) as total_revenue
-                FROM manual_requests
+                    (SELECT COUNT(*) FROM manual_requests) + (SELECT COUNT(*) FROM api_transactions) as total_requests,
+                    (SELECT COUNT(*) FROM manual_requests WHERE status = 'completed') + 
+                    (SELECT COUNT(*) FROM api_transactions WHERE gv_status = 'completed') as total_completed,
+                    (SELECT COUNT(*) FROM manual_requests WHERE status IN ('submitted', 'pending')) + 
+                    (SELECT COUNT(*) FROM api_transactions WHERE gv_status = 'pending') as total_pending,
+                    (SELECT COUNT(*) FROM manual_requests WHERE status = 'under_review') as total_under_review,
+                    (SELECT COUNT(*) FROM manual_requests WHERE status = 'processing') + 
+                    (SELECT COUNT(*) FROM api_transactions WHERE gv_status = 'processing') as total_processing,
+                    (SELECT COUNT(*) FROM manual_requests WHERE status IN ('rejected', 'cancelled')) + 
+                    (SELECT COUNT(*) FROM api_transactions WHERE gv_status IN ('failed', 'refunded')) as total_rejected,
+                    (SELECT COUNT(*) FROM manual_requests WHERE DATE(submitted_at) = CURRENT_DATE()) + 
+                    (SELECT COUNT(*) FROM api_transactions WHERE DATE(submitted_at) = CURRENT_DATE()) as requests_today
             ");
-            $totals = $stmt->fetch(PDO::FETCH_ASSOC);
+            $totals = $stmtTotals->fetch(PDO::FETCH_ASSOC);
             $stats = array_merge($stats, $totals);
 
             // User & Wallet Totals
@@ -44,52 +49,75 @@ class StatsController
             ");
             $userStats = $stmtUsers->fetch(PDO::FETCH_ASSOC);
             $stats = array_merge($stats, $userStats);
-            // Today's stats
-            $stmtToday = $this->db->query("
-                SELECT 
-                    COUNT(*) as requests_today,
-                    COALESCE(SUM(CASE WHEN status = 'completed' THEN price_paid ELSE 0 END), 0) as revenue_today
-                FROM manual_requests 
-                WHERE DATE(submitted_at) = CURRENT_DATE()
-            ");
-            $today = $stmtToday->fetch(PDO::FETCH_ASSOC);
-            $stats = array_merge($stats, $today);
-            // Overwrite total_revenue on the KPI card with today's revenue so the label matches
-            $stats['total_revenue'] = (float)($stats['revenue_today'] ?? 0);
-            $stats['total_profit'] = (float)$stats['total_revenue'] * 0.25;
-            $stats['withdrawable_profit'] = (float)$stats['total_revenue'] * 0.25;
-            $stats['provider_balance'] = 0.00;
 
-            // By status
-            $stmtStatus = $this->db->query("SELECT status, COUNT(*) as count FROM manual_requests GROUP BY status");
+            // Revenue calculation from single source of truth (completed wallet debits)
+            $stmtRev = $this->db->query("
+                SELECT 
+                    COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE() THEN amount ELSE 0 END), 0) as revenue_today,
+                    COALESCE(SUM(amount), 0) as total_revenue
+                FROM transactions 
+                WHERE type = 'debit' AND status = 'completed'
+            ");
+            $revData = $stmtRev->fetch(PDO::FETCH_ASSOC);
+            $revenueToday = (float)($revData['revenue_today'] ?? 0);
+            $totalRevenue = (float)($revData['total_revenue'] ?? 0);
+
+            $stats['revenue_today']      = $revenueToday;
+            $stats['total_revenue']      = $totalRevenue;
+            $stats['profit_today']       = $revenueToday * 0.25;
+            $stats['total_profit']       = $totalRevenue * 0.25;
+            $stats['withdrawable_profit'] = $totalRevenue * 0.25;
+            $stats['provider_balance']   = 0.00;
+
+            // By status (unified)
+            $stmtStatus = $this->db->query("
+                SELECT status, COUNT(*) as count FROM (
+                    SELECT status FROM manual_requests
+                    UNION ALL
+                    SELECT gv_status as status FROM api_transactions
+                ) s GROUP BY status
+            ");
             $stats['requests_by_status'] = $stmtStatus->fetchAll(PDO::FETCH_ASSOC);
 
-            // By category
+            // By category (unified)
             $stmtCategory = $this->db->query("
-                SELECT c.name as category, COUNT(r.id) as count 
-                FROM manual_requests r 
-                JOIN services s ON r.service_id = s.id 
-                JOIN service_categories c ON s.category_id = c.id
-                GROUP BY c.name
+                SELECT category, COUNT(*) as count FROM (
+                    SELECT c.name as category 
+                    FROM manual_requests r 
+                    JOIN services s ON r.service_id = s.id 
+                    JOIN service_categories c ON s.category_id = c.id
+                    UNION ALL
+                    SELECT c.name as category 
+                    FROM api_transactions at 
+                    JOIN services s ON at.service_id = s.id 
+                    JOIN service_categories c ON s.category_id = c.id
+                ) cat GROUP BY category
             ");
             $stats['requests_by_category'] = $stmtCategory->fetchAll(PDO::FETCH_ASSOC);
 
-            // Top services
+            // Top services (unified)
             $stmtTop = $this->db->query("
-                SELECT s.name, COUNT(r.id) as request_count 
-                FROM manual_requests r 
-                JOIN services s ON r.service_id = s.id 
-                GROUP BY s.id 
-                ORDER BY request_count DESC LIMIT 5
+                SELECT name, COUNT(*) as request_count FROM (
+                    SELECT s.name FROM manual_requests r JOIN services s ON r.service_id = s.id
+                    UNION ALL
+                    SELECT s.name FROM api_transactions at JOIN services s ON at.service_id = s.id
+                ) top_s GROUP BY name ORDER BY request_count DESC LIMIT 5
             ");
             $stats['top_services'] = $stmtTop->fetchAll(PDO::FETCH_ASSOC);
 
-            // Recent requests
+            // Recent requests (unified)
             $stmtRecent = $this->db->query("
-                SELECT r.reference, r.status, r.price_paid, r.submitted_at, s.name as service_name
-                FROM manual_requests r
-                JOIN services s ON r.service_id = s.id
-                ORDER BY r.submitted_at DESC LIMIT 10
+                SELECT reference, status, price_paid, submitted_at, service_name FROM (
+                    SELECT r.reference, r.status, r.price_paid, r.submitted_at, s.name as service_name
+                    FROM manual_requests r
+                    JOIN services s ON r.service_id = s.id
+                    UNION ALL
+                    SELECT at.gv_reference as reference, at.gv_status as status, COALESCE(sp.price, t.amount, 0) as price_paid, at.submitted_at, s.name as service_name
+                    FROM api_transactions at
+                    JOIN services s ON at.service_id = s.id
+                    LEFT JOIN service_pricing sp ON at.pricing_id = sp.id
+                    LEFT JOIN transactions t ON at.transaction_id = t.id
+                ) reqs ORDER BY submitted_at DESC LIMIT 10
             ");
             $stats['recent_requests'] = $stmtRecent->fetchAll(PDO::FETCH_ASSOC);
 

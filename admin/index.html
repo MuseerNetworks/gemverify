@@ -432,8 +432,10 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Registered Accounts" onclick="openKpiPage('registered-accounts')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('registered-accounts')"><div class="stat-top"><small>Registered Accounts</small><div class="ico">♙</div></div><strong id="statRegUsers">0</strong><span class="delta">Live accounts</span></div>
     <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Active Today" onclick="openKpiPage('active-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('active-today')"><div class="stat-top"><small>Active Today</small><div class="ico">●</div></div><strong id="statActiveUsers">0</strong><span class="delta">Active sessions</span></div>
     <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Wallet Liability" onclick="openKpiPage('wallet-liability')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('wallet-liability')"><div class="stat-top"><small>Wallet Liability</small><div class="ico">₦</div></div><strong id="statWalletLiability">₦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Customer funds</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Revenue Today" onclick="openKpiPage('revenue-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('revenue-today')"><div class="stat-top"><small>Revenue Today</small><div class="ico">₦</div></div><strong id="statRevenue">₦0</strong><span class="delta">Gross service revenue</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Profit Today" onclick="openKpiPage('profit-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('profit-today')"><div class="stat-top"><small>Profit Today</small><div class="ico">↗</div></div><strong id="statProfit">₦0</strong><span class="delta">After recorded service costs</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Revenue Today" onclick="openKpiPage('revenue-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('revenue-today')"><div class="stat-top"><small>Revenue Today</small><div class="ico">₦</div></div><strong id="statRevenue">₦0</strong><span class="delta">Today's gross revenue</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Total Revenue" onclick="openKpiPage('total-revenue')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('total-revenue')"><div class="stat-top"><small>Total Revenue</small><div class="ico">₦</div></div><strong id="statTotalRevenue">₦0</strong><span class="delta">All-time gross revenue</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Profit Today" onclick="openKpiPage('profit-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('profit-today')"><div class="stat-top"><small>Profit Today</small><div class="ico">↗</div></div><strong id="statProfit">₦0</strong><span class="delta">Today's net profit</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Total Profit" onclick="openKpiPage('total-profit')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('total-profit')"><div class="stat-top"><small>Total Profit</small><div class="ico">↗</div></div><strong id="statTotalProfit">₦0</strong><span class="delta">All-time net profit</span></div>
     <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Successful Txn" onclick="openKpiPage('successful-txn')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('successful-txn')"><div class="stat-top"><small>Successful Txn</small><div class="ico">✓</div></div><strong id="statCompleted">0</strong><span class="delta">Completed requests</span></div>
     <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Failed Txns" onclick="openKpiPage('failed-txns')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('failed-txns')"><div class="stat-top"><small>Failed Txns</small><div class="ico">×</div></div><strong id="statRejected">0</strong><span style="font-size:10px;color:var(--red);font-weight:800">Rejected & cancelled</span></div>
     <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Withdrawable Profit" onclick="openKpiPage('withdrawable-profit')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('withdrawable-profit')"><div class="stat-top"><small>Withdrawable Profit</small><div class="ico">↗</div></div><strong id="withdrawableStat">₦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Settled company funds</span></div>
@@ -909,10 +911,12 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     <div><h1>Profit & Withdrawals</h1><p>Control settled company earnings without touching customer wallet liability.</p></div>
     <button class="primary" onclick="openWithdraw()">Withdraw Profit</button>
   </div>
-  <div class="grid4">
+  <div class="grid4" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
     <div class="stat"><small>Revenue Today</small><strong id="profitRevenueToday">₦0</strong></div>
+    <div class="stat"><small>Total Revenue</small><strong id="profitTotalRevenue">₦0</strong></div>
     <div class="stat"><small>Profit Today</small><strong id="profitToday">₦0</strong></div>
-    <div class="stat"><small>Withdrawable</small><strong id="withdrawablePage">₦0</strong></div>
+    <div class="stat"><small>Total Profit</small><strong id="profitTotalProfit">₦0</strong></div>
+    <div class="stat"><small>Withdrawable Profit</small><strong id="withdrawablePage">₦0</strong></div>
     <div class="stat"><small>Customer Liability</small><strong id="profitCustomerLiability">₦0</strong></div>
   </div>
   <div class="card" style="margin-top:16px">
@@ -1464,17 +1468,21 @@ async function fetchDashboardData(){
       if(document.getElementById('statRegUsers')) document.getElementById('statRegUsers').textContent = data.total_users || 0;
       if(document.getElementById('statActiveUsers')) document.getElementById('statActiveUsers').textContent = data.active_users || 0;
       if(document.getElementById('statWalletLiability')) document.getElementById('statWalletLiability').textContent = money(data.total_wallet_liability || 0);
-      if(document.getElementById('statRevenue')) document.getElementById('statRevenue').textContent = money(data.total_revenue || 0);
-      if(document.getElementById('statProfit')) document.getElementById('statProfit').textContent = money(data.total_profit || 0);
+      if(document.getElementById('statRevenue')) document.getElementById('statRevenue').textContent = money(data.revenue_today || 0);
+      if(document.getElementById('statTotalRevenue')) document.getElementById('statTotalRevenue').textContent = money(data.total_revenue || 0);
+      if(document.getElementById('statProfit')) document.getElementById('statProfit').textContent = money(data.profit_today || 0);
+      if(document.getElementById('statTotalProfit')) document.getElementById('statTotalProfit').textContent = money(data.total_profit || 0);
       if(document.getElementById('statCompleted')) document.getElementById('statCompleted').textContent = data.total_completed || 0;
       if(document.getElementById('statRejected')) document.getElementById('statRejected').textContent = data.total_rejected || 0;
       if(document.getElementById('withdrawableStat')) document.getElementById('withdrawableStat').textContent = money(data.withdrawable_profit || 0);
       if(document.getElementById('providerBalanceStat')) document.getElementById('providerBalanceStat').textContent = money(data.provider_balance || 0);
       if(document.getElementById('finCustomerLiability')) document.getElementById('finCustomerLiability').textContent = money(data.total_wallet_liability || 0);
-      if(document.getElementById('finRevenueToday')) document.getElementById('finRevenueToday').textContent = money(data.total_revenue || 0);
+      if(document.getElementById('finRevenueToday')) document.getElementById('finRevenueToday').textContent = money(data.revenue_today || 0);
       if(document.getElementById('withdrawablePanel')) document.getElementById('withdrawablePanel').textContent = money(data.withdrawable_profit || 0);
-      if(document.getElementById('profitRevenueToday')) document.getElementById('profitRevenueToday').textContent = money(data.total_revenue || 0);
-      if(document.getElementById('profitToday')) document.getElementById('profitToday').textContent = money(data.total_profit || 0);
+      if(document.getElementById('profitRevenueToday')) document.getElementById('profitRevenueToday').textContent = money(data.revenue_today || 0);
+      if(document.getElementById('profitTotalRevenue')) document.getElementById('profitTotalRevenue').textContent = money(data.total_revenue || 0);
+      if(document.getElementById('profitToday')) document.getElementById('profitToday').textContent = money(data.profit_today || 0);
+      if(document.getElementById('profitTotalProfit')) document.getElementById('profitTotalProfit').textContent = money(data.total_profit || 0);
       if(document.getElementById('withdrawablePage')) document.getElementById('withdrawablePage').textContent = money(data.withdrawable_profit || 0);
       if(document.getElementById('profitCustomerLiability')) document.getElementById('profitCustomerLiability').textContent = money(data.total_wallet_liability || 0);
       renderLiveQueue();
@@ -1652,17 +1660,18 @@ function go(page,btn){
  closeSidebar();
  window.scrollTo(0,0);
 
- // Fetch queue data dynamically on navigation
- if(page === "requests") renderRequestsQueue("requests");
- if(page === "products" || page === "orders" || page === "print-jobs" || page === "inventory" || page === "gemprint" || page === "settings") fetchGemPrintAdminData();
- if(page === "pending") renderRequestsQueue("pending", "submitted");
- if(page === "processing") renderRequestsQueue("processing", "processing");
- if(page === "completed") renderRequestsQueue("completed", "completed");
- if(page === "rejected") renderRequestsQueue("rejected", "rejected");
- if(page === "services") fetchAdminServices();
+  // Fetch queue data dynamically on navigation
+  if(page === "requests") renderRequestsQueue("requests");
+  if(page === "products" || page === "orders" || page === "print-jobs" || page === "inventory" || page === "gemprint" || page === "settings") fetchGemPrintAdminData();
+  if(page === "pending") renderRequestsQueue("pending", "submitted");
+  if(page === "processing") renderRequestsQueue("processing", "processing");
+  if(page === "completed") renderRequestsQueue("completed", "completed");
+  if(page === "rejected") renderRequestsQueue("rejected", "rejected");
+  if(page === "services") fetchAdminServices();
   if(page === "wallet-funding") fetchWalletTopups(1);
   if(page === "admin-profile") { gvInitProfileUI(); gvLoadAdminList(); }
   if(page === "users") fetchAdminUsers(1, 'all');
+  if(page === "profit") fetchDashboardData();
   if(page === "active-users") {
     const filter = window._nextActiveUsersFilter || 'active';
     window._nextActiveUsersFilter = null;
@@ -2548,7 +2557,9 @@ function openKpiPage(page){
     'registered-accounts': ['Registered Accounts', 'users'],
     'wallet-liability':    ['Wallet Liability', 'wallet-funding'],
     'revenue-today':       ['Revenue Today', 'completed'],
+    'total-revenue':       ['Total Revenue', 'transactions'],
     'profit-today':        ['Profit Today', 'profit'],
+    'total-profit':        ['Total Profit', 'profit'],
     'successful-txn':      ['Successful Transactions', 'completed'],
     'failed-txns':         ['Failed Transactions', 'rejected'],
     'withdrawable-profit': ['Withdrawable Profit', 'profit'],
