@@ -1,77 +1,79 @@
 <?php
-// Enable display errors for diagnostics
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
-header('Content-Type: text/plain'); // Plain text so it displays nicely in browser
+header('Content-Type: text/plain');
 
-echo "=== GemVerify Live Diagnostics ===\n\n";
+echo "=== GemVerify SMTP Socket Diagnostic ===\n\n";
 
-try {
-    echo "1. Loading config files...\n";
-    require_once __DIR__ . '/config/app.php';
-    echo "✓ config/app.php loaded\n";
+function sendSMTPSocket($host, $port, $to, $subject, $htmlContent, $fromEmail, $fromName) {
+    echo "Connecting to $host:$port...\n";
+    $socket = @fsockopen($host, $port, $errno, $errstr, 10);
+    if (!$socket) {
+        echo "✗ Connection failed: $errstr ($errno)\n";
+        return false;
+    }
+    echo "✓ Connected!\n";
     
-    require_once __DIR__ . '/config/database.php';
-    echo "✓ config/database.php loaded\n";
+    $response = fgets($socket, 512);
+    echo "S: $response";
     
-    // Safe autoloader
-    echo "2. Setting up autoloader...\n";
-    spl_autoload_register(function (string $class): void {
-        $class = str_replace('\\', DIRECTORY_SEPARATOR, $class);
-        $file  = __DIR__ . '/src/' . $class . '.php';
-        if (file_exists($file)) {
-            require_once $file;
-            echo "✓ Autoloaded class: $class\n";
-        }
-    });
-    
-    // Test database connection
-    echo "3. Testing database connection...\n";
-    $db = db();
-    echo "✓ Database connected successfully\n";
-    
-    // Check if table exists
-    echo "4. Checking password_resets table...\n";
-    $stmt = $db->query("SHOW TABLES LIKE 'password_resets'");
-    if ($stmt->rowCount() > 0) {
-        echo "✓ Table 'password_resets' exists\n";
-    } else {
-        echo "✗ Table 'password_resets' does NOT exist\n";
+    fwrite($socket, "EHLO localhost\r\n");
+    $response = fgets($socket, 512);
+    echo "S: $response";
+    while (substr($response, 3, 1) === '-') {
+        $response = fgets($socket, 512);
+        echo "S: $response";
     }
     
-    // Check Mailer class
-    echo "5. Testing Mailer class loading...\n";
-    if (class_exists('Helpers\Mailer')) {
-        echo "✓ Helpers\\Mailer loaded successfully\n";
-    } else {
-        echo "✗ Helpers\\Mailer class could not be loaded\n";
-    }
+    fwrite($socket, "MAIL FROM:<$fromEmail>\r\n");
+    $response = fgets($socket, 512);
+    echo "S: $response";
     
-    // Test mail function
-    echo "6. Testing native mail() function...\n";
-    $to = 'yasiridris6@gmail.com';
-    $subject = 'GemVerify Mail Diagnostic Test';
+    fwrite($socket, "RCPT TO:<$to>\r\n");
+    $response = fgets($socket, 512);
+    echo "S: $response";
+    
+    fwrite($socket, "DATA\r\n");
+    $response = fgets($socket, 512);
+    echo "S: $response";
+    
     $headers = [
-        'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
-        'From: GemVerify Support <support@gemverify.com.ng>',
-        'Reply-To: support@gemverify.com.ng'
+        "MIME-Version: 1.0",
+        "Content-Type: text/html; charset=UTF-8",
+        "From: =?utf-8?B?" . base64_encode($fromName) . "?= <$fromEmail>",
+        "To: <$to>",
+        "Subject: =?utf-8?B?" . base64_encode($subject) . "?=",
+        "Date: " . date('r'),
+        "X-Mailer: GemVerify SMTP Socket Helper"
     ];
     
-    // Safe mail execution
-    $sent = @mail($to, $subject, '<h3>GemVerify Diagnostic Test</h3><p>Diagnostic test</p>', implode("\r\n", $headers));
-    if ($sent) {
-        echo "✓ mail() function returned true (email sent successfully)\n";
-    } else {
-        echo "✗ mail() function returned false (MTA delivery failure)\n";
-    }
+    $data = implode("\r\n", $headers) . "\r\n\r\n" . $htmlContent . "\r\n.\r\n";
+    fwrite($socket, $data);
+    $response = fgets($socket, 512);
+    echo "S: $response";
+    
+    fwrite($socket, "QUIT\r\n");
+    $response = fgets($socket, 512);
+    echo "S: $response";
+    
+    fclose($socket);
+    return strpos($response, '221') !== false || true;
+}
+
+try {
+    $to = 'yasiridris6@gmail.com';
+    $from = 'support@gemverify.com.ng';
+    $name = 'GemVerify Support';
+    
+    echo "Testing Port 25 (localhost)...\n";
+    sendSMTPSocket('127.0.0.1', 25, $to, 'Test Port 25', '<h3>Test Port 25</h3>', $from, $name);
+    
+    echo "\n-----------------------------------------\n";
+    echo "Testing Port 587 (localhost)...\n";
+    sendSMTPSocket('127.0.0.1', 587, $to, 'Test Port 587', '<h3>Test Port 587</h3>', $from, $name);
     
 } catch (Throwable $t) {
-    echo "\n!!! FATAL ERROR CAUGHT !!!\n";
-    echo "Message: " . $t->getMessage() . "\n";
-    echo "File: " . $t->getFile() . "\n";
-    echo "Line: " . $t->getLine() . "\n";
-    echo "Trace:\n" . $t->getTraceAsString() . "\n";
+    echo "\nException: " . $t->getMessage() . "\n";
 }
