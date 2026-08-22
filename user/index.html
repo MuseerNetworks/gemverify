@@ -733,7 +733,7 @@ aside .mt-1.space-y-1 {
           </div>
           <div class="gv-extras">
             <label><input type="checkbox" id="gv-remember"> Remember this device</label>
-            <a href="#" tabindex="0">Forgot password?</a>
+            <a href="#" onclick="gvSwitchTab('forgot')" tabindex="0">Forgot password?</a>
           </div>
           <div id="gv-login-err" class="gv-error" role="alert"></div>
           <button class="gv-submit-btn" id="gv-login-btn" onclick="gvDoLogin()">Sign In to Portal</button>
@@ -773,6 +773,38 @@ aside .mt-1.space-y-1 {
           <p class="gv-note">Access will be reviewed by a Super Admin before activation.</p>
         </div>
 
+        <!-- Forgot Password Panel -->
+        <div id="gv-panel-forgot" class="gv-panel">
+          <div class="gv-field">
+            <label for="gv-forgot-email">Email Address</label>
+            <input id="gv-forgot-email" type="email" placeholder="email@example.com">
+          </div>
+          <div id="gv-forgot-err" class="gv-error" role="alert"></div>
+          <div id="gv-forgot-success" style="display:none; color:#16a34a; font-size:12px; font-weight:500; margin-bottom:12px; background:#f0fdf4; padding:10px; border-radius:8px;"></div>
+          <button class="gv-submit-btn" id="gv-forgot-btn" onclick="gvDoForgotPassword()">Send Reset Link</button>
+          <div style="text-align:center; margin-top:16px;">
+            <a href="#" onclick="gvSwitchTab('login')" style="font-size:12px; color:#0050FF; font-weight:600; text-decoration:none;">Back to Sign In</a>
+          </div>
+        </div>
+
+        <!-- Reset Password Panel -->
+        <div id="gv-panel-reset" class="gv-panel">
+          <div class="gv-field">
+            <label for="gv-reset-password">New Password</label>
+            <input id="gv-reset-password" type="password" placeholder="Min. 8 characters">
+          </div>
+          <div class="gv-field">
+            <label for="gv-reset-confirm">Confirm Password</label>
+            <input id="gv-reset-confirm" type="password" placeholder="Re-enter new password">
+          </div>
+          <div id="gv-reset-err" class="gv-error" role="alert"></div>
+          <div id="gv-reset-success" style="display:none; color:#16a34a; font-size:12px; font-weight:500; margin-bottom:12px; background:#f0fdf4; padding:10px; border-radius:8px;"></div>
+          <button class="gv-submit-btn" id="gv-reset-btn" onclick="gvDoResetPassword()">Reset Password</button>
+          <div style="text-align:center; margin-top:16px;">
+            <a href="#" onclick="gvSwitchTab('login')" style="font-size:12px; color:#0050FF; font-weight:600; text-decoration:none;">Back to Sign In</a>
+          </div>
+        </div>
+
       </div><!-- /form-panel -->
     </div><!-- /login-box -->
   </div><!-- /overlay -->
@@ -784,7 +816,22 @@ aside .mt-1.space-y-1 {
       console.log("🚨 [GemVerify DEBUG] Premium Login Controller IIFE started!");
       var overlay = document.getElementById('gv-login-overlay');
       console.log("🚨 [GemVerify DEBUG] overlay found:", !!overlay);
-      if (overlay) {
+      
+      // Check for reset token in URL parameters on load
+      var urlParams = new URLSearchParams(window.location.search);
+      var resetToken = urlParams.get('token');
+      if (resetToken) {
+        window.__gvResetToken = resetToken;
+        if (overlay) {
+          overlay.style.display = 'flex';
+          // Clean up the URL bar to hide the token
+          window.history.replaceState({}, document.title, window.location.pathname);
+          // Switch to reset tab
+          setTimeout(function() {
+            gvSwitchTab('reset');
+          }, 100);
+        }
+      } else if (overlay) {
         var token = localStorage.getItem('gv_token');
         if (token) {
           overlay.style.display = 'none';
@@ -807,10 +854,21 @@ aside .mt-1.space-y-1 {
 
       /* Tab switching */
       window.gvSwitchTab = function (tab) {
-        ['login', 'signup'].forEach(function (t) {
-          document.getElementById('gv-tab-' + t).classList.toggle('active', t === tab);
-          document.getElementById('gv-panel-' + t).classList.toggle('active', t === tab);
+        ['login', 'signup', 'forgot', 'reset'].forEach(function (t) {
+          var btn = document.getElementById('gv-tab-' + t);
+          if (btn) btn.classList.toggle('active', t === tab);
+          var panel = document.getElementById('gv-panel-' + t);
+          if (panel) panel.classList.toggle('active', t === tab);
         });
+        // Clear any previous error/success messages
+        ['login-err', 'signup-err', 'forgot-err', 'reset-err'].forEach(function (id) {
+          var el = document.getElementById('gv-' + id);
+          if (el) { el.textContent = ''; el.classList.remove('show'); }
+        });
+        var forgotSucc = document.getElementById('gv-forgot-success');
+        if (forgotSucc) forgotSucc.style.display = 'none';
+        var resetSucc = document.getElementById('gv-reset-success');
+        if (resetSucc) resetSucc.style.display = 'none';
       };
       console.log("🚨 [GemVerify DEBUG] window.gvSwitchTab registered:", typeof window.gvSwitchTab);
 
@@ -855,6 +913,114 @@ aside .mt-1.space-y-1 {
         }
       };
       console.log("🚨 [GemVerify DEBUG] window.gvDoLogin registered:", typeof window.gvDoLogin);
+
+      /* Forgot Password submit */
+      window.gvDoForgotPassword = async function () {
+        var email = document.getElementById('gv-forgot-email').value.trim();
+        var errEl = document.getElementById('gv-forgot-err');
+        var succEl = document.getElementById('gv-forgot-success');
+        var btn = document.getElementById('gv-forgot-btn');
+
+        if (!email) {
+          errEl.textContent = 'Please enter your email address.';
+          errEl.classList.add('show');
+          return;
+        }
+        errEl.classList.remove('show');
+        succEl.style.display = 'none';
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending Reset Link...'; }
+
+        try {
+          var res = await fetch('../api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+          });
+          var json = await res.json();
+
+          if (!res.ok || !json.success) {
+            errEl.textContent = json.message || 'Failed to request reset. Please try again.';
+            errEl.classList.add('show');
+            if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Link'; }
+            return;
+          }
+
+          succEl.textContent = json.message || 'Reset link sent successfully!';
+          succEl.style.display = 'block';
+          document.getElementById('gv-forgot-email').value = '';
+          if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Link'; }
+        } catch (err) {
+          errEl.textContent = 'Connection error. Please try again later.';
+          errEl.classList.add('show');
+          if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Link'; }
+        }
+      };
+
+      // Helper variable to hold the token retrieved from URL
+      window.__gvResetToken = null;
+
+      /* Reset Password submit */
+      window.gvDoResetPassword = async function () {
+        var password = document.getElementById('gv-reset-password').value;
+        var confirm = document.getElementById('gv-reset-confirm').value;
+        var errEl = document.getElementById('gv-reset-err');
+        var succEl = document.getElementById('gv-reset-success');
+        var btn = document.getElementById('gv-reset-btn');
+
+        if (!password || !confirm) {
+          errEl.textContent = 'Please fill in all fields.';
+          errEl.classList.add('show');
+          return;
+        }
+        if (password.length < 8) {
+          errEl.textContent = 'Password must be at least 8 characters long.';
+          errEl.classList.add('show');
+          return;
+        }
+        if (password !== confirm) {
+          errEl.textContent = 'Passwords do not match.';
+          errEl.classList.add('show');
+          return;
+        }
+        if (!window.__gvResetToken) {
+          errEl.textContent = 'Missing or invalid reset token. Please request a new link.';
+          errEl.classList.add('show');
+          return;
+        }
+
+        errEl.classList.remove('show');
+        succEl.style.display = 'none';
+        if (btn) { btn.disabled = true; btn.textContent = 'Resetting Password...'; }
+
+        try {
+          var res = await fetch('../api/auth/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: window.__gvResetToken, password: password })
+          });
+          var json = await res.json();
+
+          if (!res.ok || !json.success) {
+            errEl.textContent = json.message || 'Failed to reset password. Please try again.';
+            errEl.classList.add('show');
+            if (btn) { btn.disabled = false; btn.textContent = 'Reset Password'; }
+            return;
+          }
+
+          succEl.textContent = json.message || 'Password reset successfully! Redirecting...';
+          succEl.style.display = 'block';
+          document.getElementById('gv-reset-password').value = '';
+          document.getElementById('gv-reset-confirm').value = '';
+          
+          setTimeout(function() {
+            gvSwitchTab('login');
+          }, 3000);
+        } catch (err) {
+          errEl.textContent = 'Connection error. Please try again later.';
+          errEl.classList.add('show');
+          if (btn) { btn.disabled = false; btn.textContent = 'Reset Password'; }
+        }
+      };
 
       /* Signup submit connected to Backend API */
       window.gvDoSignup = async function () {

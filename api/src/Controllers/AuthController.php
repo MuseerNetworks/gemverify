@@ -4,6 +4,7 @@ namespace Controllers;
 use Helpers\Response;
 use Helpers\Validator;
 use Helpers\JWT;
+use Helpers\Mailer;
 require_once __DIR__ . "/../../config/database.php";
 use Middleware\AuthMiddleware;
 use PDO;
@@ -411,6 +412,126 @@ class AuthController {
         $stmt->execute([$passwordHash, $userId]);
         
         Response::success([], 'Password changed successfully');
+    }
+
+    public function forgotPassword(): void {
+        $data = $this->getJsonInput();
+        
+        $v = new Validator($data);
+        $v->required('email')->email('email');
+
+        if ($v->fails()) {
+            Response::error('Validation failed', $v->errors(), 422);
+            return;
+        }
+        
+        $db = db();
+        
+        // Check if user exists
+        $stmt = $db->prepare("SELECT id, business_name FROM users WHERE email = ? AND is_active = 1");
+        $stmt->execute([$data['email']]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$user) {
+            // Return success even if email is not found to prevent user enumeration attacks
+            Response::success([], 'If your email is registered, you will receive a password reset link shortly.');
+            return;
+        }
+        
+        // Generate secure 64-char token
+        $token = bin2hex(random_bytes(32));
+        $expiresAt = date('Y-m-d H:i:s', time() + 3600); // 1 hour expiration
+        
+        // Save or update token
+        $stmt = $db->prepare("
+            INSERT INTO password_resets (email, token, expires_at)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE token = VALUES(token), expires_at = VALUES(expires_at), created_at = CURRENT_TIMESTAMP
+        ");
+        $stmt->execute([$data['email'], $token, $expiresAt]);
+        
+        // Send email
+        $domain = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+        
+        // Construct the reset URL
+        $resetUrl = "{$protocol}://{$domain}/gemverify/user/?token={$token}";
+        
+        $subject = "Password Reset Request — GemVerify";
+        $htmlContent = "
+            <div style='font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;'>
+                <h2 style='color: #0050FF; margin-top: 0;'>GemVerify Portal</h2>
+                <p>Hello <strong>" . htmlspecialchars($user['business_name']) . "</strong>,</p>
+                <p>We received a request to reset your password. Click the button below to choose a new one. This link will expire in 1 hour:</p>
+                <div style='text-align: center; margin: 24px 0;'>
+                    <a href='" . htmlspecialchars($resetUrl) . "' style='background-color: #0050FF; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block;'>Reset Password</a>
+                </div>
+                <p style='font-size: 12px; color: #64748b;'>If the button above does not work, copy and paste this URL into your browser:</p>
+                <p style='font-size: 12px; word-break: break-all; color: #0050FF;'>" . htmlspecialchars($resetUrl) . "</p>
+                <hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;'>
+                <p style='font-size: 11px; color: #94a3b8;'>If you did not request this, you can safely ignore this email.</p>
+            </div>
+        ";
+        
+        $sent = Mailer::sendHTML($data['email'], $subject, $htmlContent);
+        
+        if ($sent) {
+            Response::success([], 'If your email is registered, you will receive a password reset link shortly.');
+        } else {
+            Response::error('Failed to send reset email. Please contact support.', [], 500);
+        }
+    }
+
+    public function resetPassword(): void {
+        $data = $this->getJsonInput();
+        
+        $v = new Validator($data);
+        $v->required('token')
+          ->required('password')->password('password', 8);
+          
+        if ($v->fails()) {
+            Response::error('Validation failed', $v->errors(), 422);
+            return;
+        }
+        
+        $db = db();
+        
+        // Find token
+        $stmt = $db->prepare("SELECT email, expires_at FROM password_resets WHERE token = ?");
+        $stmt->execute([$data['token']]);
+        $reset = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$reset) {
+            Response::error('Invalid or expired reset token.', [], 400);
+            return;
+        }
+        
+        // Check expiration
+        if (strtotime($reset['expires_at']) < time()) {
+            // Delete expired token
+            $db->prepare("DELETE FROM password_resets WHERE email = ?")->execute([$reset['email']]);
+            Response::error('Your reset token has expired. Please request a new link.', [], 400);
+            return;
+        }
+        
+        // Update user password
+        $passwordHash = password_hash($data['password'], PASSWORD_BCRYPT);
+        
+        try {
+            $db->beginTransaction();
+            
+            $stmt = $db->prepare("UPDATE users SET password_hash = ? WHERE email = ?");
+            $stmt->execute([$passwordHash, $reset['email']]);
+            
+            // Delete token
+            $db->prepare("DELETE FROM password_resets WHERE email = ?")->execute([$reset['email']]);
+            
+            $db->commit();
+            Response::success([], 'Password has been reset successfully. You can now log in.');
+        } catch (Exception $e) {
+            $db->rollBack();
+            Response::error('Failed to reset password: ' . $e->getMessage(), [], 500);
+        }
     }
 }
 
