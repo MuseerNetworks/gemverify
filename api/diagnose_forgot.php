@@ -1,62 +1,56 @@
 <?php
-header('Content-Type: application/json');
+// Enable display errors for diagnostics
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
 
-require_once __DIR__ . '/config/app.php';
-require_once __DIR__ . '/config/database.php';
+header('Content-Type: text/plain'); // Plain text so it displays nicely in browser
 
-// Safe autoloader
-spl_autoload_register(function (string $class): void {
-    $class = str_replace('\\', DIRECTORY_SEPARATOR, $class);
-    $file  = __DIR__ . '/src/' . $class . '.php';
-    if (file_exists($file)) {
-        require_once $file;
-    }
-});
+echo "=== GemVerify Live Diagnostics ===\n\n";
 
-$response = [
-    'stage1_database' => 'pending',
-    'stage2_mailer' => 'pending',
-    'stage3_mail_function' => 'pending',
-    'errors' => []
-];
-
-// Stage 1: Database verification
 try {
-    $db = db();
-    $stmt = $db->query("SHOW TABLES LIKE 'password_resets'");
-    $tableExists = $stmt->rowCount() > 0;
+    echo "1. Loading config files...\n";
+    require_once __DIR__ . '/config/app.php';
+    echo "✓ config/app.php loaded\n";
     
-    if ($tableExists) {
-        $response['stage1_database'] = 'success (table password_resets exists)';
-    } else {
-        $response['stage1_database'] = 'failed (table password_resets does NOT exist)';
-        $response['errors'][] = 'Database table "password_resets" is missing on live. You need to run the patch script or SQL query to create it.';
-    }
-} catch (Exception $e) {
-    $response['stage1_database'] = 'error';
-    $response['errors'][] = 'Database connection error: ' . $e->getMessage();
-}
-
-// Stage 2: Mailer loading and execution verification
-try {
-    if (class_exists('Helpers\Mailer')) {
-        $response['stage2_mailer'] = 'success (Mailer helper loaded successfully)';
-    } else {
-        $response['stage2_mailer'] = 'failed (Mailer class not found by autoloader)';
-        $response['errors'][] = 'Autoloader could not find Helpers\Mailer class. Check case-sensitivity of directory names on Linux.';
-    }
-} catch (Exception $e) {
-    $response['stage2_mailer'] = 'error';
-    $response['errors'][] = 'Mailer class load exception: ' . $e->getMessage();
-}
-
-// Stage 3: Test native mail() sending
-try {
-    // Disable error display and catch warnings as exceptions
-    set_error_handler(function($errno, $errstr, $errfile, $errline) {
-        throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+    require_once __DIR__ . '/config/database.php';
+    echo "✓ config/database.php loaded\n";
+    
+    // Safe autoloader
+    echo "2. Setting up autoloader...\n";
+    spl_autoload_register(function (string $class): void {
+        $class = str_replace('\\', DIRECTORY_SEPARATOR, $class);
+        $file  = __DIR__ . '/src/' . $class . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            echo "✓ Autoloaded class: $class\n";
+        }
     });
     
+    // Test database connection
+    echo "3. Testing database connection...\n";
+    $db = db();
+    echo "✓ Database connected successfully\n";
+    
+    // Check if table exists
+    echo "4. Checking password_resets table...\n";
+    $stmt = $db->query("SHOW TABLES LIKE 'password_resets'");
+    if ($stmt->rowCount() > 0) {
+        echo "✓ Table 'password_resets' exists\n";
+    } else {
+        echo "✗ Table 'password_resets' does NOT exist\n";
+    }
+    
+    // Check Mailer class
+    echo "5. Testing Mailer class loading...\n";
+    if (class_exists('Helpers\Mailer')) {
+        echo "✓ Helpers\\Mailer loaded successfully\n";
+    } else {
+        echo "✗ Helpers\\Mailer class could not be loaded\n";
+    }
+    
+    // Test mail function
+    echo "6. Testing native mail() function...\n";
     $to = 'yasiridris6@gmail.com';
     $subject = 'GemVerify Mail Diagnostic Test';
     $headers = [
@@ -66,20 +60,18 @@ try {
         'Reply-To: support@gemverify.com.ng'
     ];
     
-    $sent = mail($to, $subject, '<h3>GemVerify Diagnostic Test</h3><p>If you see this, mail() works on live server.</p>', implode("\r\n", $headers));
-    
-    restore_error_handler();
-    
+    // Safe mail execution
+    $sent = @mail($to, $subject, '<h3>GemVerify Diagnostic Test</h3><p>Diagnostic test</p>', implode("\r\n", $headers));
     if ($sent) {
-        $response['stage3_mail_function'] = 'success (mail sent)';
+        echo "✓ mail() function returned true (email sent successfully)\n";
     } else {
-        $response['stage3_mail_function'] = 'failed (mail function returned false)';
-        $response['errors'][] = 'PHP native mail() function returned false. The mail transfer agent (MTA) may not be running or configured on this server.';
+        echo "✗ mail() function returned false (MTA delivery failure)\n";
     }
-} catch (Exception $e) {
-    restore_error_handler();
-    $response['stage3_mail_function'] = 'error';
-    $response['errors'][] = 'mail() execution threw exception/error: ' . $e->getMessage();
+    
+} catch (Throwable $t) {
+    echo "\n!!! FATAL ERROR CAUGHT !!!\n";
+    echo "Message: " . $t->getMessage() . "\n";
+    echo "File: " . $t->getFile() . "\n";
+    echo "Line: " . $t->getLine() . "\n";
+    echo "Trace:\n" . $t->getTraceAsString() . "\n";
 }
-
-echo json_encode($response, JSON_PRETTY_PRINT);
