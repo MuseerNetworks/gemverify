@@ -326,21 +326,32 @@ class KatPayService {
     public function createPayout(array $params): array {
         $this->assertConfigured();
 
+        $bankCode = (string) $params['bank_code'];
+        $acctNo   = (string) $params['account_number'];
+        $acctName = (string) $params['account_name'];
+
         $body = [
             'amount'         => (float) $params['amount'],
-            'bank_code'      => (string) $params['bank_code'],
-            'account_number' => (string) $params['account_number'],
-            'account_name'   => (string) $params['account_name'],
+            'bank_code'      => $bankCode,
+            'bankCode'       => $bankCode,
+            'account_number' => $acctNo,
+            'accountNumber'  => $acctNo,
+            'account_name'   => $acctName,
+            'accountName'    => $acctName,
             'description'    => $params['description'] ?? 'Admin Profit Withdrawal',
             'reference'      => $params['reference']   ?? ('WD_' . time() . '_' . rand(100, 999)),
         ];
 
         $response = $this->post('/payouts', $body);
 
-        if (empty($response['success']) && empty($response['status']) && !isset($response['id']) && !isset($response['data'])) {
-            throw new RuntimeException(
-                'KatPay payout failed: ' . ($response['message'] ?? 'Unknown payout error')
-            );
+        $isSuccess = !empty($response['success']) || (!empty($response['status']) && $response['status'] !== 'failed') || isset($response['id']);
+
+        if (!$isSuccess) {
+            $msg = $response['message'] ?? $response['error'] ?? 'Unknown KatPay payout failure';
+            if (str_contains(strtolower($msg), 'internal error') || str_contains(strtolower($msg), 'failed') || str_contains(strtolower($msg), 'error')) {
+                $msg .= ' [Note: Verify that Payouts feature is enabled under KatPay Merchant Settings and your KatPay account balance is funded]';
+            }
+            throw new RuntimeException('KatPay payout rejected: ' . $msg);
         }
 
         return $response['data'] ?? $response;
@@ -432,10 +443,10 @@ class KatPayService {
             );
         }
 
-        // Treat 4xx as domain errors (pass through so callers can inspect the message)
-        // Treat 5xx as fatal infrastructure errors
-        if ($httpCode >= 500) {
-            throw new RuntimeException('KatPay server error (HTTP ' . $httpCode . '): ' . ($decoded['message'] ?? $raw));
+        // Treat 4xx / 5xx as domain/server errors
+        if ($httpCode >= 400) {
+            $msg = $decoded['message'] ?? $decoded['error'] ?? ('HTTP ' . $httpCode . ' Error');
+            throw new RuntimeException('KatPay API Error (HTTP ' . $httpCode . '): ' . $msg);
         }
 
         return $decoded;

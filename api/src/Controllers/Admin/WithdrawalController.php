@@ -176,6 +176,7 @@ class WithdrawalController {
 
             } catch (\Throwable $payoutErr) {
                 // Mark as failed
+                $errMsg = $payoutErr->getMessage();
                 $fStmt = $this->db->prepare("
                     UPDATE admin_withdrawals SET
                       status = 'failed',
@@ -183,11 +184,11 @@ class WithdrawalController {
                     WHERE id = ?
                 ");
                 $fStmt->execute([
-                    json_encode(['error' => $payoutErr->getMessage()]),
+                    json_encode(['error' => $errMsg, 'time' => date('Y-m-d H:i:s')]),
                     $withdrawalId
                 ]);
 
-                Response::error('KatPay Payout Failed: ' . $payoutErr->getMessage(), 502);
+                Response::error('KatPay Payout Error: ' . $errMsg, 400);
             }
 
         } catch (\Throwable $e) {
