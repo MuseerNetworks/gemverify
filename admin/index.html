@@ -1474,6 +1474,7 @@ async function fetchDashboardData(){
       if(document.getElementById('statTotalProfit')) document.getElementById('statTotalProfit').textContent = money(data.total_profit || 0);
       if(document.getElementById('statCompleted')) document.getElementById('statCompleted').textContent = data.total_completed || 0;
       if(document.getElementById('statRejected')) document.getElementById('statRejected').textContent = data.total_rejected || 0;
+      withdrawableProfit = Number(data.withdrawable_profit || 0);
       if(document.getElementById('withdrawableStat')) document.getElementById('withdrawableStat').textContent = money(data.withdrawable_profit || 0);
       if(document.getElementById('providerBalanceStat')) document.getElementById('providerBalanceStat').textContent = money(data.provider_balance || 0);
       if(document.getElementById('finCustomerLiability')) document.getElementById('finCustomerLiability').textContent = money(data.total_wallet_liability || 0);
@@ -2504,7 +2505,7 @@ async function openWithdraw(){
   
   document.getElementById('modalFoot').innerHTML =
     `<button class="secondary" onclick="closeModal()">Cancel</button>
-     <button class="primary" onclick="submitWithdraw()">Review Withdrawal</button>`;
+     <button class="primary" onclick="submitWithdraw()">Withdraw</button>`;
   document.getElementById('modal').classList.add('show');
 
   const banks = await loadKatPayBanks();

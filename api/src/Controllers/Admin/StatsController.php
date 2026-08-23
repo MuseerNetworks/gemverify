@@ -62,12 +62,13 @@ class StatsController
             $revenueToday = (float)($revData['revenue_today'] ?? 0);
             $totalRevenue = (float)($revData['total_revenue'] ?? 0);
 
-            $stats['revenue_today']      = $revenueToday;
-            $stats['total_revenue']      = $totalRevenue;
-            $stats['profit_today']       = $revenueToday * 0.25;
-            $stats['total_profit']       = $totalRevenue * 0.25;
-            $stats['withdrawable_profit'] = $totalRevenue * 0.25;
-            $stats['provider_balance']   = 0.00;
+            $completedWithdrawals = (float) ($this->db->query("SELECT COALESCE(SUM(amount), 0) FROM admin_withdrawals WHERE status = 'completed'")->fetchColumn() ?: 0);
+            $stats['revenue_today']       = $revenueToday;
+            $stats['total_revenue']       = $totalRevenue;
+            $stats['profit_today']        = $revenueToday * 0.25;
+            $stats['total_profit']        = $totalRevenue * 0.25;
+            $stats['withdrawable_profit'] = max(0, ($totalRevenue * 0.25) - $completedWithdrawals);
+            $stats['provider_balance']    = 0.00;
 
             // By status (unified)
             $stmtStatus = $this->db->query("
