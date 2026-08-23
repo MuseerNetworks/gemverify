@@ -98,8 +98,80 @@ try {
         echo "✓ Configured service: $slug\n";
     }
 
-    // Step 4: Disable basic NIN pricing variant (id 178)
-    echo "\n4. Disabling 'basic' NIN variant (pricing ID 178)...\n";
+    // Step 4: Seed Pricing Variants for TechHub-connected Services
+    echo "\n4. Seeding/Configuring pricing variants in 'service_pricing' table...\n";
+    $pricingSeed = [
+        'nin-verification' => [
+            ['key' => 'basic', 'label' => 'Basic Slip', 'price' => 250],
+            ['key' => 'regular', 'label' => 'Regular Slip', 'price' => 350],
+            ['key' => 'standard', 'label' => 'Standard Slip', 'price' => 500],
+            ['key' => 'premium', 'label' => 'Premium Slip', 'price' => 800],
+            ['key' => 'vnin', 'label' => 'vNIN Slip', 'price' => 1000]
+        ],
+        'ipe-clearance-single' => [
+            ['key' => null, 'label' => 'Standard Fee', 'price' => 500]
+        ],
+        'personalization' => [
+            ['key' => null, 'label' => 'Standard Fee', 'price' => 800]
+        ],
+        'self-service' => [
+            ['key' => 'Delinking Email', 'label' => 'Delinking Email', 'price' => 500],
+            ['key' => 'Retrieval NIN Details', 'label' => 'Retrieval NIN Details', 'price' => 500]
+        ],
+        'bvn-verification' => [
+            ['key' => 'full', 'label' => 'Full Details Slip', 'price' => 400],
+            ['key' => 'premium', 'label' => 'Premium Slip', 'price' => 700]
+        ],
+        'bvn-retrieval' => [
+            ['key' => null, 'label' => 'Standard Fee', 'price' => 400]
+        ]
+    ];
+
+    foreach ($pricingSeed as $slug => $variants) {
+        // Get service ID
+        $sStmt = $db->prepare("SELECT id FROM services WHERE slug = ?");
+        $sStmt->execute([$slug]);
+        $serviceId = $sStmt->fetchColumn();
+        
+        if (!$serviceId) {
+            echo "⚠ Service slug '$slug' not found in database — skipping pricing configuration.\n";
+            continue;
+        }
+        
+        foreach ($variants as $v) {
+            // Check if variant exists
+            if ($v['key'] === null) {
+                $checkStmt = $db->prepare("SELECT id FROM service_pricing WHERE service_id = ? AND variant_key IS NULL");
+                $checkStmt->execute([$serviceId]);
+            } else {
+                $checkStmt = $db->prepare("SELECT id FROM service_pricing WHERE service_id = ? AND variant_key = ?");
+                $checkStmt->execute([$serviceId, $v['key']]);
+            }
+            $existingId = $checkStmt->fetchColumn();
+            
+            if ($existingId) {
+                // Update
+                $updStmt = $db->prepare("
+                    UPDATE service_pricing 
+                    SET price = ?, variant_label = ?, is_active = 1 
+                    WHERE id = ?
+                ");
+                $updStmt->execute([$v['price'], $v['label'], $existingId]);
+                echo "✓ Updated pricing for $slug (" . ($v['key'] ?? 'Standard') . ") to ₦" . $v['price'] . "\n";
+            } else {
+                // Insert
+                $insStmt = $db->prepare("
+                    INSERT INTO service_pricing (service_id, variant_key, variant_label, price, is_active) 
+                    VALUES (?, ?, ?, ?, 1)
+                ");
+                $insStmt->execute([$serviceId, $v['key'], $v['label'], $v['price']]);
+                echo "✓ Created pricing for $slug (" . ($v['key'] ?? 'Standard') . ") at ₦" . $v['price'] . "\n";
+            }
+        }
+    }
+
+    // Step 5: Disable basic NIN pricing variant (id 178)
+    echo "\n5. Disabling 'basic' NIN variant (pricing ID 178)...\n";
     $db->exec("UPDATE service_pricing SET is_active = 0 WHERE id = 178");
     echo "✓ Pricing variant ID 178 disabled.\n";
 
