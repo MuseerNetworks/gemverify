@@ -957,7 +957,7 @@ aside .mt-1.space-y-1 {
       };
 
       // Helper variable to hold the token retrieved from URL
-      window.__gvResetToken = null;
+      window.__gvResetToken = window.__gvResetToken || null;
 
       /* Reset Password submit */
       window.gvDoResetPassword = async function () {
