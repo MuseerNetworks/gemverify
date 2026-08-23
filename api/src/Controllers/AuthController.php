@@ -454,8 +454,13 @@ class AuthController {
         $domain = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
         
-        // Construct the reset URL
-        $resetUrl = "{$protocol}://{$domain}/gemverify/user/?token={$token}";
+        // Dynamically determine the base path of the project relative to document root
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $apiPos = strpos($scriptName, '/api/');
+        $basePath = ($apiPos !== false) ? substr($scriptName, 0, $apiPos) . '/' : '/';
+        
+        // Construct the reset URL dynamically
+        $resetUrl = "{$protocol}://{$domain}{$basePath}user/?token={$token}";
         
         $subject = "Password Reset Request — GemVerify";
         $htmlContent = "
