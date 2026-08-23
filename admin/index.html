@@ -2479,7 +2479,8 @@ let katpayBanksList = [];
 async function loadKatPayBanks() {
   if (katpayBanksList.length > 0) return katpayBanksList;
   try {
-    const res = await adminFetch('../api/admin/banks');
+    const raw = await gvAdminFetch('../api/admin/banks');
+    const res = await raw.json();
     if (res && res.success && Array.isArray(res.data)) {
       katpayBanksList = res.data;
     }
@@ -2571,8 +2572,9 @@ async function confirmWithdraw(amount, bankCode, bankName, acctNo, acctName, rea
   try {
     document.getElementById('modalBody').innerHTML = '<div style="padding:30px;text-align:center">Processing KatPay Payout... Please wait...</div>';
     
-    const res = await adminFetch('../api/admin/withdrawals', {
+    const raw = await gvAdminFetch('../api/admin/withdrawals', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         amount: amount,
         bank_code: bankCode,
@@ -2582,6 +2584,7 @@ async function confirmWithdraw(amount, bankCode, bankName, acctNo, acctName, rea
         description: reason
       })
     });
+    const res = await raw.json();
 
     closeModal();
 
@@ -2602,7 +2605,8 @@ async function refreshProviderBalances(){
     const totalEl = document.getElementById('providerTotal');
     if (totalEl) totalEl.textContent = 'Syncing...';
     
-    const res = await adminFetch('../api/admin/provider-balances');
+    const raw = await gvAdminFetch('../api/admin/provider-balances');
+    const res = await raw.json();
     if (res && res.success && res.data) {
       const data = res.data;
       if (totalEl) totalEl.textContent = money(data.total_balance || 0);
@@ -3429,6 +3433,7 @@ async function gvAdminFetch(url, options) {
   }
   return res;
 }
+window.adminFetch = gvAdminFetch;
 
 // Phase 1 — Validate stored token and restore session on page load/refresh
 async function gvRestoreSession() {
