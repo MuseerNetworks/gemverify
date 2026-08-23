@@ -133,6 +133,14 @@ addRoute('GET',  '/admin/wallet/topups',                          function ()   
 addRoute('GET',  '/admin/wallet/topups/{ref}',                    function ($p)  { (new \Controllers\Admin\WalletAdminController())->getTopUp($p['ref']); });
 addRoute('POST', '/admin/wallet/topups/{ref}/credit',             function ($p)  { (new \Controllers\Admin\WalletAdminController())->manualCredit($p['ref']); });
 
+// ── Provider Balances (Admin) ────────────────────────────────────────────────
+addRoute('GET',  '/admin/provider-balances',                     function ()    { (new \Controllers\Admin\ProviderBalanceController())->getBalances(); });
+
+// ── Admin Withdrawals (KatPay Payouts) ───────────────────────────────────────
+addRoute('GET',  '/admin/banks',                                 function ()    { (new \Controllers\Admin\WithdrawalController())->getBanks(); });
+addRoute('GET',  '/admin/withdrawals',                           function ()    { (new \Controllers\Admin\WithdrawalController())->listWithdrawals(); });
+addRoute('POST', '/admin/withdrawals',                           function ()    { (new \Controllers\Admin\WithdrawalController())->createWithdrawal(); });
+
 // ── KatPay Webhook (PUBLIC — no auth, signature-verified internally) ──────────
 // This route MUST be registered last as a fallback to avoid auth middleware
 addRoute('POST', '/payment/callback',                             function ()    { (new \Controllers\TopUpController())->handleCallback(); });

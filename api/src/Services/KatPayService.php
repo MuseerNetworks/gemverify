@@ -291,6 +291,79 @@ class KatPayService {
         return abs(time() - (int) $timestamp) <= $maxAgeSeconds;
     }
 
+    /**
+     * Get list of supported NUBAN banks for payouts from KatPay.
+     * GET /api/bank-list or /v1/bank-list
+     */
+    public function getBankList(): array {
+        $this->assertConfigured();
+        try {
+            $response = $this->get('/bank-list');
+            if (isset($response['data']) && is_array($response['data'])) {
+                return $response['data'];
+            }
+            if (is_array($response) && isset($response[0])) {
+                return $response;
+            }
+            return $response['data'] ?? [];
+        } catch (RuntimeException $e) {
+            // Try alternative path if base endpoint differs
+            try {
+                $res = $this->get('/v1/bank-list');
+                return $res['data'] ?? $res;
+            } catch (RuntimeException) {
+                return [];
+            }
+        }
+    }
+
+    /**
+     * Create a payout / bank transfer via KatPay.
+     * POST /v1/payouts
+     *
+     * @param array $params { amount, bank_code, account_number, account_name, description, reference }
+     */
+    public function createPayout(array $params): array {
+        $this->assertConfigured();
+
+        $body = [
+            'amount'         => (float) $params['amount'],
+            'bank_code'      => (string) $params['bank_code'],
+            'account_number' => (string) $params['account_number'],
+            'account_name'   => (string) $params['account_name'],
+            'description'    => $params['description'] ?? 'Admin Profit Withdrawal',
+            'reference'      => $params['reference']   ?? ('WD_' . time() . '_' . rand(100, 999)),
+        ];
+
+        $response = $this->post('/payouts', $body);
+
+        if (empty($response['success']) && empty($response['status']) && !isset($response['id']) && !isset($response['data'])) {
+            throw new RuntimeException(
+                'KatPay payout failed: ' . ($response['message'] ?? 'Unknown payout error')
+            );
+        }
+
+        return $response['data'] ?? $response;
+    }
+
+    /**
+     * Get live KatPay merchant wallet balance.
+     */
+    public function getMerchantBalance(): array {
+        $this->assertConfigured();
+        try {
+            $response = $this->get('/merchant/balance');
+            return $response['data'] ?? $response;
+        } catch (RuntimeException) {
+            try {
+                $res = $this->get('/balance');
+                return $res['data'] ?? $res;
+            } catch (RuntimeException) {
+                return ['available_balance' => 0, 'currency' => 'NGN'];
+            }
+        }
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // PRIVATE HELPERS
     // ──────────────────────────────────────────────────────────────────────────

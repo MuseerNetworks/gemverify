@@ -2473,57 +2473,161 @@ function updateWithdrawableUI(){
   });
 }
 
-function openWithdraw(){
-  document.getElementById('modalTitle').textContent='Withdraw Company Profit';
-  document.getElementById('modalBody').innerHTML=`
+let katpayBanksList = [];
+
+async function loadKatPayBanks() {
+  if (katpayBanksList.length > 0) return katpayBanksList;
+  try {
+    const res = await adminFetch('../api/admin/banks');
+    if (res && res.success && Array.isArray(res.data)) {
+      katpayBanksList = res.data;
+    }
+  } catch(e) {
+    console.error('Failed to load KatPay banks', e);
+  }
+  return katpayBanksList;
+}
+
+async function openWithdraw(){
+  document.getElementById('modalTitle').textContent = 'Withdraw Company Profit via KatPay';
+  document.getElementById('modalBody').innerHTML = `
     <div style="background:#eff6ff;border:1px solid #dbeafe;padding:14px;border-radius:13px;margin-bottom:16px">
       <small style="color:var(--muted);font-weight:800">AVAILABLE FOR WITHDRAWAL</small>
       <div style="font-size:24px;font-weight:900;margin-top:4px">${money(withdrawableProfit)}</div>
-      <p style="font-size:10px;color:var(--muted);margin:5px 0 0">This balance represents settled company funds only. Customer wallet balances are excluded.</p>
+      <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Transfers are processed instantly via KatPay Payouts API directly to NUBAN bank accounts.</p>
     </div>
-    <div class="field"><label>Withdrawal Amount (NGN)</label><input id="withdrawAmount" type="number" min="1" max="${withdrawableProfit}" placeholder="Enter amount"></div>
-    <div class="field"><label>Destination</label><select id="withdrawDestination"><option>Company Settlement Account</option><option>Approved Business Bank Account</option></select></div>
-    <div class="field"><label>Reason / Reference</label><input id="withdrawReason" placeholder="e.g. Weekly profit settlement"></div>
-    <div style="background:#fff7e6;color:#92400e;border:1px solid #fde68a;padding:11px;border-radius:11px;font-size:10px">
-      Security rule: withdrawals should require backend balance validation, admin re-authentication/2FA, and an immutable audit record.
-    </div>`;
-  document.getElementById('modalFoot').innerHTML=
+    <div class="field"><label>Withdrawal Amount (NGN)</label><input id="withdrawAmount" type="number" min="100" max="${withdrawableProfit}" placeholder="Min ₦100"></div>
+    <div class="field"><label>Destination Bank</label><select id="withdrawBank"><option value="">Loading banks...</option></select></div>
+    <div class="field"><label>NUBAN Account Number</label><input id="withdrawAcctNo" type="text" maxlength="10" placeholder="10-digit account number"></div>
+    <div class="field"><label>Account Holder Name</label><input id="withdrawAcctName" type="text" placeholder="Account owner full name"></div>
+    <div class="field"><label>Narration / Reference</label><input id="withdrawReason" placeholder="e.g. Weekly profit settlement"></div>`;
+  
+  document.getElementById('modalFoot').innerHTML =
     `<button class="secondary" onclick="closeModal()">Cancel</button>
      <button class="primary" onclick="submitWithdraw()">Review Withdrawal</button>`;
   document.getElementById('modal').classList.add('show');
+
+  const banks = await loadKatPayBanks();
+  const bankSelect = document.getElementById('withdrawBank');
+  if (bankSelect) {
+    if (banks.length > 0) {
+      bankSelect.innerHTML = '<option value="">-- Select Destination Bank --</option>' + 
+        banks.map(b => `<option value="${b.code || b.bank_code}">${b.name || b.bank_name} (${b.code || b.bank_code})</option>`).join('');
+    } else {
+      bankSelect.innerHTML = `
+        <option value="">-- Select Bank --</option>
+        <option value="058">GTBank (058)</option>
+        <option value="011">First Bank (011)</option>
+        <option value="057">Zenith Bank (057)</option>
+        <option value="033">United Bank for Africa (033)</option>
+        <option value="044">Access Bank (044)</option>
+        <option value="999991">PalmPay (999991)</option>
+        <option value="999992">OPay (999992)</option>
+        <option value="50515">Moniepoint (50515)</option>
+      `;
+    }
+  }
 }
 
 function submitWithdraw(){
-  const amount=Number(document.getElementById('withdrawAmount').value);
-  if(!amount || amount<=0){alert('Enter a valid withdrawal amount.');return}
-  if(amount>withdrawableProfit){alert('Withdrawal exceeds settled withdrawable profit.');return}
-  const destination=document.getElementById('withdrawDestination').value;
-  const reason=document.getElementById('withdrawReason').value.trim() || 'Profit withdrawal';
-  document.getElementById('modalTitle').textContent='Confirm Profit Withdrawal';
-  document.getElementById('modalBody').innerHTML=`
-    <div style="padding:15px;border:1px solid var(--line);border-radius:13px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Amount</span><b>${money(amount)}</b></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Destination</span><b>${destination}</b></div>
-      <div style="display:flex;justify-content:space-between"><span>Reason</span><b>${reason}</b></div>
+  const amount = Number(document.getElementById('withdrawAmount').value);
+  const bankSelect = document.getElementById('withdrawBank');
+  const bankCode = bankSelect ? bankSelect.value : '';
+  const bankName = bankSelect && bankSelect.options[bankSelect.selectedIndex] ? bankSelect.options[bankSelect.selectedIndex].text : '';
+  const acctNo = document.getElementById('withdrawAcctNo').value.trim();
+  const acctName = document.getElementById('withdrawAcctName').value.trim();
+  const reason = document.getElementById('withdrawReason').value.trim() || 'Profit withdrawal';
+
+  if (!amount || amount < 100) { alert('Minimum withdrawal amount is ₦100.'); return; }
+  if (amount > withdrawableProfit) { alert('Withdrawal exceeds settled withdrawable profit.'); return; }
+  if (!bankCode) { alert('Please select a destination bank.'); return; }
+  if (!acctNo || acctNo.length !== 10) { alert('Please enter a valid 10-digit NUBAN account number.'); return; }
+  if (!acctName) { alert('Please enter the account holder name.'); return; }
+
+  document.getElementById('modalTitle').textContent = 'Confirm KatPay Payout Withdrawal';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="padding:15px;border:1px solid var(--line);border-radius:13px;background:var(--bg)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Amount:</span><b style="color:var(--brand)">${money(amount)}</b></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Bank:</span><b>${bankName}</b></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Account Number:</span><b style="font-family:monospace">${acctNo}</b></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Account Name:</span><b>${acctName}</b></div>
+      <div style="display:flex;justify-content:space-between"><span>Narration:</span><b>${reason}</b></div>
     </div>
-    <div class="field"><label>Admin Password / Re-authentication</label><input id="reauth" type="password" placeholder="Required in production backend"></div>`;
-  document.getElementById('modalFoot').innerHTML=
-    `<button class="secondary" onclick="closeModal()">Cancel</button>
-     <button class="primary" onclick="confirmWithdraw(${amount})">Confirm Withdrawal</button>`;
+    <div style="margin-top:12px;background:#fff7e6;color:#92400e;border:1px solid #fde68a;padding:10px;border-radius:10px;font-size:11px">
+      ⚠ Funds will be transferred directly from KatPay merchant balance to <b>${acctName}</b>. This action is final.
+    </div>`;
+  
+  document.getElementById('modalFoot').innerHTML =
+    `<button class="secondary" onclick="openWithdraw()">← Edit</button>
+     <button class="primary" style="background:#16a34a;border-color:#16a34a" onclick="confirmWithdraw(${amount}, '${bankCode}', '${escapeJs(bankName)}', '${acctNo}', '${escapeJs(acctName)}', '${escapeJs(reason)}')">Execute Payout Now</button>`;
 }
 
-function confirmWithdraw(amount){
-  const auth=document.getElementById('reauth').value;
-  if(!auth){alert('Admin re-authentication is required.');return}
-  if(amount>withdrawableProfit){alert('Balance changed. Recalculate withdrawal before continuing.');return}
-  closeModal();
-  alert('Withdrawal request received. This feature requires a backend withdrawal API endpoint (/api/admin/withdrawals) to be connected before funds can be transferred. Please contact the development team to complete this integration.');
+function escapeJs(str) {
+  return (str || '').replace(/'/g, "\\'");
 }
 
+async function confirmWithdraw(amount, bankCode, bankName, acctNo, acctName, reason){
+  try {
+    document.getElementById('modalBody').innerHTML = '<div style="padding:30px;text-align:center">Processing KatPay Payout... Please wait...</div>';
+    
+    const res = await adminFetch('../api/admin/withdrawals', {
+      method: 'POST',
+      body: JSON.stringify({
+        amount: amount,
+        bank_code: bankCode,
+        bank_name: bankName,
+        account_number: acctNo,
+        account_name: acctName,
+        description: reason
+      })
+    });
 
-function refreshProviderBalances(){
-  alert('Provider balance refresh requires backend provider API integration. Configure provider credentials in the backend to enable live balance syncing.');
+    closeModal();
+
+    if (res && res.success) {
+      alert('✓ KatPay Payout Executed Successfully!\n\nRef: ' + (res.data.reference || '') + '\nAmount: ' + money(amount) + '\nAccount: ' + acctName + ' (' + acctNo + ')');
+      if (typeof fetchAdminDashboardData === 'function') fetchAdminDashboardData();
+    } else {
+      alert('Payout Failed: ' + (res.message || 'Unknown error occurred.'));
+    }
+  } catch(e) {
+    closeModal();
+    alert('Connection error executing payout: ' + e.message);
+  }
 }
+
+async function refreshProviderBalances(){
+  try {
+    const totalEl = document.getElementById('providerTotal');
+    if (totalEl) totalEl.textContent = 'Syncing...';
+    
+    const res = await adminFetch('../api/admin/provider-balances');
+    if (res && res.success && res.data) {
+      const data = res.data;
+      if (totalEl) totalEl.textContent = money(data.total_balance || 0);
+      
+      const tableBody = document.querySelector('#providerTable tbody');
+      if (tableBody && Array.isArray(data.providers)) {
+        tableBody.innerHTML = data.providers.map(p => `
+          <tr>
+            <td><b>${p.name}</b></td>
+            <td><small>${p.category}</small></td>
+            <td><strong style="color:${p.available_balance > 0 ? '#16a34a' : 'inherit'}">${money(p.available_balance)}</strong></td>
+            <td>${money(p.threshold)}</td>
+            <td><span class="pill ${p.status === 'Healthy' ? 'green' : 'amber'}">${p.status}</span></td>
+            <td><small>${p.last_sync}</small></td>
+            <td><button class="secondary" style="padding:4px 8px;font-size:11px" onclick="viewProvider('${escapeJs(p.name)}')">View</button></td>
+          </tr>
+        `).join('');
+      }
+    } else {
+      alert('Failed to refresh provider balances: ' + (res?.message || 'Unknown error'));
+    }
+  } catch(e) {
+    alert('Error connecting to provider balances API: ' + e.message);
+  }
+}
+
 function filterProviders(){
   const q=(document.getElementById('providerSearch')?.value||'').toLowerCase();
   document.querySelectorAll('#providerTable tbody tr').forEach(row=>{
