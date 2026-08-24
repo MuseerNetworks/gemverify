@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <link rel="icon" type="image/png" href="../assets/img/auth-shield.png">
@@ -92,7 +92,7 @@ table{width:100%;min-width:680px;border-collapse:collapse}th,td{padding:12px 15p
   .modal-box{width:100%;max-height:94vh;border-radius:16px}
 }
 
-/* FINAL MOBILE APP LAYOUT — no sideways scrolling */
+/* FINAL MOBILE APP LAYOUT â€” no sideways scrolling */
 html, body { width:100%; max-width:100%; overflow-x:hidden; }
 *, *::before, *::after { box-sizing:border-box; }
 
@@ -209,7 +209,7 @@ html, body { width:100%; max-width:100%; overflow-x:hidden; }
   .fin-grid{grid-template-columns:1fr}
 }
 
-/* ===== Dark Mode (requested change 1) — additive, light mode untouched ===== */
+/* ===== Dark Mode (requested change 1) â€” additive, light mode untouched ===== */
 body.dark-mode{background:#0b1220;color:#e5e7eb}
 body.dark-mode .login{background:radial-gradient(circle at 15% 10%,rgba(11,92,255,.16),transparent 30%),radial-gradient(circle at 90% 85%,rgba(14,165,233,.14),transparent 28%),#0b1220}
 body.dark-mode .login-box{background:#111827;border-color:#1f2937}
@@ -250,10 +250,10 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 </head>
 <body>
 
-<!-- ── Session restore overlay — visible only while token is being validated ── -->
+<!-- â”€â”€ Session restore overlay â€” visible only while token is being validated â”€â”€ -->
 <div id="gv-session-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#f1f5f9;flex-direction:column;align-items:center;justify-content:center;gap:16px">
   <img src="../assets/img/auth-shield.png" style="width:52px;height:52px;object-fit:contain;border-radius:14px;opacity:.85" alt="">
-  <p style="font-size:13px;font-weight:600;color:#64748b;margin:0;letter-spacing:.02em">Restoring session…</p>
+  <p style="font-size:13px;font-weight:600;color:#64748b;margin:0;letter-spacing:.02em">Restoring sessionâ€¦</p>
 </div>
 
 <section id="login" class="login">
@@ -262,7 +262,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
       <img src="../assets/img/auth-shield.png" style="width:52px;height:52px;object-fit:contain;border-radius:12px;" alt="GemVerify">
       <h1>GemVerify<br>Admin Portal</h1>
       <p>Secure operations control for identity verification, manual service requests, payments, users and GemPrint.</p>
-      <div class="secure">◉ <span>Protected administrative environment</span></div>
+      <div class="secure">â—‰ <span>Protected administrative environment</span></div>
     </div>
     <div class="login-form">
       <div class="eyebrow">Administration</div>
@@ -271,7 +271,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
       <div class="field"><label>Admin Email</label><input id="email" type="email" placeholder="admin@gemverify.com"></div>
       <div class="field"><label>Password</label><input id="password" type="password" placeholder="Enter your password"></div>
 
-      <!-- ── First-Admin Setup Panel (hidden by default) ─────────────── -->
+      <!-- â”€â”€ First-Admin Setup Panel (hidden by default) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <div id="gv-setup-panel" style="display:none">
         <div class="field"><label>Full Name</label><input id="setup-name" type="text" placeholder="e.g. John Doe" autocomplete="off"></div>
         <div class="field"><label>Email Address</label><input id="setup-email" type="email" placeholder="e.g. admin@yourdomain.com" autocomplete="off"></div>
@@ -280,7 +280,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
         <div id="setup-err" class="err" style="display:none"></div>
         <div id="setup-ok" style="display:none;background:#eaf8ef;color:#15803d;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:4px;"></div>
       </div>
-      <!-- ── End Setup Panel ─────────────────────────────────────────── -->
+      <!-- â”€â”€ End Setup Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <div id="loginError" style="display:none;font-size:11px;color:#dc2626;background:#fff0f0;padding:8px 12px;border-radius:8px;margin-bottom:12px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 22px;font-size:11px">
         <label><input type="checkbox"> Remember this device</label>
@@ -297,122 +297,122 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   <div class="brand"><img src="../assets/img/auth-shield.png" style="width:38px;height:38px;object-fit:contain;border-radius:12px;" alt="GemVerify"><div><b>GemVerify</b><small>ADMIN PORTAL</small></div></div>
   <nav class="nav">
     <div class="nav-group open">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">OVERVIEW<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">OVERVIEW<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button class="active" data-page="dashboard" onclick="go('dashboard',this)">▦　Dashboard</button>
-    <button data-page="analytics" onclick="go('analytics',this)">◔　Analytics</button>
+    <button class="active" data-page="dashboard" onclick="go('dashboard',this)">â–¦ã€€Dashboard</button>
+    <button data-page="analytics" onclick="go('analytics',this)">â—”ã€€Analytics</button>
     </div>
     </div>
 
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">OPERATIONS<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">OPERATIONS<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button data-page="requests" onclick="go('requests',this)">◫　Manual Requests</button>
-    <button data-page="pending" onclick="go('pending',this)">◷　Pending Requests</button>
-    <button data-page="processing" onclick="go('processing',this)">◌　Processing</button>
-    <button data-page="completed" onclick="go('completed',this)">✓　Completed</button>
-    <button data-page="rejected" onclick="go('rejected',this)">⊘　Rejected</button>
-    <button data-page="api-transactions" onclick="go('api-transactions',this)">⚡　API Transactions</button>
+    <button data-page="requests" onclick="go('requests',this)">â—«ã€€Manual Requests</button>
+    <button data-page="pending" onclick="go('pending',this)">â—·ã€€Pending Requests</button>
+    <button data-page="processing" onclick="go('processing',this)">â—Œã€€Processing</button>
+    <button data-page="completed" onclick="go('completed',this)">âœ“ã€€Completed</button>
+    <button data-page="rejected" onclick="go('rejected',this)">âŠ˜ã€€Rejected</button>
+    <button data-page="api-transactions" onclick="go('api-transactions',this)">âš¡ã€€API Transactions</button>
     </div>
     </div>
 
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">NIN SERVICES<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">NIN SERVICES<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button data-page="nin-validation" onclick="go('nin-validation',this)">N　Validation</button>
-    <button data-page="nin-ipe" onclick="go('nin-ipe',this)">N　IPE Modification</button>
-    <button data-page="nin-personalisation" onclick="go('nin-personalisation',this)">N　Personalisation</button>
-    <button data-page="nin-modification" onclick="go('nin-modification',this)">N　Modification</button>
-    <button data-page="nin-dob" onclick="go('nin-dob',this)">N　DOB &gt; 5 Years</button>
-    <button data-page="nin-delinking" onclick="go('nin-delinking',this)">N　Self-Service Delinking</button>
+    <button data-page="nin-validation" onclick="go('nin-validation',this)">Nã€€Validation</button>
+    <button data-page="nin-ipe" onclick="go('nin-ipe',this)">Nã€€IPE Modification</button>
+    <button data-page="nin-personalisation" onclick="go('nin-personalisation',this)">Nã€€Personalisation</button>
+    <button data-page="nin-modification" onclick="go('nin-modification',this)">Nã€€Modification</button>
+    <button data-page="nin-dob" onclick="go('nin-dob',this)">Nã€€DOB &gt; 5 Years</button>
+    <button data-page="nin-delinking" onclick="go('nin-delinking',this)">Nã€€Self-Service Delinking</button>
     </div>
     </div>
 
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">BVN SERVICES<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">BVN SERVICES<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button data-page="bvn-license" onclick="go('bvn-license',this)">B　License Creation</button>
-    <button data-page="bvn-nonappearance" onclick="go('bvn-nonappearance',this)">B　Non-Appearance</button>
-    <button data-page="bvn-risk" onclick="go('bvn-risk',this)">B　Central Risk Management</button>
-    <button data-page="bvn-modification" onclick="go('bvn-modification',this)">B　Modification</button>
+    <button data-page="bvn-license" onclick="go('bvn-license',this)">Bã€€License Creation</button>
+    <button data-page="bvn-nonappearance" onclick="go('bvn-nonappearance',this)">Bã€€Non-Appearance</button>
+    <button data-page="bvn-risk" onclick="go('bvn-risk',this)">Bã€€Central Risk Management</button>
+    <button data-page="bvn-modification" onclick="go('bvn-modification',this)">Bã€€Modification</button>
     </div>
     </div>
 
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">JAMB<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">JAMB<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button data-page="jamb-all" onclick="go('jamb-all',this)">J　All Requests</button>
-    <button data-page="jamb-result" onclick="go('jamb-result',this)">J　Original Result</button>
-    <button data-page="jamb-slip" onclick="go('jamb-slip',this)">J　Exam Slip</button>
-    <button data-page="jamb-admission" onclick="go('jamb-admission',this)">J　Admission Letter</button>
-    <button data-page="jamb-reprints" onclick="go('jamb-reprints',this)">J　Re-Prints</button>
+    <button data-page="jamb-all" onclick="go('jamb-all',this)">Jã€€All Requests</button>
+    <button data-page="jamb-result" onclick="go('jamb-result',this)">Jã€€Original Result</button>
+    <button data-page="jamb-slip" onclick="go('jamb-slip',this)">Jã€€Exam Slip</button>
+    <button data-page="jamb-admission" onclick="go('jamb-admission',this)">Jã€€Admission Letter</button>
+    <button data-page="jamb-reprints" onclick="go('jamb-reprints',this)">Jã€€Re-Prints</button>
     </div>
     </div>
 
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">CAC<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">CAC<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button data-page="cac-business" onclick="go('cac-business',this)">C　Business Name</button>
-    <button data-page="cac-ltd" onclick="go('cac-ltd',this)">C　LTD Setup</button>
-    <button data-page="cac-verification" onclick="go('cac-verification',this)">C　Verification</button>
+    <button data-page="cac-business" onclick="go('cac-business',this)">Cã€€Business Name</button>
+    <button data-page="cac-ltd" onclick="go('cac-ltd',this)">Cã€€LTD Setup</button>
+    <button data-page="cac-verification" onclick="go('cac-verification',this)">Cã€€Verification</button>
     </div>
     </div>
 
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">TIN<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">TIN<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button data-page="tin" onclick="go('tin',this)">T　Registration</button>
+    <button data-page="tin" onclick="go('tin',this)">Tã€€Registration</button>
     </div>
     </div>
 
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">ATTESTATION<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">ATTESTATION<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button data-page="attestation" onclick="go('attestation',this)">A　NIN Attestation</button>
+    <button data-page="attestation" onclick="go('attestation',this)">Aã€€NIN Attestation</button>
     </div>
     </div>
 
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">GEMPRINT<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">GEMPRINT<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button data-page="products" onclick="go('products',this)">▤　Products</button>
-    <button data-page="orders" onclick="go('orders',this)">▣　Orders</button>
-    <button data-page="print-jobs" onclick="go('print-jobs',this)">▥　Print Jobs</button>
-    <button data-page="inventory" onclick="go('inventory',this)">▤　Inventory</button>
+    <button data-page="products" onclick="go('products',this)">â–¤ã€€Products</button>
+    <button data-page="orders" onclick="go('orders',this)">â–£ã€€Orders</button>
+    <button data-page="print-jobs" onclick="go('print-jobs',this)">â–¥ã€€Print Jobs</button>
+    <button data-page="inventory" onclick="go('inventory',this)">â–¤ã€€Inventory</button>
     </div>
     </div>
 
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">FINANCE<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">FINANCE<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button data-page="revenue" onclick="go('revenue',this)">₦　Revenue</button>
-    <button data-page="provider-balance" onclick="go('provider-balance',this)">◉　Providers Balance</button>
-    <button data-page="profit" onclick="go('profit',this)">↗　Profit & Withdrawals</button>
-    <button data-page="transactions" onclick="go('transactions',this)">₦　Transactions</button>
-    <button data-page="wallet-funding" onclick="go('wallet-funding',this)">＋　Wallet Funding</button>
-    <button data-page="refunds" onclick="go('refunds',this)">↩　Refunds</button>
+    <button data-page="revenue" onclick="go('revenue',this)">â‚¦ã€€Revenue</button>
+    <button data-page="provider-balance" onclick="go('provider-balance',this)">â—‰ã€€Providers Balance</button>
+    <button data-page="profit" onclick="go('profit',this)">â†—ã€€Profit & Withdrawals</button>
+    <button data-page="transactions" onclick="go('transactions',this)">â‚¦ã€€Transactions</button>
+    <button data-page="wallet-funding" onclick="go('wallet-funding',this)">ï¼‹ã€€Wallet Funding</button>
+    <button data-page="refunds" onclick="go('refunds',this)">â†©ã€€Refunds</button>
     </div>
     </div>
 
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">USERS<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">USERS<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button data-page="users" onclick="go('users',this)">♙　All Users</button>
-    <button data-page="active-users" onclick="go('active-users',this)">●　Active</button>
-    <button data-page="suspended-users" onclick="go('suspended-users',this)">⊘　Suspended</button>
+    <button data-page="users" onclick="go('users',this)">â™™ã€€All Users</button>
+    <button data-page="active-users" onclick="go('active-users',this)">â—ã€€Active</button>
+    <button data-page="suspended-users" onclick="go('suspended-users',this)">âŠ˜ã€€Suspended</button>
     </div>
     </div>
 
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">SYSTEM<span class="nav-caret">▾</span></div>
+    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">SYSTEM<span class="nav-caret">â–¾</span></div>
     <div class="nav-sub">
-    <button data-page="notifications" onclick="go('notifications',this)">♧　Notifications</button>
-    <button data-page="admins" onclick="go('admins',this)">♙　Admin Users</button>
-    <button data-page="roles" onclick="go('roles',this)">◈　Roles &amp; Permissions</button>
-    <button data-page="services" onclick="go('services',this)">⚙　Services &amp; Pricing</button>
-    <button data-page="audit" onclick="go('audit',this)">◷　Audit Logs</button>
-    <button data-page="settings" onclick="go('settings',this)">⚙　Settings</button>
-    <button class="danger" onclick="logout()">↪　Logout</button>
+    <button data-page="notifications" onclick="go('notifications',this)">â™§ã€€Notifications</button>
+    <button data-page="admins" onclick="go('admins',this)">â™™ã€€Admin Users</button>
+    <button data-page="roles" onclick="go('roles',this)">â—ˆã€€Roles &amp; Permissions</button>
+    <button data-page="services" onclick="go('services',this)">âš™ã€€Services &amp; Pricing</button>
+    <button data-page="audit" onclick="go('audit',this)">â—·ã€€Audit Logs</button>
+    <button data-page="settings" onclick="go('settings',this)">âš™ã€€Settings</button>
+    <button class="danger" onclick="logout()">â†ªã€€Logout</button>
     </div>
     </div>
   </nav>
@@ -421,25 +421,25 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 
 <main class="main">
 <header class="top">
-  <div class="top-left"><button class="hamb" aria-label="Toggle navigation" onclick="toggleSidebar()">☰</button><input class="search" placeholder="Search users, requests, reference..."></div>
-  <div class="top-actions"><button class="icon-btn" id="darkToggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button><button class="icon-btn">⌕</button><button class="icon-btn">♧</button><div class="avatar" id="navAdminAvatar" onclick="go('admin-profile',this)" title="Admin Profile" style="cursor:pointer;background:#dbeafe;color:var(--blue)"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div></div>
+  <div class="top-left"><button class="hamb" aria-label="Toggle navigation" onclick="toggleSidebar()">â˜°</button><input class="search" placeholder="Search users, requests, reference..."></div>
+  <div class="top-actions"><button class="icon-btn" id="darkToggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode" title="Toggle dark mode">â˜¾</button><button class="icon-btn">âŒ•</button><button class="icon-btn">â™§</button><div class="avatar" id="navAdminAvatar" onclick="go('admin-profile',this)" title="Admin Profile" style="cursor:pointer;background:#dbeafe;color:var(--blue)"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div></div>
 </header>
 
 <div class="content">
 <section id="page-dashboard" class="page active">
   <div class="heading"><div><h1 id="dashGreeting">Good morning, Admin</h1><p>Here's what is happening across GemVerify today.</p></div><button class="primary" onclick="go('requests')">View Manual Queue</button></div>
   <div class="grid4">
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Registered Accounts" onclick="openKpiPage('registered-accounts')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('registered-accounts')"><div class="stat-top"><small>Registered Accounts</small><div class="ico">♙</div></div><strong id="statRegUsers">0</strong><span class="delta">Live accounts</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Active Today" onclick="openKpiPage('active-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('active-today')"><div class="stat-top"><small>Active Today</small><div class="ico">●</div></div><strong id="statActiveUsers">0</strong><span class="delta">Active sessions</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Wallet Liability" onclick="openKpiPage('wallet-liability')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('wallet-liability')"><div class="stat-top"><small>Wallet Liability</small><div class="ico">₦</div></div><strong id="statWalletLiability">₦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Customer funds</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Revenue Today" onclick="openKpiPage('revenue-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('revenue-today')"><div class="stat-top"><small>Revenue Today</small><div class="ico">₦</div></div><strong id="statRevenue">₦0</strong><span class="delta">Today's gross revenue</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Total Revenue" onclick="openKpiPage('total-revenue')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('total-revenue')"><div class="stat-top"><small>Total Revenue</small><div class="ico">₦</div></div><strong id="statTotalRevenue">₦0</strong><span class="delta">All-time gross revenue</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Profit Today" onclick="openKpiPage('profit-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('profit-today')"><div class="stat-top"><small>Profit Today</small><div class="ico">↗</div></div><strong id="statProfit">₦0</strong><span class="delta">Today's net profit</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Total Profit" onclick="openKpiPage('total-profit')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('total-profit')"><div class="stat-top"><small>Total Profit</small><div class="ico">↗</div></div><strong id="statTotalProfit">₦0</strong><span class="delta">All-time net profit</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Successful Txn" onclick="openKpiPage('successful-txn')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('successful-txn')"><div class="stat-top"><small>Successful Txn</small><div class="ico">✓</div></div><strong id="statCompleted">0</strong><span class="delta">Completed requests</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Failed Txns" onclick="openKpiPage('failed-txns')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('failed-txns')"><div class="stat-top"><small>Failed Txns</small><div class="ico">×</div></div><strong id="statRejected">0</strong><span style="font-size:10px;color:var(--red);font-weight:800">Rejected & cancelled</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Withdrawable Profit" onclick="openKpiPage('withdrawable-profit')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('withdrawable-profit')"><div class="stat-top"><small>Withdrawable Profit</small><div class="ico">↗</div></div><strong id="withdrawableStat">₦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Settled company funds</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Providers Balance" onclick="openKpiPage('provider-balance')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('provider-balance')"><div class="stat-top"><small>Providers Balance</small><div class="ico">◉</div></div><strong id="providerBalanceStat">₦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Configured provider balances</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Registered Accounts" onclick="openKpiPage('registered-accounts')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('registered-accounts')"><div class="stat-top"><small>Registered Accounts</small><div class="ico">â™™</div></div><strong id="statRegUsers">0</strong><span class="delta">Live accounts</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Active Today" onclick="openKpiPage('active-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('active-today')"><div class="stat-top"><small>Active Today</small><div class="ico">â—</div></div><strong id="statActiveUsers">0</strong><span class="delta">Active sessions</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Wallet Liability" onclick="openKpiPage('wallet-liability')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('wallet-liability')"><div class="stat-top"><small>Wallet Liability</small><div class="ico">â‚¦</div></div><strong id="statWalletLiability">â‚¦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Customer funds</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Revenue Today" onclick="openKpiPage('revenue-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('revenue-today')"><div class="stat-top"><small>Revenue Today</small><div class="ico">â‚¦</div></div><strong id="statRevenue">â‚¦0</strong><span class="delta">Today's gross revenue</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Total Revenue" onclick="openKpiPage('total-revenue')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('total-revenue')"><div class="stat-top"><small>Total Revenue</small><div class="ico">â‚¦</div></div><strong id="statTotalRevenue">â‚¦0</strong><span class="delta">All-time gross revenue</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Profit Today" onclick="openKpiPage('profit-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('profit-today')"><div class="stat-top"><small>Profit Today</small><div class="ico">â†—</div></div><strong id="statProfit">â‚¦0</strong><span class="delta">Today's net profit</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Total Profit" onclick="openKpiPage('total-profit')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('total-profit')"><div class="stat-top"><small>Total Profit</small><div class="ico">â†—</div></div><strong id="statTotalProfit">â‚¦0</strong><span class="delta">All-time net profit</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Successful Txn" onclick="openKpiPage('successful-txn')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('successful-txn')"><div class="stat-top"><small>Successful Txn</small><div class="ico">âœ“</div></div><strong id="statCompleted">0</strong><span class="delta">Completed requests</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Failed Txns" onclick="openKpiPage('failed-txns')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('failed-txns')"><div class="stat-top"><small>Failed Txns</small><div class="ico">Ã—</div></div><strong id="statRejected">0</strong><span style="font-size:10px;color:var(--red);font-weight:800">Rejected & cancelled</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Withdrawable Profit" onclick="openKpiPage('withdrawable-profit')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('withdrawable-profit')"><div class="stat-top"><small>Withdrawable Profit</small><div class="ico">â†—</div></div><strong id="withdrawableStat">â‚¦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Settled company funds</span></div>
+    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Providers Balance" onclick="openKpiPage('provider-balance')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('provider-balance')"><div class="stat-top"><small>Providers Balance</small><div class="ico">â—‰</div></div><strong id="providerBalanceStat">â‚¦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Configured provider balances</span></div>
   </div>
   <div class="card" style="margin-top:16px">
     <div class="card-head">
@@ -449,17 +449,17 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     <div class="fin-grid" style="padding:18px">
       <div class="fin-card" style="padding:15px;border:1px solid var(--line);border-radius:14px;background:#f8fafc">
         <small style="color:var(--muted);font-weight:800">CUSTOMER WALLET LIABILITY</small>
-        <div id="finCustomerLiability" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">₦0</div>
+        <div id="finCustomerLiability" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">â‚¦0</div>
         <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Must never be withdrawable as company profit.</p>
       </div>
       <div class="fin-card" style="padding:15px;border:1px solid var(--line);border-radius:14px;background:#f8fafc">
         <small style="color:var(--muted);font-weight:800">REVENUE TODAY</small>
-        <div id="finRevenueToday" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">₦0</div>
+        <div id="finRevenueToday" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">â‚¦0</div>
         <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Gross amount charged for successful services.</p>
       </div>
       <div class="fin-card" style="padding:15px;border:1px solid var(--line);border-radius:14px;background:#f8fafc">
         <small style="color:var(--muted);font-weight:800">WITHDRAWABLE PROFIT</small>
-        <div id="withdrawablePanel" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">₦0</div>
+        <div id="withdrawablePanel" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">â‚¦0</div>
         <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Only settled, non-customer funds can be withdrawn.</p>
       </div>
     </div>
@@ -474,7 +474,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     <div class="stat"><small>Total Providers</small><strong id="provIntelTotal">0</strong></div>
     <div class="stat"><small>Low-balance Alerts</small><strong id="provIntelAlerts">0</strong></div>
     <div class="stat"><small>Provider Status</small><strong id="provIntelStatus" style="font-size:18px">Healthy</strong></div>
-    <div class="stat"><small>Last Sync</small><strong id="provIntelSync" style="font-size:18px">—</strong></div>
+    <div class="stat"><small>Last Sync</small><strong id="provIntelSync" style="font-size:18px">â€”</strong></div>
   </div>
 </div>
 
@@ -488,9 +488,9 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     </div>
     <div class="card"><div class="card-head"><h3>Workload by Service</h3><span>Live status</span></div>
       <div class="queue">
-        <div class="q"><div><b>NIN Services</b><small>Validation · IPE · Modification</small></div><strong>0</strong></div>
-        <div class="q"><div><b>JAMB</b><small>Results · Slips · Admission</small></div><strong>0</strong></div>
-        <div class="q"><div><b>CAC</b><small>Registration · Verification</small></div><strong>0</strong></div>
+        <div class="q"><div><b>NIN Services</b><small>Validation Â· IPE Â· Modification</small></div><strong>0</strong></div>
+        <div class="q"><div><b>JAMB</b><small>Results Â· Slips Â· Admission</small></div><strong>0</strong></div>
+        <div class="q"><div><b>CAC</b><small>Registration Â· Verification</small></div><strong>0</strong></div>
         <div class="q"><div><b>BVN</b><small>Manual BVN operations</small></div><strong>0</strong></div>
       </div>
     </div>
@@ -498,8 +498,8 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 </section>
 
 <section id="page-services" class="page">
-  <div class="heading"><div><h1>Services & Pricing</h1><p>Control what users see, how services are named, and what they pay.</p></div><div style="display:flex;gap:8px"><button class="secondary" onclick="seedServices()">⚡ Seed Default Services</button><button class="primary" onclick="openService()">+ Add Service</button></div></div>
-  <div class="card" style="margin-bottom:16px"><div class="card-head"><h3>Service Catalogue</h3><span>Loaded from database — prices and status are authoritative</span></div>
+  <div class="heading"><div><h1>Services & Pricing</h1><p>Control what users see, how services are named, and what they pay.</p></div><div style="display:flex;gap:8px"><button class="secondary" onclick="seedServices()">âš¡ Seed Default Services</button><button class="primary" onclick="openService()">+ Add Service</button></div></div>
+  <div class="card" style="margin-bottom:16px"><div class="card-head"><h3>Service Catalogue</h3><span>Loaded from database â€” prices and status are authoritative</span></div>
     <div style="padding:15px"><div class="toolbar"><input id="serviceSearch" oninput="renderServices()" placeholder="Search services..."><select id="catFilter" onchange="renderServices()"><option value="">All categories</option><option>NIN</option><option>BVN</option><option>JAMB</option><option>CAC</option><option>TIN</option><option>Attestation</option><option>GemPrint</option></select></div></div>
     <div id="serviceGrid" class="service-grid" style="padding:0 15px 18px"></div>
   </div>
@@ -507,18 +507,18 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 
 <section id="page-requests" class="page">
  <div class="heading"><div><h1>Manual Requests</h1><p>Process externally completed jobs and upload results for users.</p></div></div>
- <div class="card"><div class="card-head"><h3>Processing Queue</h3><span>Pending → Processing → Completed</span></div>
+ <div class="card"><div class="card-head"><h3>Processing Queue</h3><span>Pending â†’ Processing â†’ Completed</span></div>
  <table><thead><tr><th>Reference</th><th>Customer</th><th>Service</th><th>Payment</th><th>Status</th><th>Action</th></tr></thead><tbody>
  <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">No requests currently submitted. Fresh installation state.</td></tr>
  </tbody></table></div>
 </section>
 
 <section id="page-users" class="page">
-  <div class="heading"><div><h1>Users</h1><p>Customer accounts and activity.</p></div><button class="secondary" onclick="fetchAdminUsers(1,'all')">⟳ Refresh</button></div>
+  <div class="heading"><div><h1>Users</h1><p>Customer accounts and activity.</p></div><button class="secondary" onclick="fetchAdminUsers(1,'all')">âŸ³ Refresh</button></div>
   <div class="card"><div class="card-head"><h3>All Registered Users</h3><span id="usersCountLabel">Loading...</span></div>
     <div style="overflow-x:auto"><table style="table-layout:fixed;width:100%">
       <colgroup><col style="min-width:140px"><col style="width:200px"><col style="width:110px"><col style="width:90px"><col style="width:80px"><col style="width:70px"></colgroup>
-      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th></tr></thead>
+      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (â‚¦)</th><th>Requests</th><th>Status</th></tr></thead>
       <tbody id="usersTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading users...</td></tr></tbody>
     </table></div>
     <div id="usersPagination" style="display:flex;justify-content:center;gap:8px;margin-top:14px"></div>
@@ -526,33 +526,33 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 </section>
 
 <section id="page-active-users" class="page">
-  <div class="heading"><div><h1>Active Users</h1><p>Users active in the last 24 hours.</p></div><button class="secondary" onclick="go('users')">← All Users</button></div>
+  <div class="heading"><div><h1>Active Users</h1><p>Users active in the last 24 hours.</p></div><button class="secondary" onclick="go('users')">â† All Users</button></div>
   <div class="card"><div class="card-head"><h3>Active Users</h3><span id="activeUsersCountLabel">Loading...</span></div>
     <div style="overflow-x:auto"><table style="table-layout:fixed;width:100%">
       <colgroup><col style="min-width:140px"><col style="width:200px"><col style="width:110px"><col style="width:90px"><col style="width:80px"><col style="width:70px"></colgroup>
-      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th></tr></thead>
+      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (â‚¦)</th><th>Requests</th><th>Status</th></tr></thead>
       <tbody id="activeUsersTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr></tbody>
     </table></div>
   </div>
 </section>
 
 <section id="page-suspended-users" class="page">
-  <div class="heading"><div><h1>Suspended Users</h1><p>Inactive customer accounts.</p></div><button class="secondary" onclick="go('users')">← All Users</button></div>
+  <div class="heading"><div><h1>Suspended Users</h1><p>Inactive customer accounts.</p></div><button class="secondary" onclick="go('users')">â† All Users</button></div>
   <div class="card"><div class="card-head"><h3>Suspended Users</h3><span id="suspendedUsersCountLabel">Loading...</span></div>
     <div style="overflow-x:auto"><table style="table-layout:fixed;width:100%">
       <colgroup><col style="min-width:140px"><col style="width:200px"><col style="width:110px"><col style="width:90px"><col style="width:80px"><col style="width:70px"></colgroup>
-      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th></tr></thead>
+      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (â‚¦)</th><th>Requests</th><th>Status</th></tr></thead>
       <tbody id="suspendedUsersTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr></tbody>
     </table></div>
   </div>
 </section>
 
 <section id="page-transactions" class="page">
-  <div class="heading"><div><h1>Transactions</h1><p>Wallet credits, debits, refunds and holds.</p></div><button class="secondary" onclick="fetchAdminTransactions(1)">⟳ Refresh</button></div>
+  <div class="heading"><div><h1>Transactions</h1><p>Wallet credits, debits, refunds and holds.</p></div><button class="secondary" onclick="fetchAdminTransactions(1)">âŸ³ Refresh</button></div>
   <div class="card"><div class="card-head"><h3>Wallet Transactions</h3><span id="txnCountLabel">Loading...</span></div>
     <div style="overflow-x:auto"><table style="table-layout:fixed;width:100%">
       <colgroup><col style="width:160px"><col style="min-width:140px"><col style="width:80px"><col style="width:90px"><col style="width:90px"><col style="width:80px"><col style="width:130px"></colgroup>
-      <thead><tr><th>Reference</th><th>User</th><th>Type</th><th>Amount (₦)</th><th>Balance After</th><th>Status</th><th>Date</th></tr></thead>
+      <thead><tr><th>Reference</th><th>User</th><th>Type</th><th>Amount (â‚¦)</th><th>Balance After</th><th>Status</th><th>Date</th></tr></thead>
       <tbody id="txnTbody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Loading transactions...</td></tr></tbody>
     </table></div>
     <div id="txnPagination" style="display:flex;justify-content:center;gap:8px;margin-top:14px"></div>
@@ -560,12 +560,12 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 </section>
 
 
-<section id="page-api-transactions" class="page"><div class="heading"><div><h1>API Transactions</h1><p>TechHub-powered service requests — NIN, BVN, Self-Service, Personalization, IPE.</p></div><div style="display:flex;gap:8px;align-items:center"><button id="btn-batch-refund" onclick="batchRefundFailed()" style="height:36px;padding:0 14px;font-size:13px;border-radius:8px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;font-weight:600" title="Refund all failed/stuck transactions with no refund issued">⚠ Refund All Failed</button><select id="atxn-filter-status" onchange="fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px"><option value="">All Statuses</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select><input id="atxn-search" type="text" placeholder="Search ref / ticket…" onkeydown="if(event.key==='Enter')fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;width:200px"><button class="primary" onclick="fetchApiTransactions(1)" style="height:36px;padding:0 14px;font-size:13px">🔄 Refresh</button></div></div><div id="atxn-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div><div class="card"><table id="atxn-table"><thead><tr><th>GV Reference</th><th>User</th><th>Service</th><th>Variant</th><th>Method</th><th>Status</th><th>Provider</th><th>Amount</th><th>Submitted</th><th>Actions</th></tr></thead><tbody id="atxn-body"><tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr></tbody></table></div><div id="atxn-pagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px"></div>
+<section id="page-api-transactions" class="page"><div class="heading"><div><h1>API Transactions</h1><p>TechHub-powered service requests â€” NIN, BVN, Self-Service, Personalization, IPE.</p></div><div style="display:flex;gap:8px;align-items:center"><button id="btn-batch-refund" onclick="batchRefundFailed()" style="height:36px;padding:0 14px;font-size:13px;border-radius:8px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;font-weight:600" title="Refund all failed/stuck transactions with no refund issued">âš  Refund All Failed</button><select id="atxn-filter-status" onchange="fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px"><option value="">All Statuses</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select><input id="atxn-search" type="text" placeholder="Search ref / ticketâ€¦" onkeydown="if(event.key==='Enter')fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;width:200px"><button class="primary" onclick="fetchApiTransactions(1)" style="height:36px;padding:0 14px;font-size:13px">ðŸ”„ Refresh</button></div></div><div id="atxn-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div><div class="card"><table id="atxn-table"><thead><tr><th>GV Reference</th><th>User</th><th>Service</th><th>Variant</th><th>Method</th><th>Status</th><th>Provider</th><th>Amount</th><th>Submitted</th><th>Actions</th></tr></thead><tbody id="atxn-body"><tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">Loadingâ€¦</td></tr></tbody></table></div><div id="atxn-pagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px"></div>
 
 <!-- API Transaction Detail Modal -->
 <div id="atxn-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
 <div style="background:var(--card);border-radius:16px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto;padding:28px;position:relative">
-<button onclick="document.getElementById('atxn-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text)">✕</button>
+<button onclick="document.getElementById('atxn-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text)">âœ•</button>
 <h2 style="margin:0 0 20px;font-size:18px">API Transaction Detail</h2>
 <div id="atxn-modal-content"></div>
 </div></div>
@@ -573,17 +573,17 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 <!-- Refund Flag Modal -->
 <div id="atxn-refund-modal" style="display:none;position:fixed;inset:0;z-index:210;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
 <div style="background:var(--card);border-radius:16px;max-width:480px;width:100%;padding:28px;position:relative">
-<button onclick="document.getElementById('atxn-refund-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text)">✕</button>
-<h2 style="margin:0 0 16px;font-size:16px">⚠ Issue Wallet Refund</h2>
+<button onclick="document.getElementById('atxn-refund-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text)">âœ•</button>
+<h2 style="margin:0 0 16px;font-size:16px">âš  Issue Wallet Refund</h2>
 <p id="atxn-refund-info" style="font-size:13px;margin-bottom:12px;opacity:.7"></p>
-<textarea id="atxn-refund-note" placeholder="Reason for refund…" style="width:100%;height:80px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+<textarea id="atxn-refund-note" placeholder="Reason for refundâ€¦" style="width:100%;height:80px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
 <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
 <button onclick="document.getElementById('atxn-refund-modal').style.display='none'" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text);cursor:pointer">Cancel</button>
 <button id="atxn-refund-confirm" class="primary" style="padding:8px 18px;border-radius:8px">Confirm & Credit Wallet</button>
 </div></div></div>
 
 </section>
-<section id="page-gemprint" class="page"><div class="heading"><div><h1>GemPrint</h1><p>Materials, orders, inventory and printing jobs.</p></div><button class="primary">+ Add Product</button></div><div class="grid4"><div class="stat"><small>Products</small><strong>0</strong></div><div class="stat"><small>Pending Orders</small><strong>0</strong></div><div class="stat"><small>Print Jobs</small><strong>0</strong></div><div class="stat"><small>Today's Sales</small><strong>₦0</strong></div></div><div class="card" style="margin-top:16px"><div class="card-head"><h3>Printing Job Queue</h3><span>Payment Confirmed → Queued → Processing → Printing → Finishing → Ready → Out for Delivery → Completed</span></div><table><thead><tr><th>Job</th><th>Customer</th><th>Service</th><th>Stage</th></tr></thead><tbody><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">No print jobs in queue.</td></tr></tbody></table></div></section>
+<section id="page-gemprint" class="page"><div class="heading"><div><h1>GemPrint</h1><p>Materials, orders, inventory and printing jobs.</p></div><button class="primary">+ Add Product</button></div><div class="grid4"><div class="stat"><small>Products</small><strong>0</strong></div><div class="stat"><small>Pending Orders</small><strong>0</strong></div><div class="stat"><small>Print Jobs</small><strong>0</strong></div><div class="stat"><small>Today's Sales</small><strong>â‚¦0</strong></div></div><div class="card" style="margin-top:16px"><div class="card-head"><h3>Printing Job Queue</h3><span>Payment Confirmed â†’ Queued â†’ Processing â†’ Printing â†’ Finishing â†’ Ready â†’ Out for Delivery â†’ Completed</span></div><table><thead><tr><th>Job</th><th>Customer</th><th>Service</th><th>Stage</th></tr></thead><tbody><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">No print jobs in queue.</td></tr></tbody></table></div></section>
 
 <section id="page-analytics" class="page"><div class="heading"><div><h1>Analytics</h1><p>Platform performance overview.</p></div></div><div class="grid4"><div class="stat"><small>Verification Volume</small><strong>0</strong><span class="delta">0%</span></div><div class="stat"><small>Manual Completion</small><strong id="statManualCompletion">0%</strong><span class="delta">0%</span></div><div class="stat"><small>GemPrint Orders</small><strong>0</strong><span class="delta">0%</span></div><div class="stat"><small>Avg. Processing</small><strong>0m</strong><span class="delta">0m</span></div></div></section>
 
@@ -591,10 +591,10 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 
 <section id="page-audit" class="page"><div class="heading"><div><h1>Audit Logs</h1><p>Track sensitive administrative actions.</p></div></div><div class="card"><table><thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th></tr></thead><tbody><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">No audit actions logged. Clean installation state.</td></tr></tbody></table></div></section>
 
-<section id="page-settings" class="page"><div class="heading"><div><h1>Settings</h1><p>Administrative and platform controls.</p></div></div><div class="card"><div style="padding:20px"><div class="field"><label>Platform Name</label><input id="settingPlatformName" value="GemVerify"></div><div class="field"><label>Default Currency</label><select><option>NGN — Nigerian Naira</option></select></div><div class="field"><label>Require re-authentication for wallet adjustments</label><select><option>Enabled</option><option>Disabled</option></select></div><div class="field"><label>GemPrint Module Status</label><select id="settingGemPrintStatus"><option value="enabled">Active (Fully Enabled)</option><option value="coming_soon">Coming Soon / Disabled</option></select></div><div class="field"><label>GemPrint Delivery Fee (₦)</label><input id="settingGemPrintDeliveryFee" type="number" value="1500"></div><button class="primary" onclick="saveAdminSettings()">Save Settings</button></div></div></section>
+<section id="page-settings" class="page"><div class="heading"><div><h1>Settings</h1><p>Administrative and platform controls.</p></div></div><div class="card"><div style="padding:20px"><div class="field"><label>Platform Name</label><input id="settingPlatformName" value="GemVerify"></div><div class="field"><label>Default Currency</label><select><option>NGN â€” Nigerian Naira</option></select></div><div class="field"><label>Require re-authentication for wallet adjustments</label><select><option>Enabled</option><option>Disabled</option></select></div><div class="field"><label>GemPrint Module Status</label><select id="settingGemPrintStatus"><option value="enabled">Active (Fully Enabled)</option><option value="coming_soon">Coming Soon / Disabled</option></select></div><div class="field"><label>GemPrint Delivery Fee (â‚¦)</label><input id="settingGemPrintDeliveryFee" type="number" value="1500"></div><button class="primary" onclick="saveAdminSettings()">Save Settings</button></div></div></section>
 
 <section id="page-pending" class="page">
-  <div class="heading"><div><h1>Pending Requests</h1><p>Requests awaiting admin action.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>Pending Requests</h1><p>Requests awaiting admin action.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Pending Requests Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody>
@@ -602,7 +602,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   </tbody></table></div>
 </section>
 <section id="page-processing" class="page">
-  <div class="heading"><div><h1>Processing</h1><p>Requests currently being handled by operations.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>Processing</h1><p>Requests currently being handled by operations.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Processing Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody>
@@ -610,7 +610,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   </tbody></table></div>
 </section>
 <section id="page-completed" class="page">
-  <div class="heading"><div><h1>Completed</h1><p>Successfully completed manual requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>Completed</h1><p>Successfully completed manual requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Completed Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody>
@@ -618,163 +618,163 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   </tbody></table></div>
 </section>
 <section id="page-rejected" class="page">
-  <div class="heading"><div><h1>Failed Transactions</h1><p>All failed, rejected and cancelled requests — manual and API-based.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>Failed Transactions</h1><p>All failed, rejected and cancelled requests â€” manual and API-based.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div id="failed-txns-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px"></div>
   <div class="card">
-    <div class="card-head"><h3>Failed Transactions (Combined)</h3><span id="failed-txns-count" style="color:var(--muted);font-size:13px">Loading…</span></div>
+    <div class="card-head"><h3>Failed Transactions (Combined)</h3><span id="failed-txns-count" style="color:var(--muted);font-size:13px">Loadingâ€¦</span></div>
     <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Type</th><th>Status</th><th>Amount</th><th>Date</th><th>Action</th></tr></thead>
-    <tbody id="failed-txns-body"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr></tbody>
+    <tbody id="failed-txns-body"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loadingâ€¦</td></tr></tbody>
     </table>
   </div>
 </section>
 
 <section id="page-nin-validation" class="page">
-  <div class="heading"><div><h1>NIN Validation</h1><p>NIN Validation manual processing queue.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>NIN Validation</h1><p>NIN Validation manual processing queue.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>NIN Validation Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No NIN Validation requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-nin-ipe" class="page">
-  <div class="heading"><div><h1>IPE Modification</h1><p>IPE Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>IPE Modification</h1><p>IPE Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>IPE Modification Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No IPE Modification requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-nin-personalisation" class="page">
-  <div class="heading"><div><h1>Personalisation</h1><p>NIN Personalisation requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>Personalisation</h1><p>NIN Personalisation requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Personalisation Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Personalisation requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-nin-modification" class="page">
-  <div class="heading"><div><h1>NIN Modification</h1><p>NIN Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>NIN Modification</h1><p>NIN Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>NIN Modification Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No NIN Modification requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-nin-dob" class="page">
-  <div class="heading"><div><h1>DOB > 5 Years</h1><p>DOB correction requests beyond five years.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>DOB > 5 Years</h1><p>DOB correction requests beyond five years.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>DOB > 5 Years Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No DOB > 5 Years requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-nin-delinking" class="page">
-  <div class="heading"><div><h1>Self-Service Delinking</h1><p>Self-Service Delinking requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>Self-Service Delinking</h1><p>Self-Service Delinking requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Self-Service Delinking Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Self-Service Delinking requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-bvn-license" class="page">
-  <div class="heading"><div><h1>BVN License Creation</h1><p>BVN License Creation requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>BVN License Creation</h1><p>BVN License Creation requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>BVN License Creation Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No BVN License Creation requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-bvn-nonappearance" class="page">
-  <div class="heading"><div><h1>BVN Non-Appearance</h1><p>BVN Non-Appearance requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>BVN Non-Appearance</h1><p>BVN Non-Appearance requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>BVN Non-Appearance Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No BVN Non-Appearance requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-bvn-risk" class="page">
-  <div class="heading"><div><h1>Central Risk Management</h1><p>Central Risk Management requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>Central Risk Management</h1><p>Central Risk Management requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Central Risk Management Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Central Risk Management requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-bvn-modification" class="page">
-  <div class="heading"><div><h1>BVN Modification</h1><p>BVN Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>BVN Modification</h1><p>BVN Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>BVN Modification Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No BVN Modification requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-jamb-all" class="page">
-  <div class="heading"><div><h1>JAMB All Requests</h1><p>All JAMB service requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>JAMB All Requests</h1><p>All JAMB service requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>JAMB All Requests Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-jamb-result" class="page">
-  <div class="heading"><div><h1>JAMB Original Result</h1><p>Original Result requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>JAMB Original Result</h1><p>Original Result requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>JAMB Original Result Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Original Result requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-jamb-slip" class="page">
-  <div class="heading"><div><h1>JAMB Exam Slip</h1><p>Exam Slip requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>JAMB Exam Slip</h1><p>Exam Slip requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>JAMB Exam Slip Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Exam Slip requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-jamb-admission" class="page">
-  <div class="heading"><div><h1>JAMB Admission Letter</h1><p>Admission Letter requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>JAMB Admission Letter</h1><p>Admission Letter requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>JAMB Admission Letter Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Admission Letter requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-jamb-reprints" class="page">
-  <div class="heading"><div><h1>JAMB Re-Prints</h1><p>JAMB re-print requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>JAMB Re-Prints</h1><p>JAMB re-print requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>JAMB Re-Prints Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Re-Prints requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-cac-business" class="page">
-  <div class="heading"><div><h1>CAC Business Name</h1><p>Business Name Registration requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>CAC Business Name</h1><p>Business Name Registration requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>CAC Business Name Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No CAC Business Name requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-cac-ltd" class="page">
-  <div class="heading"><div><h1>CAC LTD Setup</h1><p>Company LTD Setup requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>CAC LTD Setup</h1><p>Company LTD Setup requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>CAC LTD Setup Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No CAC LTD Setup requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-cac-verification" class="page">
-  <div class="heading"><div><h1>CAC Verification</h1><p>Business Verification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>CAC Verification</h1><p>Business Verification requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>CAC Verification Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No CAC Verification requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-tin" class="page">
-  <div class="heading"><div><h1>TIN Registration</h1><p>TIN Registration requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>TIN Registration</h1><p>TIN Registration requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>TIN Registration Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No TIN Registration requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-attestation" class="page">
-  <div class="heading"><div><h1>NIN Attestation</h1><p>NIN Attestation requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>NIN Attestation</h1><p>NIN Attestation requests.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>NIN Attestation Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No NIN Attestation requests currently queued.</td></tr></tbody></table></div>
 </section>
 <section id="page-products" class="page">
   <div class="heading"><div><h1>GemPrint Products</h1><p>Printing materials products catalogue.</p></div>
-  <div class="flex gap-2"><button class="primary" onclick="openAddProductModal()">+ Add Product</button><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div></div>
+  <div class="flex gap-2"><button class="primary" onclick="openAddProductModal()">+ Add Product</button><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div></div>
   <div class="card"><div class="card-head"><h3>GemPrint Products Catalogue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>ID</th><th>Name</th><th>SKU</th><th>Category</th><th>Price</th><th>Stock</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No products found. Add products to populate.</td></tr></tbody></table></div>
 </section>
 <section id="page-orders" class="page">
-  <div class="heading"><div><h1>GemPrint Orders</h1><p>GemPrint materials orders and delivery status.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>GemPrint Orders</h1><p>GemPrint materials orders and delivery status.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Product Orders Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Order ID</th><th>Customer Name</th><th>Items Summary</th><th>Total Paid</th><th>Payment</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No customer orders placed yet.</td></tr></tbody></table></div>
 </section>
 <section id="page-print-jobs" class="page">
-  <div class="heading"><div><h1>GemPrint Print Jobs</h1><p>Printing service jobs and production stages.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>GemPrint Print Jobs</h1><p>Printing service jobs and production stages.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Printing Jobs Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Job ID</th><th>Service Type</th><th>Specs</th><th>Price</th><th>Payment</th><th>Stage</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No print jobs submitted yet.</td></tr></tbody></table></div>
 </section>
 <section id="page-inventory" class="page">
-  <div class="heading"><div><h1>GemPrint Inventory</h1><p>Stock levels and inventory management.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>GemPrint Inventory</h1><p>Stock levels and inventory management.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Inventory Stock Control</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>SKU</th><th>Product Name</th><th>Stock Level</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No products found in inventory.</td></tr></tbody></table></div>
 </section>
 <section id="page-revenue" class="page">
-  <div class="heading"><div><h1>Revenue</h1><p>Revenue overview and service income.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>Revenue</h1><p>Revenue overview and service income.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Revenue Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Revenue items recorded.</td></tr></tbody></table></div>
@@ -792,8 +792,8 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
         <option value="failed">Failed</option>
         <option value="expired">Expired</option>
       </select>
-      <button class="secondary" onclick="fetchWalletTopups(1)" style="height:36px">⟳ Refresh</button>
-      <button class="secondary" onclick="go('dashboard')" style="height:36px">← Dashboard</button>
+      <button class="secondary" onclick="fetchWalletTopups(1)" style="height:36px">âŸ³ Refresh</button>
+      <button class="secondary" onclick="go('dashboard')" style="height:36px">â† Dashboard</button>
     </div>
   </div>
 
@@ -803,7 +803,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   <div class="card" style="padding:0;overflow:hidden">
     <div class="card-head" style="padding:14px 18px">
       <h3>Top-Up Orders</h3>
-      <span id="wf-total-badge" style="font-size:12px;opacity:.6">Loading…</span>
+      <span id="wf-total-badge" style="font-size:12px;opacity:.6">Loadingâ€¦</span>
     </div>
     <div style="overflow-x:auto">
       <table id="wf-table">
@@ -820,7 +820,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
           </tr>
         </thead>
         <tbody id="wf-tbody">
-          <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading…</td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loadingâ€¦</td></tr>
         </tbody>
       </table>
     </div>
@@ -833,35 +833,37 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   <div style="max-width:600px;margin:auto;background:var(--card);border-radius:16px;overflow:hidden">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--border)">
       <h3 style="margin:0;font-size:15px">Top-Up Detail</h3>
-      <button onclick="document.getElementById('wf-detail-modal').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text)">✕</button>
+      <button onclick="document.getElementById('wf-detail-modal').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text)">âœ•</button>
     </div>
     <div id="wf-detail-body" style="padding:20px"></div>
     <div id="wf-detail-actions" style="padding:0 20px 20px;display:flex;gap:10px;flex-wrap:wrap"></div>
   </div>
 </div>
 <section id="page-refunds" class="page">
-  <div class="heading"><div><h1>Refunds</h1><p>Refund requests and processed refunds.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>Refunds Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Refund transactions recorded.</td></tr></tbody></table></div>
+  <div class="heading"><div><h1>Refunds</h1><p>All refunded transactions â€” manual and API-based.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
+  <div id="refunds-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px"></div>
+  <div class="card">
+    <div class="card-head"><h3>Refunded Transactions</h3><span id="refunds-count" style="color:var(--muted);font-size:13px">Loadingâ€¦</span></div>
+    <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Type</th><th>Amount</th><th>Date</th></tr></thead>
+    <tbody id="refunds-body"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loadingâ€¦</td></tr></tbody>
+    </table>
+  </div>
 </section>
+
 <section id="page-active-users" class="page" style="display:none"><!-- merged above --></section>
 <section id="page-suspended-users" class="page" style="display:none"><!-- merged above --></section>
 <section id="page-notifications" class="page">
-  <div class="heading"><div><h1>Notifications</h1><p>Platform and administrative notifications.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>Notifications</h1><p>Platform and administrative notifications.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Notifications Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No administrative notifications.</td></tr></tbody></table></div>
 </section>
 <section id="page-roles" class="page">
-  <div class="heading"><div><h1>Roles & Permissions</h1><p>Admin roles, permissions and access controls.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div class="heading"><div><h1>Roles & Permissions</h1><p>Admin roles, permissions and access controls.</p></div><button class="secondary" onclick="go('dashboard')">â† Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>Roles & Permissions Queue</h3><span>Admin controlled</span></div>
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No custom roles configured. Standard RBAC active.</td></tr></tbody></table></div>
 </section>
-<section id="page-suspended-users" class="page" style="display:none"><!-- duplicate --></section>
-<section id="page-notifications" class="page" style="display:none"><!-- duplicate --></section>
-<section id="page-roles" class="page" style="display:none"><!-- duplicate --></section>
 
 
 <section id="page-provider-balance" class="page">
@@ -872,9 +874,9 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 
   <div class="grid4">
     <div class="stat"><small>Total Providers</small><strong>0</strong><span class="delta">Configured providers</span></div>
-    <div class="stat"><small>Total Provider Balance</small><strong id="providerTotal">₦0</strong><span class="delta">Across all configured providers</span></div>
+    <div class="stat"><small>Total Provider Balance</small><strong id="providerTotal">â‚¦0</strong><span class="delta">Across all configured providers</span></div>
     <div class="stat"><small>Low Balance Alerts</small><strong>0</strong><span style="font-size:10px;color:var(--muted);font-weight:800">No alerts</span></div>
-    <div class="stat"><small>Last Sync</small><strong style="font-size:18px">—</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Provider balances sync</span></div>
+    <div class="stat"><small>Last Sync</small><strong style="font-size:18px">â€”</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Provider balances sync</span></div>
   </div>
 
   
@@ -915,12 +917,12 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     <button class="primary" onclick="openWithdraw()">Withdraw Profit</button>
   </div>
   <div class="grid4" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
-    <div class="stat"><small>Revenue Today</small><strong id="profitRevenueToday">₦0</strong></div>
-    <div class="stat"><small>Total Revenue</small><strong id="profitTotalRevenue">₦0</strong></div>
-    <div class="stat"><small>Profit Today</small><strong id="profitToday">₦0</strong></div>
-    <div class="stat"><small>Total Profit</small><strong id="profitTotalProfit">₦0</strong></div>
-    <div class="stat"><small>Withdrawable Profit</small><strong id="withdrawablePage">₦0</strong></div>
-    <div class="stat"><small>Customer Liability</small><strong id="profitCustomerLiability">₦0</strong></div>
+    <div class="stat"><small>Revenue Today</small><strong id="profitRevenueToday">â‚¦0</strong></div>
+    <div class="stat"><small>Total Revenue</small><strong id="profitTotalRevenue">â‚¦0</strong></div>
+    <div class="stat"><small>Profit Today</small><strong id="profitToday">â‚¦0</strong></div>
+    <div class="stat"><small>Total Profit</small><strong id="profitTotalProfit">â‚¦0</strong></div>
+    <div class="stat"><small>Withdrawable Profit</small><strong id="withdrawablePage">â‚¦0</strong></div>
+    <div class="stat"><small>Customer Liability</small><strong id="profitCustomerLiability">â‚¦0</strong></div>
   </div>
   <div class="card" style="margin-top:16px">
     <div class="card-head"><h3>Withdrawal History</h3><span>Every withdrawal must be auditable</span></div>
@@ -941,15 +943,15 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       </div>
       <div style="min-width:0">
-        <div style="font-size:20px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="profileName">—</div>
-        <div style="font-size:13px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="profileEmail">—</div>
-        <div style="margin-top:8px"><span class="pill blue" id="profileRole">—</span></div>
+        <div style="font-size:20px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="profileName">â€”</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="profileEmail">â€”</div>
+        <div style="margin-top:8px"><span class="pill blue" id="profileRole">â€”</span></div>
       </div>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:28px;padding-top:18px">
       <div>
         <small style="color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px">Last Login</small>
-        <div style="font-size:14px;font-weight:600;color:var(--text);margin-top:4px" id="profileLastLogin">—</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-top:4px" id="profileLastLogin">â€”</div>
       </div>
       <div>
         <small style="color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px">Account Status</small>
@@ -991,8 +993,8 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
       <div class="field"><label>Confirm Password</label><input type="password" id="newAdminConfirm" placeholder="Repeat password" autocomplete="new-password"></div>
       <div class="field" style="grid-column:1 / -1"><label>Role</label>
         <select id="newAdminRole">
-          <option value="admin">Administrator — Full operations access</option>
-          <option value="support">Support — Notes and document access only</option>
+          <option value="admin">Administrator â€” Full operations access</option>
+          <option value="support">Support â€” Notes and document access only</option>
         </select>
       </div>
     </div>
@@ -1001,7 +1003,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     <button class="primary" id="createAdminBtn" onclick="gvCreateAdmin()" style="padding:10px 28px;font-size:13px">Create Administrator</button>
   </div>
 </section>
-<!-- ── End Admin Profile Page ─────────────────────────────────────── -->
+<!-- â”€â”€ End Admin Profile Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 
 </div>
 </main>
@@ -1012,7 +1014,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   <div class="modal-box">
     <div class="modal-head">
       <h3 id="kpiDetailTitle">Metric Details</h3>
-      <button class="icon-btn" onclick="closeKpiDetail()" aria-label="Close">×</button>
+      <button class="icon-btn" onclick="closeKpiDetail()" aria-label="Close">Ã—</button>
     </div>
     <div class="modal-body" id="kpiDetailBody"></div>
     <div class="modal-foot">
@@ -1021,10 +1023,10 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   </div>
 </div>
 
-<div id="modal" class="modal"><div class="modal-box"><div class="modal-head"><h3 id="modalTitle">Edit</h3><button class="secondary" onclick="closeModal()">✕</button></div><div id="modalBody" class="modal-body"></div><div id="modalFoot" class="modal-foot"></div></div></div>
+<div id="modal" class="modal"><div class="modal-box"><div class="modal-head"><h3 id="modalTitle">Edit</h3><button class="secondary" onclick="closeModal()">âœ•</button></div><div id="modalBody" class="modal-body"></div><div id="modalFoot" class="modal-foot"></div></div></div>
 
 <script>
-  // ── First-Admin Setup Boot Check ──────────────────────────────────────────
+  // â”€â”€ First-Admin Setup Boot Check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let __gvSetupMode = false;
 
   async function gvCheckSetup() {
@@ -1104,9 +1106,9 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
         return;
       }
 
-      // Success — switch to login mode
+      // Success â€” switch to login mode
       __gvSetupMode = false;
-      okEl.textContent = '✓ Admin account created! Please sign in with your credentials.';
+      okEl.textContent = 'âœ“ Admin account created! Please sign in with your credentials.';
       okEl.style.display = 'block';
       document.getElementById('gv-setup-panel').style.display = 'none';
       document.getElementById('email').closest('.field').style.display = 'block';
@@ -1135,7 +1137,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     gvCheckSetup();
     gvRestoreSession();
   });
-  // ── End First-Admin Setup ─────────────────────────────────────────────────
+  // â”€â”€ End First-Admin Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   // Global inactivity detector (10 minutes for Admin)
   (function() {
@@ -1170,7 +1172,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
     }, 1000);
   })();
 
-// ── API Transactions Admin (TH-27/28/29) ─────────────────────────────────────
+// â”€â”€ API Transactions Admin (TH-27/28/29) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let atxnCurrentPage = 1;
 let atxnCurrentRef  = null;
 
@@ -1289,7 +1291,7 @@ function viewAtxnDetail(ref) {
     var summaryRow = tx.input_summary ? '<div style="grid-column:1/-1"><strong>Input Summary (masked)</strong><br><code style="font-size:11px;opacity:.8">' + tx.input_summary + '</code></div>' : '';
     var resultRow  = tx.has_result ? '<div style="grid-column:1/-1"><span style="color:#22c55e">\u2713 Result data available</span></div>' : '';
     var refundBtn  = (!tx.refund_issued && (tx.gv_status==='failed'||tx.gv_status==='pending'||tx.gv_status==='processing'))
-      ? '<div style="margin-top:16px;display:flex;justify-content:flex-end"><button onclick="openAtxnRefundModal(\'' + tx.gv_reference + '\',\'' + ((tx.user && tx.user.business_name)||'').replace(/'/g,"\\'") + '\',' + (tx.price_paid||0) + ')" style="padding:8px 18px;border-radius:8px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;font-weight:600">⚠ Issue Refund</button></div>'
+      ? '<div style="margin-top:16px;display:flex;justify-content:flex-end"><button onclick="openAtxnRefundModal(\'' + tx.gv_reference + '\',\'' + ((tx.user && tx.user.business_name)||'').replace(/'/g,"\\'") + '\',' + (tx.price_paid||0) + ')" style="padding:8px 18px;border-radius:8px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;font-weight:600">âš  Issue Refund</button></div>'
       : '';
     content.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">'
       + '<div><strong>GV Reference</strong><br><code style="font-size:12px">' + tx.gv_reference + '</code></div>'
@@ -1320,7 +1322,7 @@ function openAtxnRefundModal(ref, userName, price) {
   var info  = document.getElementById('atxn-refund-info');
   var note  = document.getElementById('atxn-refund-note');
   var modal = document.getElementById('atxn-refund-modal');
-  if (info) info.textContent = 'Issue wallet refund for ' + ref + ' (' + userName + ') — ₦' + Number(price).toLocaleString() + '. This will immediately credit the user\'s wallet and mark the transaction as refunded.';
+  if (info) info.textContent = 'Issue wallet refund for ' + ref + ' (' + userName + ') â€” â‚¦' + Number(price).toLocaleString() + '. This will immediately credit the user\'s wallet and mark the transaction as refunded.';
   if (note) note.value = '';
   if (modal) modal.style.display = 'flex';
   document.getElementById('atxn-modal').style.display = 'none';
@@ -1392,7 +1394,7 @@ async function fetchAdminServices() {
   if (!token) return;
   const gridEl = document.getElementById('serviceGrid');
   if (gridEl && services.length === 0) {
-    gridEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">Loading service catalogue…</div>';
+    gridEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">Loading service catalogueâ€¦</div>';
   }
   try {
     const res = await fetch('../api/admin/services', {
@@ -1533,7 +1535,7 @@ async function renderLiveQueue(pageNumber) {
   const tbody = document.getElementById('dash-queue-tbody');
   const paginEl = document.getElementById('dash-queue-pagination');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Loadingâ€¦</td></tr>';
   if (paginEl) paginEl.style.display = 'none';
   try {
     const res = await fetch('../api/admin/requests?per_page=' + PER_PAGE + '&page=' + pageNumber, {
@@ -1571,9 +1573,9 @@ async function renderLiveQueue(pageNumber) {
           const prevDis = pageNumber === 1 ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
           const nextDis = pageNumber >= totalPages ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
           paginEl.innerHTML = `
-            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderLiveQueue(${Math.max(1, pageNumber-1)})" ${prevDis}>← Prev</button>
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderLiveQueue(${Math.max(1, pageNumber-1)})" ${prevDis}>â† Prev</button>
             <span style="font-size:12px;color:var(--muted);padding:0 4px">Page ${pageNumber} of ${totalPages}</span>
-            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderLiveQueue(${Math.min(totalPages, pageNumber+1)})" ${nextDis}>Next →</button>
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderLiveQueue(${Math.min(totalPages, pageNumber+1)})" ${nextDis}>Next â†’</button>
           `;
           paginEl.style.display = 'flex';
         }
@@ -1598,7 +1600,7 @@ async function renderRequestsQueue(page, statusFilter, pageNumber) {
   const tbody = document.querySelector('#page-' + page + ' table tbody');
   if (!tbody) return;
 
-  tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:var(--muted)">Loadingâ€¦</td></tr>`;
 
   try {
     let url = '../api/admin/requests?per_page=10&page=' + pageNumber;
@@ -1612,7 +1614,7 @@ async function renderRequestsQueue(page, statusFilter, pageNumber) {
       const pg         = json.data.pagination || {};
       const totalPages = pg.total_pages || 1;
 
-      // ── Empty state
+      // â”€â”€ Empty state
       if (list.length === 0) {
         tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:var(--muted)">No requests in this queue.</td></tr>`;
         const oldPgn = document.querySelector('#page-' + page + ' .card-pagination');
@@ -1620,7 +1622,7 @@ async function renderRequestsQueue(page, statusFilter, pageNumber) {
         return;
       }
 
-      // ── Rows
+      // â”€â”€ Rows
       tbody.innerHTML = list.map(r => {
         const uName   = r.business_name || r.user_name || (r.user && r.user.business_name) || ('User #' + (r.user_id || ''));
         const sName   = r.service_name  || (r.service  && r.service.name) || 'Service';
@@ -1628,7 +1630,7 @@ async function renderRequestsQueue(page, statusFilter, pageNumber) {
         const pill    = `<span class="pill ${pillCls}">${r.status}</span>`;
         const openBtn = `<button class="secondary" style="font-size:12px;padding:5px 12px" onclick="openRequest('${r.reference}','${sName}')">Open</button>`;
         if (page === 'requests') {
-          const amt = '₦' + parseFloat(r.price_paid || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
+          const amt = 'â‚¦' + parseFloat(r.price_paid || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
           return `<tr>
             <td data-label="Reference" style="font-family:monospace;font-size:12px"><b>${r.reference}</b></td>
             <td data-label="Customer" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${uName}</td>
@@ -1648,7 +1650,7 @@ async function renderRequestsQueue(page, statusFilter, pageNumber) {
         }
       }).join('');
 
-      // ── Pagination bar
+      // â”€â”€ Pagination bar
       const cardEl = document.querySelector('#page-' + page + ' .card');
       if (cardEl) {
         let paginEl = cardEl.querySelector('.card-pagination');
@@ -1664,9 +1666,9 @@ async function renderRequestsQueue(page, statusFilter, pageNumber) {
           const prevDis = pageNumber === 1            ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
           const nextDis = pageNumber >= totalPages    ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
           paginEl.innerHTML = `
-            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderRequestsQueue('${page}','${statusFilter}',${Math.max(1, pageNumber-1)})" ${prevDis}>← Prev</button>
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderRequestsQueue('${page}','${statusFilter}',${Math.max(1, pageNumber-1)})" ${prevDis}>â† Prev</button>
             <span style="font-size:12px;color:var(--muted);padding:0 4px">Page ${pageNumber} of ${totalPages}</span>
-            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderRequestsQueue('${page}','${statusFilter}',${Math.min(totalPages, pageNumber+1)})" ${nextDis}>Next →</button>
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderRequestsQueue('${page}','${statusFilter}',${Math.min(totalPages, pageNumber+1)})" ${nextDis}>Next â†’</button>
           `;
           paginEl.style.display = 'flex';
         }
@@ -1697,7 +1699,9 @@ function go(page,btn){
   if(page === "pending") renderRequestsQueue("pending", "submitted");
   if(page === "processing") renderRequestsQueue("processing", "processing");
   if(page === "completed") renderRequestsQueue("completed", "completed");
-  if(page === "rejected") renderRequestsQueue("rejected", "rejected");
+  if(page === "rejected") loadFailedTxns();   // combined failed txns (manual + API)
+  if(page === "refunds") loadRefunds();
+  if(page === "api-transactions") { fetchApiTransactions(1); fetchApiTxnStats(); }
   if(page === "services") fetchAdminServices();
   if(page === "wallet-funding") fetchWalletTopups(1);
   if(page === "admin-profile") { gvInitProfileUI(); gvLoadAdminList(); }
@@ -1735,7 +1739,7 @@ function toggleDarkMode(){
 function applyTheme(mode){
  if(mode==='dark'){document.body.classList.add('dark-mode')}else{document.body.classList.remove('dark-mode')}
  const btn=document.getElementById('darkToggle');
- if(btn)btn.textContent=mode==='dark'?'☀':'☾';
+ if(btn)btn.textContent=mode==='dark'?'â˜€':'â˜¾';
  try{localStorage.setItem('gv-theme',mode)}catch(e){}
 }
 function initTheme(){
@@ -1745,7 +1749,7 @@ function initTheme(){
 }
 initTheme();
 
-// ── Users & Transactions Admin Fetch Functions ──────────────────────────────
+// â”€â”€ Users & Transactions Admin Fetch Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function fetchAdminUsers(page, filter) {
   filter = filter || 'all';
   page   = page || 1;
@@ -1782,10 +1786,10 @@ async function fetchAdminUsers(page, filter) {
     }
 
     tbody.innerHTML = users.map(u => {
-      const name    = u.business_name || '—';
-      const email   = u.email || '—';
-      const phone   = u.phone || '—';
-      const wallet  = '₦' + parseFloat(u.wallet_balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
+      const name    = u.business_name || 'â€”';
+      const email   = u.email || 'â€”';
+      const phone   = u.phone || 'â€”';
+      const wallet  = 'â‚¦' + parseFloat(u.wallet_balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
       const reqs    = parseInt(u.request_count || 0);
       const active  = parseInt(u.is_active) === 1;
       const pill    = active ? '<span class="pill green">Active</span>' : '<span class="pill red">Suspended</span>';
@@ -1809,9 +1813,9 @@ async function fetchAdminUsers(page, filter) {
           const prevDis = page === 1 ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
           const nextDis = page >= last_page ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
           pagination.innerHTML = `
-            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminUsers(${Math.max(1, page - 1)}, '${filter}')" ${prevDis}>← Prev</button>
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminUsers(${Math.max(1, page - 1)}, '${filter}')" ${prevDis}>â† Prev</button>
             <span style="font-size:12px;color:var(--muted);padding:0 4px">Page ${page} of ${last_page}</span>
-            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminUsers(${Math.min(last_page, page + 1)}, '${filter}')" ${nextDis}>Next →</button>
+            <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminUsers(${Math.min(last_page, page + 1)}, '${filter}')" ${nextDis}>Next â†’</button>
           `;
           pagination.style.display = 'flex';
         }
@@ -1859,13 +1863,13 @@ async function fetchAdminTransactions(page) {
     const statusColors = { completed:'green', pending:'amber', failed:'red', reversed:'red' };
 
     tbody.innerHTML = transactions.map(t => {
-      const user   = t.business_name || t.email || '—';
-      const type   = t.type || '—';
+      const user   = t.business_name || t.email || 'â€”';
+      const type   = t.type || 'â€”';
       const tColor = typeColors[type] || 'amber';
       const sColor = statusColors[t.status] || 'amber';
-      const amount = '₦' + parseFloat(t.amount || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
-      const balAfter = '₦' + parseFloat(t.balance_after || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
-      const date   = t.created_at ? new Date(t.created_at).toLocaleString('en-GB', { dateStyle:'short', timeStyle:'short' }) : '—';
+      const amount = 'â‚¦' + parseFloat(t.amount || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
+      const balAfter = 'â‚¦' + parseFloat(t.balance_after || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
+      const date   = t.created_at ? new Date(t.created_at).toLocaleString('en-GB', { dateStyle:'short', timeStyle:'short' }) : 'â€”';
       return `<tr>
         <td data-label="Reference" style="font-family:monospace;font-size:12px">${t.reference}</td>
         <td data-label="User"      style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${user}">${user}</td>
@@ -1885,9 +1889,9 @@ async function fetchAdminTransactions(page) {
         const prevDis = page === 1 ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
         const nextDis = page >= last_page ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
         pagination.innerHTML = `
-          <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminTransactions(${Math.max(1, page - 1)})" ${prevDis}>← Prev</button>
+          <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminTransactions(${Math.max(1, page - 1)})" ${prevDis}>â† Prev</button>
           <span style="font-size:12px;color:var(--muted);padding:0 4px">Page ${page} of ${last_page}</span>
-          <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminTransactions(${Math.min(last_page, page + 1)})" ${nextDis}>Next →</button>
+          <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="fetchAdminTransactions(${Math.min(last_page, page + 1)})" ${nextDis}>Next â†’</button>
         `;
         pagination.style.display = 'flex';
       }
@@ -1903,9 +1907,9 @@ async function fetchAdminTransactions(page) {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Wallet Funding Admin Functions
-// ──────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let _wfCurrentPage = 1;
 
 async function fetchWalletTopups(page) {
@@ -1914,7 +1918,7 @@ async function fetchWalletTopups(page) {
   const tbody = document.getElementById('wf-tbody');
   const pagination = document.getElementById('wf-pagination');
   const totalBadge = document.getElementById('wf-total-badge');
-  if(tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading…</td></tr>';
+  if(tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loadingâ€¦</td></tr>';
   if(pagination) pagination.innerHTML = '';
 
   let url = '../api/admin/wallet/topups?page=' + _wfCurrentPage;
@@ -1962,14 +1966,14 @@ async function fetchWalletTopups(page) {
 
       const receivedCell = r.amount_received != null
         ? '<span style="' + (r.amount_received < r.amount ? 'color:#c2410c' : 'color:#15803d') + '">' + money(r.amount_received) + '</span>'
-        : '<span style="color:var(--muted)">—</span>';
+        : '<span style="color:var(--muted)">â€”</span>';
 
-      const date = r.created_at ? r.created_at.substring(0,16).replace('T',' ') : '—';
-      const shortRef = (r.merchant_reference || '').substring(0, 22) + '…';
+      const date = r.created_at ? r.created_at.substring(0,16).replace('T',' ') : 'â€”';
+      const shortRef = (r.merchant_reference || '').substring(0, 22) + 'â€¦';
 
       return '<tr>' +
         '<td style="font-size:11px;font-family:monospace" title="' + r.merchant_reference + '">' + shortRef + '</td>' +
-        '<td><div style="font-weight:600;font-size:12px">' + (r.user_name || '—') + '</div><div style="font-size:11px;color:var(--muted)">' + (r.user_email || '') + '</div></td>' +
+        '<td><div style="font-weight:600;font-size:12px">' + (r.user_name || 'â€”') + '</div><div style="font-size:11px;color:var(--muted)">' + (r.user_email || '') + '</div></td>' +
         '<td style="font-weight:700">' + money(r.amount) + '</td>' +
         '<td>' + receivedCell + '</td>' +
         '<td>' + typeBadge + '</td>' +
@@ -2021,7 +2025,7 @@ async function viewWfTopUp(ref) {
   const body = document.getElementById('wf-detail-body');
   const actions = document.getElementById('wf-detail-actions');
   if(!modal || !body) return;
-  body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">Loading…</div>';
+  body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">Loadingâ€¦</div>';
   actions.innerHTML = '';
   modal.style.display = 'block';
 
@@ -2036,24 +2040,24 @@ async function viewWfTopUp(ref) {
     const row = (label, val) => '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">' + label + '</span><span style="font-weight:600;text-align:right;max-width:60%">' + val + '</span></div>';
 
     const pa = r.payment_account;
-    const paHtml = pa ? row('Bank', pa.bank_name || '—') + row('Account', pa.account_number || '—') + row('Account Name', pa.account_name || '—') : '';
+    const paHtml = pa ? row('Bank', pa.bank_name || 'â€”') + row('Account', pa.account_number || 'â€”') + row('Account Name', pa.account_name || 'â€”') : '';
 
     body.innerHTML =
       row('Reference', '<span style="font-family:monospace;font-size:11px">' + r.merchant_reference + '</span>') +
-      row('User', (r.user_name || '—') + '<br><span style="font-size:11px;color:var(--muted)">' + (r.user_email || '') + '</span>') +
+      row('User', (r.user_name || 'â€”') + '<br><span style="font-size:11px;color:var(--muted)">' + (r.user_email || '') + '</span>') +
       row('Amount Requested', money(r.amount)) +
-      row('Amount Received', r.amount_received != null ? money(r.amount_received) : '—') +
+      row('Amount Received', r.amount_received != null ? money(r.amount_received) : 'â€”') +
       row('Status', r.status?.toUpperCase()) +
-      row('KatPay UUID', r.katpay_uuid || '—') +
+      row('KatPay UUID', r.katpay_uuid || 'â€”') +
       row('Credited TX ID', r.credited_tx_id || 'Not credited') +
       paHtml +
-      row('Admin Note', r.admin_note || '—') +
-      row('Created', r.created_at || '—') +
-      row('Completed', r.completed_at || '—');
+      row('Admin Note', r.admin_note || 'â€”') +
+      row('Created', r.created_at || 'â€”') +
+      row('Completed', r.completed_at || 'â€”');
 
     // Actions
     if(!r.credited_tx_id && ['partial','pending','failed','processing'].includes(r.status)) {
-      actions.innerHTML = '<button class="primary" style="background:#16a34a;border-color:#16a34a" onclick="openWfCreditModal(\'' + r.merchant_reference + '\',' + r.amount + ',' + (r.amount_received || 0) + ')">💳 Manual Credit</button>';
+      actions.innerHTML = '<button class="primary" style="background:#16a34a;border-color:#16a34a" onclick="openWfCreditModal(\'' + r.merchant_reference + '\',' + r.amount + ',' + (r.amount_received || 0) + ')">ðŸ’³ Manual Credit</button>';
     }
 
   } catch(e) {
@@ -2064,7 +2068,7 @@ async function viewWfTopUp(ref) {
 function openWfCreditModal(ref, amount, received) {
   const creditAmount = received > 0 ? received : amount;
   const note = prompt(
-    'Manual credit for: ' + ref + '\n\nEnter credit amount (default: ₦' + creditAmount.toLocaleString() + '):',
+    'Manual credit for: ' + ref + '\n\nEnter credit amount (default: â‚¦' + creditAmount.toLocaleString() + '):',
     creditAmount.toString()
   );
   if(note === null) return;
@@ -2078,7 +2082,7 @@ function openWfCreditModal(ref, amount, received) {
 }
 
 async function confirmWfCredit(ref, creditAmount, note) {
-  if(!confirm('Credit ₦' + creditAmount.toLocaleString() + ' to wallet for top-up: ' + ref + '?\n\nThis action is irreversible.')) return;
+  if(!confirm('Credit â‚¦' + creditAmount.toLocaleString() + ' to wallet for top-up: ' + ref + '?\n\nThis action is irreversible.')) return;
 
   try {
     const res = await fetch('../api/admin/wallet/topups/' + encodeURIComponent(ref) + '/credit', {
@@ -2091,7 +2095,7 @@ async function confirmWfCredit(ref, creditAmount, note) {
     });
     const json = await res.json();
     if(!res.ok || !json.success) throw new Error(json.message || 'Credit failed');
-    alert('✓ Wallet credited successfully!\nTx Reference: ' + (json.data?.transaction_ref || ''));
+    alert('âœ“ Wallet credited successfully!\nTx Reference: ' + (json.data?.transaction_ref || ''));
     document.getElementById('wf-detail-modal').style.display = 'none';
     fetchWalletTopups(_wfCurrentPage);
   } catch(e) {
@@ -2099,7 +2103,7 @@ async function confirmWfCredit(ref, creditAmount, note) {
   }
 }
 
-function money(n){return n?new Intl.NumberFormat('en-NG',{style:'currency',currency:'NGN',maximumFractionDigits:0}).format(n):'—'}
+function money(n){return n?new Intl.NumberFormat('en-NG',{style:'currency',currency:'NGN',maximumFractionDigits:0}).format(n):'â€”'}
 
 function updateCategoryDropdown() {
   const catSelect = document.getElementById('catFilter');
@@ -2120,7 +2124,7 @@ async function seedServices() {
   if (!token) return;
   const gridEl = document.getElementById('serviceGrid');
   if (gridEl) {
-    gridEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">Seeding 22 default services & pricing variants into database…</div>';
+    gridEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">Seeding 22 default services & pricing variants into databaseâ€¦</div>';
   }
   try {
     const res = await fetch('../api/admin/services/seed', {
@@ -2174,7 +2178,7 @@ function renderServices(){
   <div class="service">
    <div class="service-top"><div class="ico">${iconChar}</div>
    <button class="toggle ${s.visible?'on':''}" onclick="toggleVisible('${s.id}')"><i></i></button></div>
-   <h3>${s.name}</h3><p>${s.cat} · ${s.type} · ${s.visible?'Visible to users':'Hidden from users'}</p>
+   <h3>${s.name}</h3><p>${s.cat} Â· ${s.type} Â· ${s.visible?'Visible to users':'Hidden from users'}</p>
    <div class="service-row"><div><small style="color:var(--muted);font-size:9px">USER PRICE</small><div class="price">${money(s.price)}</div></div><button class="secondary" onclick="openService('${s.id}')">Edit</button></div>
   </div>`;
  }).join('');
@@ -2219,11 +2223,11 @@ function openService(id){
  let pricingHtml = '';
  if (s.pricing && s.pricing.length > 0) {
      pricingHtml = s.pricing.map(p => {
-         let label = p.variant_key ? `Price for '${p.variant_key}' (₦)` : 'Price (₦)';
+         let label = p.variant_key ? `Price for '${p.variant_key}' (â‚¦)` : 'Price (â‚¦)';
          return `<div class="field"><label>${label}</label><input class="mVariantPrice" data-pid="${p.pricing_id}" type="number" value="${p.price}"></div>`;
      }).join('');
  } else {
-     pricingHtml = `<div class="field"><label>Price (₦)</label><input class="mVariantPrice" data-pid="" type="number" value="${s.price}"></div>`;
+     pricingHtml = `<div class="field"><label>Price (â‚¦)</label><input class="mVariantPrice" data-pid="" type="number" value="${s.price}"></div>`;
  }
  
  document.getElementById('modalTitle').textContent='Edit Service';
@@ -2297,7 +2301,7 @@ async function saveService(id){
     
     closeModal();
     await fetchAdminServices();
-    alert('✓ Service and pricing updated successfully!');
+    alert('âœ“ Service and pricing updated successfully!');
   } catch(e) {
     console.error("Failed to save service", e);
     alert('Failed to save service: ' + e.message);
@@ -2338,7 +2342,7 @@ async function openRequest(ref, defaultServiceTitle) {
     const notes = d.admin_notes || [];
     const trx = d.transaction || {};
 
-    document.getElementById('modalTitle').textContent = (svc.name || defaultServiceTitle) + ' · ' + req.reference;
+    document.getElementById('modalTitle').textContent = (svc.name || defaultServiceTitle) + ' Â· ' + req.reference;
 
     // Helper for rendering form data dynamically
     let formDataHtml = '';
@@ -2378,7 +2382,7 @@ async function openRequest(ref, defaultServiceTitle) {
       histHtml = history.map(h => `
         <div style="font-size:11px;border-left:2px solid #0050FF;padding-left:8px;margin-bottom:8px">
           <b style="text-transform:capitalize">${h.status || h.new_status}</b>
-          <span style="color:var(--muted);font-size:10px"> · ${h.created_at || h.changed_at}</span>
+          <span style="color:var(--muted);font-size:10px"> Â· ${h.created_at || h.changed_at}</span>
           ${h.notes ? `<br><small style="color:#64748b">${h.notes}</small>` : ''}
         </div>
       `).join('');
@@ -2402,20 +2406,20 @@ async function openRequest(ref, defaultServiceTitle) {
     document.getElementById('modalBody').innerHTML = `
       <!-- SECTION 1: REQUEST SUMMARY -->
       <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 1 — Request Summary</b>
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 1 â€” Request Summary</b>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:10px;font-size:11px">
           <div><small style="color:var(--muted)">Reference</small><br><b>${req.reference}</b></div>
           <div><small style="color:var(--muted)">Service</small><br><b>${svc.name || defaultServiceTitle}</b></div>
           <div><small style="color:var(--muted)">Category</small><br><b>${svc.category || 'N/A'}</b></div>
           <div><small style="color:var(--muted)">Status</small><br><span class="pill blue" style="text-transform:capitalize">${req.status}</span></div>
-          <div><small style="color:var(--muted)">Amount Paid</small><br><b>₦${Number(req.price_paid || 0).toLocaleString('en-NG', {minimumFractionDigits:2})}</b></div>
+          <div><small style="color:var(--muted)">Amount Paid</small><br><b>â‚¦${Number(req.price_paid || 0).toLocaleString('en-NG', {minimumFractionDigits:2})}</b></div>
           <div><small style="color:var(--muted)">Submitted Date</small><br><b>${req.submitted_at}</b></div>
         </div>
       </div>
 
       <!-- SECTION 2: CUSTOMER INFORMATION -->
       <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 2 — Customer Information</b>
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 2 â€” Customer Information</b>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:10px;font-size:11px">
           <div><small style="color:var(--muted)">Business / User</small><br><b>${user.business_name || 'N/A'}</b></div>
           <div><small style="color:var(--muted)">Email</small><br><b>${user.email || 'N/A'}</b></div>
@@ -2425,7 +2429,7 @@ async function openRequest(ref, defaultServiceTitle) {
 
       <!-- SECTION 3: SUBMITTED FORM DATA -->
       <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 3 — Submitted Form Data</b>
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 3 â€” Submitted Form Data</b>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
           ${formDataHtml}
         </div>
@@ -2433,7 +2437,7 @@ async function openRequest(ref, defaultServiceTitle) {
 
       <!-- SECTION 4: DOCUMENTS -->
       <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 4 — Uploaded Documents</b>
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 4 â€” Uploaded Documents</b>
         <div style="margin-top:10px">
           ${docsHtml}
         </div>
@@ -2441,7 +2445,7 @@ async function openRequest(ref, defaultServiceTitle) {
 
       <!-- SECTION 5: STATUS TIMELINE -->
       <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 5 — Status Timeline</b>
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 5 â€” Status Timeline</b>
         <div style="margin-top:10px">
           ${histHtml}
         </div>
@@ -2449,7 +2453,7 @@ async function openRequest(ref, defaultServiceTitle) {
 
       <!-- SECTION 6: ADMIN NOTES -->
       <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 6 — Admin Notes</b>
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 6 â€” Admin Notes</b>
         <div style="margin-top:10px;margin-bottom:10px">
           ${notesHtml}
         </div>
@@ -2461,7 +2465,7 @@ async function openRequest(ref, defaultServiceTitle) {
 
       <!-- SECTION 7: ACTIONS -->
       <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 7 — Operational Actions</b>
+        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 7 â€” Operational Actions</b>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
           <div class="field" style="margin-bottom:0">
             <label style="font-size:11px">Update Request Status</label>
@@ -2528,7 +2532,7 @@ async function openWithdraw(){
       <div style="font-size:24px;font-weight:900;margin-top:4px">${money(withdrawableProfit)}</div>
       <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Transfers are processed instantly via KatPay Payouts API directly to NUBAN bank accounts.</p>
     </div>
-    <div class="field"><label>Withdrawal Amount (NGN)</label><input id="withdrawAmount" type="number" min="100" max="${withdrawableProfit}" placeholder="Min ₦100"></div>
+    <div class="field"><label>Withdrawal Amount (NGN)</label><input id="withdrawAmount" type="number" min="100" max="${withdrawableProfit}" placeholder="Min â‚¦100"></div>
     <div class="field"><label>Destination Bank</label><select id="withdrawBank"><option value="">Loading banks...</option></select></div>
     <div class="field"><label>NUBAN Account Number</label><input id="withdrawAcctNo" type="text" maxlength="10" placeholder="10-digit account number"></div>
     <div class="field"><label>Account Holder Name</label><input id="withdrawAcctName" type="text" placeholder="Account owner full name"></div>
@@ -2570,7 +2574,7 @@ function submitWithdraw(){
   const acctName = document.getElementById('withdrawAcctName').value.trim();
   const reason = document.getElementById('withdrawReason').value.trim() || 'Profit withdrawal';
 
-  if (!amount || amount < 100) { alert('Minimum withdrawal amount is ₦100.'); return; }
+  if (!amount || amount < 100) { alert('Minimum withdrawal amount is â‚¦100.'); return; }
   if (amount > withdrawableProfit) { alert('Withdrawal exceeds settled withdrawable profit.'); return; }
   if (!bankCode) { alert('Please select a destination bank.'); return; }
   if (!acctNo || acctNo.length !== 10) { alert('Please enter a valid 10-digit NUBAN account number.'); return; }
@@ -2586,11 +2590,11 @@ function submitWithdraw(){
       <div style="display:flex;justify-content:space-between"><span>Narration:</span><b>${reason}</b></div>
     </div>
     <div style="margin-top:12px;background:#fff7e6;color:#92400e;border:1px solid #fde68a;padding:10px;border-radius:10px;font-size:11px">
-      ⚠ Funds will be transferred directly from KatPay merchant balance to <b>${acctName}</b>. This action is final.
+      âš  Funds will be transferred directly from KatPay merchant balance to <b>${acctName}</b>. This action is final.
     </div>`;
   
   document.getElementById('modalFoot').innerHTML =
-    `<button class="secondary" onclick="openWithdraw()">← Edit</button>
+    `<button class="secondary" onclick="openWithdraw()">â† Edit</button>
      <button class="primary" style="background:#16a34a;border-color:#16a34a" onclick="confirmWithdraw(${amount}, '${bankCode}', '${escapeJs(bankName)}', '${acctNo}', '${escapeJs(acctName)}', '${escapeJs(reason)}')">Execute Payout Now</button>`;
 }
 
@@ -2619,7 +2623,7 @@ async function confirmWithdraw(amount, bankCode, bankName, acctNo, acctName, rea
     closeModal();
 
     if (res && res.success) {
-      alert('✓ KatPay Payout Executed Successfully!\n\nRef: ' + (res.data.reference || '') + '\nAmount: ' + money(amount) + '\nAccount: ' + acctName + ' (' + acctNo + ')');
+      alert('âœ“ KatPay Payout Executed Successfully!\n\nRef: ' + (res.data.reference || '') + '\nAmount: ' + money(amount) + '\nAccount: ' + acctName + ' (' + acctNo + ')');
       if (typeof fetchAdminDashboardData === 'function') fetchAdminDashboardData();
     } else {
       alert('Payout Failed: ' + (res.message || 'Unknown error occurred.'));
@@ -2650,9 +2654,9 @@ async function refreshProviderBalances(){
           var jobInfo = '';
           if (p.jobs_completed !== undefined) {
             jobInfo = `<span style="font-size:11px;color:var(--muted)">
-              ✓ ${p.jobs_completed} done &nbsp;
-              ⏳ ${p.jobs_pending} pending &nbsp;
-              ✗ ${p.jobs_failed} failed
+              âœ“ ${p.jobs_completed} done &nbsp;
+              â³ ${p.jobs_pending} pending &nbsp;
+              âœ— ${p.jobs_failed} failed
             </span>`;
           }
           var spendLabel = p.spend_total !== undefined
@@ -2691,10 +2695,10 @@ function filterProviders(){
   });
 }
 function viewProvider(name){
-  document.getElementById('modalTitle').textContent=name+' — Provider Balance';
+  document.getElementById('modalTitle').textContent=name+' â€” Provider Balance';
   document.getElementById('modalBody').innerHTML=`
     <div class="grid4" style="grid-template-columns:1fr 1fr">
-      <div class="stat"><small>Available Balance</small><strong>₦0</strong></div>
+      <div class="stat"><small>Available Balance</small><strong>â‚¦0</strong></div>
       <div class="stat"><small>Status</small><strong style="font-size:18px">Healthy</strong></div>
     </div>
     <div style="margin-top:14px;padding:13px;border:1px solid var(--line);border-radius:12px">
@@ -2713,7 +2717,7 @@ function openKpiPage(page){
     go('active-users');
     return;
   }
-  // Failed Txns → combined Failed Transactions page
+  // Failed Txns â†’ combined Failed Transactions page
   if (page === 'failed-txns') {
     go('rejected');
     loadFailedTxns();
@@ -2758,11 +2762,11 @@ function loadFailedTxns() {
     var manualReqs = (manualRes.data && manualRes.data.requests) || manualRes.requests || [];
     manualReqs.forEach(function(r) {
       rows.push({
-        ref:    r.reference || r.ref || '—',
-        user:   r.user_name || r.name || '—',
-        service:r.service_name || r.service || '—',
+        ref:    r.reference || r.ref || 'â€”',
+        user:   r.user_name || r.name || 'â€”',
+        service:r.service_name || r.service || 'â€”',
         type:   'Manual',
-        status: r.status || '—',
+        status: r.status || 'â€”',
         amount: r.price_paid || 0,
         date:   r.submitted_at || r.created_at || '',
         canRefund: false,
@@ -2774,11 +2778,11 @@ function loadFailedTxns() {
     var apiItems = (apiRes.data && apiRes.data.items) || apiRes.items || [];
     apiItems.forEach(function(t) {
       rows.push({
-        ref:    t.gv_reference || '—',
-        user:   (t.user && t.user.business_name) || '—',
-        service:t.service_name || '—',
+        ref:    t.gv_reference || 'â€”',
+        user:   (t.user && t.user.business_name) || 'â€”',
+        service:t.service_name || 'â€”',
         type:   'API',
-        status: t.gv_status || '—',
+        status: t.gv_status || 'â€”',
         amount: t.price_paid || 0,
         date:   t.submitted_at || '',
         canRefund: (!t.refund_issued && (t.gv_status === 'failed' || t.gv_status === 'processing')),
@@ -2819,7 +2823,7 @@ function loadFailedTxns() {
         : '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#f3e8ff;color:#7c3aed;font-weight:600">Manual</span>';
       var actionBtn = r.canRefund
         ? '<button onclick="openAtxnRefundModal(\'' + r.apiRef + '\',\'' + r.user.replace(/'/g,"\\'") + '\',' + r.amount + ')" style="padding:4px 10px;border-radius:6px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;font-size:12px;font-weight:600">\u26a0 Refund</button>'
-        : '<span style="font-size:11px;color:var(--muted)">' + (r.type === 'API' && !r.canRefund ? 'Refunded' : '—') + '</span>';
+        : '<span style="font-size:11px;color:var(--muted)">' + (r.type === 'API' && !r.canRefund ? 'Refunded' : 'â€”') + '</span>';
       return '<tr>' +
         '<td><code style="font-size:11px">' + r.ref + '</code></td>' +
         '<td>' + r.user + '</td>' +
@@ -2832,6 +2836,54 @@ function loadFailedTxns() {
         '</tr>';
     }).join('');
   });
+}
+
+function loadRefunds() {
+  var tbody    = document.getElementById('refunds-body');
+  var countEl  = document.getElementById('refunds-count');
+  var summaryEl = document.getElementById('refunds-summary');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading\u2026</td></tr>';
+
+  gvAdminFetch('../api/admin/requests?status=refunded&per_page=200')
+    .then(function(r){ return r.json(); })
+    .then(function(json) {
+      var items = (json.data && json.data.requests) || json.requests || [];
+
+      if (summaryEl) {
+        var manualCount = items.filter(function(r){ return r.request_type === 'manual'; }).length;
+        var apiCount    = items.filter(function(r){ return r.request_type === 'api'; }).length;
+        var totalAmt    = items.reduce(function(s, r){ return s + Number(r.price_paid || 0); }, 0);
+        summaryEl.innerHTML =
+          '<div class="stat"><small>Manual Refunds</small><strong style="color:#8b5cf6">' + manualCount + '</strong></div>' +
+          '<div class="stat"><small>API Refunds</small><strong style="color:#8b5cf6">' + apiCount + '</strong></div>' +
+          '<div class="stat"><small>Total Refunded</small><strong style="color:#8b5cf6">\u20a6' + Number(totalAmt).toLocaleString() + '</strong></div>';
+      }
+
+      if (!items.length) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">\u2713 No refunded transactions found.</td></tr>';
+        if (countEl) countEl.textContent = '0 records';
+        return;
+      }
+
+      if (countEl) countEl.textContent = items.length + ' record' + (items.length !== 1 ? 's' : '');
+
+      if (tbody) tbody.innerHTML = items.map(function(r) {
+        var typePill = r.request_type === 'api'
+          ? '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#dbeafe;color:#1d4ed8;font-weight:600">API</span>'
+          : '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#f3e8ff;color:#7c3aed;font-weight:600">Manual</span>';
+        return '<tr>' +
+          '<td><code style="font-size:11px">' + (r.reference || '\u2014') + '</code></td>' +
+          '<td>' + ((r.user && r.user.business_name) || '\u2014') + '</td>' +
+          '<td>' + ((r.service && r.service.name) || '\u2014') + '</td>' +
+          '<td>' + typePill + '</td>' +
+          '<td><span style="color:#8b5cf6;font-weight:600">\u20a6' + Number(r.price_paid || 0).toLocaleString() + '</span></td>' +
+          '<td><small>' + (r.submitted_at ? r.submitted_at.slice(0,16) : '\u2014') + '</small></td>' +
+          '</tr>';
+      }).join('');
+    })
+    .catch(function(e) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#ef4444">Error loading refunds: ' + e.message + '</td></tr>';
+    });
 }
 
 function closeKpiDetail(){
@@ -3003,7 +3055,7 @@ function updateGemPrintDashboardStats() {
   let statSales = document.getElementById("gpStatSales");
   if (statSales) {
     let totalSales = gpAdminData.orders.reduce((sum, o) => sum + o.total, 0) + gpAdminData.print_jobs.reduce((sum, j) => sum + j.price, 0);
-    statSales.textContent = "₦" + totalSales.toLocaleString();
+    statSales.textContent = "â‚¦" + totalSales.toLocaleString();
   }
 
   let dashboardTbody = document.querySelector("#page-gemprint table tbody");
@@ -3047,7 +3099,7 @@ function renderGemPrintProducts(pg) {
       <td data-label="Name">${p.name}</td>
       <td data-label="SKU"><code style="font-size:11px">${p.sku}</code></td>
       <td data-label="Category">${p.category}</td>
-      <td data-label="Price">₦${p.price.toLocaleString()}</td>
+      <td data-label="Price">â‚¦${p.price.toLocaleString()}</td>
       <td data-label="Stock">${p.stock} units</td>
       <td data-label="Action" style="white-space:nowrap">
         <button class="secondary" onclick="openEditProductModal('${p.id}')">Edit</button>
@@ -3117,7 +3169,7 @@ function renderGemPrintOrders(pg) {
         <td data-label="Order ID"><b>${o.id}</b><br><small style="opacity:.6">${o.date}</small></td>
         <td data-label="Customer Name">${o.customer}</td>
         <td data-label="Items Summary" title="${o.items.map(it => `${it.name} (x${it.qty})`).join(', ')}">${itemsSummary}</td>
-        <td data-label="Total Paid"><b>₦${o.total.toLocaleString()}</b></td>
+        <td data-label="Total Paid"><b>â‚¦${o.total.toLocaleString()}</b></td>
         <td data-label="Payment"><span class="pill green">${o.paymentStatus}</span></td>
         <td data-label="Status"><span class="pill ${statusColor}">${o.status}</span></td>
         <td data-label="Action"><button class="secondary" onclick="openChangeOrderStatusModal('${o.id}', '${o.status}')">Manage</button></td>
@@ -3146,13 +3198,13 @@ function renderGemPrintJobs(pg) {
   }
   tbody.innerHTML = items.map(j => {
     let statusColor = j.status === 'Completed' ? 'green' : (j.status === 'Cancelled' ? 'red' : 'amber');
-    let specs = `${j.size} · ${j.type} · ${j.color} · Qty: ${j.qty} · Finish: ${j.finishing}`;
+    let specs = `${j.size} Â· ${j.type} Â· ${j.color} Â· Qty: ${j.qty} Â· Finish: ${j.finishing}`;
     return `
       <tr>
         <td data-label="Job ID"><b>${j.id}</b><br><small style="opacity:.6">${j.date}</small></td>
         <td data-label="Service Type"><b>${j.service}</b></td>
         <td data-label="Specs" style="font-size:10px;opacity:.8">${specs}</td>
-        <td data-label="Price"><b>₦${j.price.toLocaleString()}</b></td>
+        <td data-label="Price"><b>â‚¦${j.price.toLocaleString()}</b></td>
         <td data-label="Payment"><span class="pill green">${j.paymentStatus}</span></td>
         <td data-label="Stage"><span class="pill ${statusColor}">${j.status}</span></td>
         <td data-label="Action"><button class="secondary" onclick="openChangeJobStatusModal('${j.id}', '${j.status}')">Manage</button></td>
@@ -3162,7 +3214,7 @@ function renderGemPrintJobs(pg) {
   _gpRenderPgn('print-jobs', p, totalPages, 'renderGemPrintJobs');
 }
 
-// ── Shared GemPrint client-side pagination helpers ──────────────────────────
+// â”€â”€ Shared GemPrint client-side pagination helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function _gpRenderPgn(pageId, current, total, fnName) {
   const cardEl = document.querySelector('#page-' + pageId + ' .card');
   if (!cardEl) return;
@@ -3177,9 +3229,9 @@ function _gpRenderPgn(pageId, current, total, fnName) {
   const prevDis = current <= 1     ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
   const nextDis = current >= total ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
   paginEl.innerHTML =
-    '<button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="' + fnName + '(' + Math.max(1, current - 1) + ')" ' + prevDis + '>← Prev</button>' +
+    '<button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="' + fnName + '(' + Math.max(1, current - 1) + ')" ' + prevDis + '>â† Prev</button>' +
     '<span style="font-size:12px;color:var(--muted);padding:0 4px">Page ' + current + ' of ' + total + '</span>' +
-    '<button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="' + fnName + '(' + Math.min(total, current + 1) + ')" ' + nextDis + '>Next →</button>';
+    '<button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="' + fnName + '(' + Math.min(total, current + 1) + ')" ' + nextDis + '>Next â†’</button>';
   paginEl.style.display = 'flex';
 }
 function _gpHidePgn(pageId) {
@@ -3207,7 +3259,7 @@ async function saveAdminSettings() {
     });
     let json = await res.json();
     if (json.success) {
-      alert("✓ Settings saved successfully!");
+      alert("âœ“ Settings saved successfully!");
       fetchGemPrintAdminData();
     } else {
       alert("Error saving settings: " + json.message);
@@ -3223,7 +3275,7 @@ function openAddProductModal() {
     <div class="field"><label>Product Name</label><input id="pName" placeholder="e.g. Glossy Card Stock 300gsm"></div>
     <div class="field"><label>Description</label><textarea id="pDesc" placeholder="Product details..."></textarea></div>
     <div class="field"><label>Category</label><select id="pCat"><option>Paper</option><option>Cards & IDs</option><option>Ink & Toner</option><option>Binding</option><option>Business Materials</option><option>Accessories</option></select></div>
-    <div class="field"><label>Price (₦)</label><input id="pPrice" type="number" placeholder="Price"></div>
+    <div class="field"><label>Price (â‚¦)</label><input id="pPrice" type="number" placeholder="Price"></div>
     <div class="field"><label>Stock Level</label><input id="pStock" type="number" value="100" placeholder="Initial stock"></div>
     <div class="field"><label>SKU</label><input id="pSku" placeholder="e.g. GP-PAP-GLS"></div>
   `;
@@ -3257,7 +3309,7 @@ async function submitAddProduct() {
     let json = await res.json();
     if (json.success) {
       closeModal();
-      alert("✓ Product added successfully!");
+      alert("âœ“ Product added successfully!");
       fetchGemPrintAdminData();
     } else {
       alert("Error: " + json.message);
@@ -3275,7 +3327,7 @@ function openEditProductModal(id) {
     <div class="field"><label>Product Name</label><input id="pName" value="${p.name}"></div>
     <div class="field"><label>Description</label><textarea id="pDesc">${p.description || ""}</textarea></div>
     <div class="field"><label>Category</label><select id="pCat"><option ${p.category==="Paper"?"selected":""}>Paper</option><option ${p.category==="Cards & IDs"?"selected":""}>Cards & IDs</option><option ${p.category==="Ink & Toner"?"selected":""}>Ink & Toner</option><option ${p.category==="Binding"?"selected":""}>Binding</option><option ${p.category==="Business Materials"?"selected":""}>Business Materials</option><option ${p.category==="Accessories"?"selected":""}>Accessories</option></select></div>
-    <div class="field"><label>Price (₦)</label><input id="pPrice" type="number" value="${p.price}"></div>
+    <div class="field"><label>Price (â‚¦)</label><input id="pPrice" type="number" value="${p.price}"></div>
     <div class="field"><label>Stock Level</label><input id="pStock" type="number" value="${p.stock}"></div>
     <div class="field"><label>SKU</label><input id="pSku" value="${p.sku}"></div>
   `;
@@ -3307,7 +3359,7 @@ async function submitEditProduct(id) {
     let json = await res.json();
     if (json.success) {
       closeModal();
-      alert("✓ Product updated successfully!");
+      alert("âœ“ Product updated successfully!");
       fetchGemPrintAdminData();
     } else {
       alert("Error: " + json.message);
@@ -3327,7 +3379,7 @@ async function deleteProduct(id) {
     });
     let json = await res.json();
     if (json.success) {
-      alert("✓ Product deleted successfully!");
+      alert("âœ“ Product deleted successfully!");
       fetchGemPrintAdminData();
     }
   } catch(e) {
@@ -3440,7 +3492,7 @@ async function submitJobStatus(id) {
 function closeModal(){document.getElementById('modal').classList.remove('show')}
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 
-// ── Admin Profile Page Logic ───────────────────────────────────────────────
+// â”€â”€ Admin Profile Page Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 var GV_ROLE_LABELS = { 'super_admin': 'Super Administrator', 'admin': 'Administrator', 'support': 'Support' };
 
 function gvInitProfileUI() {
@@ -3573,9 +3625,9 @@ async function gvCreateAdmin() {
   btn.disabled = false; btn.textContent = 'Create Administrator';
 }
 
-// ── Session Management (Phases 1, 2, 3) ──────────────────────────────────
+// â”€â”€ Session Management (Phases 1, 2, 3) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// Phase 2 — Fetch wrapper: auto-logout on 401/403
+// Phase 2 â€” Fetch wrapper: auto-logout on 401/403
 async function gvAdminFetch(url, options) {
   const token = localStorage.getItem('gv_admin_token');
   const opts  = Object.assign({}, options);
@@ -3591,10 +3643,10 @@ async function gvAdminFetch(url, options) {
 }
 window.adminFetch = gvAdminFetch;
 
-// Phase 1 — Validate stored token and restore session on page load/refresh
+// Phase 1 â€” Validate stored token and restore session on page load/refresh
 async function gvRestoreSession() {
   const token = localStorage.getItem('gv_admin_token');
-  if (!token) return; // No token → stay on login (default state)
+  if (!token) return; // No token â†’ stay on login (default state)
 
   const overlay = document.getElementById('gv-session-overlay');
   if (overlay) overlay.style.display = 'flex';
@@ -3603,7 +3655,7 @@ async function gvRestoreSession() {
     const res = await gvAdminFetch('../api/auth/me');
 
     if (res.ok) {
-      // Token valid — restore the session without a page reload
+      // Token valid â€” restore the session without a page reload
       if (overlay) overlay.style.display = 'none';
       document.getElementById('login').style.display  = 'none';
       document.getElementById('app').classList.add('on');
@@ -3612,25 +3664,25 @@ async function gvRestoreSession() {
       setTimeout(gvInitProfileUI, 150);
       gvScheduleTokenRefresh(token); // Phase 3
     } else {
-      // Non-401 error (e.g. 500) — clear token to be safe, show login
+      // Non-401 error (e.g. 500) â€” clear token to be safe, show login
       localStorage.removeItem('gv_admin_token');
       localStorage.removeItem('gv_admin');
       if (overlay) overlay.style.display = 'none';
     }
   } catch (e) {
     // 401/403 already handled by gvAdminFetch (token cleared, logout called)
-    // Network error falls here too — just hide overlay and show login
+    // Network error falls here too â€” just hide overlay and show login
     if (overlay) overlay.style.display = 'none';
     console.warn('[gvRestoreSession]', e.message || e);
   }
 }
 
-// Phase 3 — Schedule a silent token refresh 30 minutes before JWT expiry
+// Phase 3 â€” Schedule a silent token refresh 30 minutes before JWT expiry
 function gvScheduleTokenRefresh(token) {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return;
-    // base64url → base64 → JSON
+    // base64url â†’ base64 â†’ JSON
     const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
     const exp = payload.exp; // seconds since epoch
     if (!exp) return;
@@ -3661,7 +3713,7 @@ async function gvDoTokenRefresh() {
       console.log('[gvSession] Token refreshed silently');
       gvScheduleTokenRefresh(json.data.token); // schedule next refresh
     } else {
-      console.warn('[gvSession] Refresh failed — admin will need to re-login at expiry');
+      console.warn('[gvSession] Refresh failed â€” admin will need to re-login at expiry');
     }
   } catch (e) {
     console.warn('[gvSession] Refresh network error:', e);
@@ -3672,7 +3724,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var t = localStorage.getItem('gv_admin_token');
   if (t) { setTimeout(gvInitProfileUI, 150); }
 });
-// ── End Session Management ────────────────────────────────────────────────
+// â”€â”€ End Session Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 </script>
 </body>
 </html>
