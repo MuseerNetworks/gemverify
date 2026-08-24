@@ -618,13 +618,16 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   </tbody></table></div>
 </section>
 <section id="page-rejected" class="page">
-  <div class="heading"><div><h1>Rejected</h1><p>Requests rejected or cancelled.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>Rejected Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody>
-  <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No rejected requests.</td></tr>
-  </tbody></table></div>
+  <div class="heading"><div><h1>Failed Transactions</h1><p>All failed, rejected and cancelled requests — manual and API-based.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
+  <div id="failed-txns-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px"></div>
+  <div class="card">
+    <div class="card-head"><h3>Failed Transactions (Combined)</h3><span id="failed-txns-count" style="color:var(--muted);font-size:13px">Loading…</span></div>
+    <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Type</th><th>Status</th><th>Amount</th><th>Date</th><th>Action</th></tr></thead>
+    <tbody id="failed-txns-body"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr></tbody>
+    </table>
+  </div>
 </section>
+
 <section id="page-nin-validation" class="page">
   <div class="heading"><div><h1>NIN Validation</h1><p>NIN Validation manual processing queue.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
   <div class="card"><div class="card-head"><h3>NIN Validation Queue</h3><span>Admin controlled</span></div>
@@ -2710,9 +2713,10 @@ function openKpiPage(page){
     go('active-users');
     return;
   }
-  // Failed Txns → API Transactions page filtered to failed status
+  // Failed Txns → combined Failed Transactions page
   if (page === 'failed-txns') {
-    openFailedTransactions();
+    go('rejected');
+    loadFailedTxns();
     return;
   }
   const pages = {
@@ -2730,16 +2734,104 @@ function openKpiPage(page){
   if(item) go(item[1]);
 }
 
-function openFailedTransactions() {
-  go('api-transactions');
-  // Set the status filter to "failed" and reload
-  var sel = document.getElementById('atxn-filter-status');
-  if (sel) {
-    sel.value = 'failed';
-  }
-  if (typeof fetchApiTransactions === 'function') {
-    fetchApiTransactions(1);
-  }
+function loadFailedTxns() {
+  var tbody  = document.getElementById('failed-txns-body');
+  var countEl = document.getElementById('failed-txns-count');
+  var summaryEl = document.getElementById('failed-txns-summary');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loading\u2026</td></tr>';
+
+  var manualPromise = gvAdminFetch('../api/admin/requests?status=rejected&per_page=200')
+    .then(function(r){ return r.json(); })
+    .catch(function(){ return { success: false, data: { requests: [] } }; });
+
+  var apiPromise = gvAdminFetch('../api/admin/api-transactions?status=failed&per_page=200')
+    .then(function(r){ return r.json(); })
+    .catch(function(){ return { success: false, data: { items: [] } }; });
+
+  Promise.all([manualPromise, apiPromise]).then(function(results) {
+    var manualRes = results[0];
+    var apiRes    = results[1];
+
+    var rows = [];
+
+    // Manual rejected/cancelled
+    var manualReqs = (manualRes.data && manualRes.data.requests) || manualRes.requests || [];
+    manualReqs.forEach(function(r) {
+      rows.push({
+        ref:    r.reference || r.ref || '—',
+        user:   r.user_name || r.name || '—',
+        service:r.service_name || r.service || '—',
+        type:   'Manual',
+        status: r.status || '—',
+        amount: r.price_paid || 0,
+        date:   r.submitted_at || r.created_at || '',
+        canRefund: false,
+        apiRef: null
+      });
+    });
+
+    // API failed/refunded
+    var apiItems = (apiRes.data && apiRes.data.items) || apiRes.items || [];
+    apiItems.forEach(function(t) {
+      rows.push({
+        ref:    t.gv_reference || '—',
+        user:   (t.user && t.user.business_name) || '—',
+        service:t.service_name || '—',
+        type:   'API',
+        status: t.gv_status || '—',
+        amount: t.price_paid || 0,
+        date:   t.submitted_at || '',
+        canRefund: (!t.refund_issued && (t.gv_status === 'failed' || t.gv_status === 'processing')),
+        apiRef: t.gv_reference
+      });
+    });
+
+    // Sort combined by date descending
+    rows.sort(function(a, b) {
+      return (b.date || '').localeCompare(a.date || '');
+    });
+
+    // Summary stats
+    var manualCount = manualReqs.length;
+    var apiCount    = apiItems.length;
+    var apiUnrefunded = apiItems.filter(function(t){ return !t.refund_issued && t.gv_status === 'failed'; }).length;
+    if (summaryEl) {
+      summaryEl.innerHTML =
+        '<div class="stat"><small>Manual Rejected</small><strong style="color:#ef4444">' + manualCount + '</strong></div>' +
+        '<div class="stat"><small>API Failed</small><strong style="color:#ef4444">' + apiCount + '</strong></div>' +
+        '<div class="stat"><small>API Unrefunded</small><strong style="color:#f59e0b">' + apiUnrefunded + '</strong></div>';
+    }
+
+    var statusColors = { rejected:'#ef4444', cancelled:'#64748b', failed:'#ef4444', refunded:'#8b5cf6', processing:'#f59e0b', pending:'#f59e0b' };
+
+    if (rows.length === 0) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">\u2713 No failed or rejected transactions found.</td></tr>';
+      if (countEl) countEl.textContent = '0 records';
+      return;
+    }
+
+    if (countEl) countEl.textContent = rows.length + ' record' + (rows.length !== 1 ? 's' : '');
+
+    if (tbody) tbody.innerHTML = rows.map(function(r) {
+      var sc = statusColors[r.status] || 'var(--muted)';
+      var typePill = r.type === 'API'
+        ? '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#dbeafe;color:#1d4ed8;font-weight:600">API</span>'
+        : '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#f3e8ff;color:#7c3aed;font-weight:600">Manual</span>';
+      var actionBtn = r.canRefund
+        ? '<button onclick="openAtxnRefundModal(\'' + r.apiRef + '\',\'' + r.user.replace(/'/g,"\\'") + '\',' + r.amount + ')" style="padding:4px 10px;border-radius:6px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;font-size:12px;font-weight:600">\u26a0 Refund</button>'
+        : '<span style="font-size:11px;color:var(--muted)">' + (r.type === 'API' && !r.canRefund ? 'Refunded' : '—') + '</span>';
+      return '<tr>' +
+        '<td><code style="font-size:11px">' + r.ref + '</code></td>' +
+        '<td>' + r.user + '</td>' +
+        '<td>' + r.service + '</td>' +
+        '<td>' + typePill + '</td>' +
+        '<td><span style="color:' + sc + ';font-weight:600;text-transform:capitalize">' + r.status + '</span></td>' +
+        '<td>\u20a6' + Number(r.amount).toLocaleString() + '</td>' +
+        '<td><small>' + (r.date ? r.date.slice(0,16) : '\u2014') + '</small></td>' +
+        '<td>' + actionBtn + '</td>' +
+        '</tr>';
+    }).join('');
+  });
 }
 
 function closeKpiDetail(){
