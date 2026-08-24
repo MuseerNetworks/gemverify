@@ -20,49 +20,85 @@ class StatsController
     {
         try {
             $stats = [];
-            
-            // Unified counts across manual_requests and api_transactions
-            $stmtTotals = $this->db->query("
-                SELECT 
-                    (SELECT COUNT(*) FROM manual_requests) + (SELECT COUNT(*) FROM api_transactions) as total_requests,
-                    (SELECT COUNT(*) FROM manual_requests WHERE status = 'completed') + 
-                    (SELECT COUNT(*) FROM api_transactions WHERE gv_status = 'completed') as total_completed,
-                    (SELECT COUNT(*) FROM manual_requests WHERE status IN ('submitted', 'pending')) + 
-                    (SELECT COUNT(*) FROM api_transactions WHERE gv_status = 'pending') as total_pending,
-                    (SELECT COUNT(*) FROM manual_requests WHERE status = 'under_review') as total_under_review,
-                    (SELECT COUNT(*) FROM manual_requests WHERE status = 'processing') + 
-                    (SELECT COUNT(*) FROM api_transactions WHERE gv_status = 'processing') as total_processing,
-                    (SELECT COUNT(*) FROM manual_requests WHERE status IN ('rejected', 'cancelled')) + 
-                    (SELECT COUNT(*) FROM api_transactions WHERE gv_status IN ('failed', 'refunded')) as total_rejected,
-                    (SELECT COUNT(*) FROM manual_requests WHERE DATE(submitted_at) = CURRENT_DATE()) + 
-                    (SELECT COUNT(*) FROM api_transactions WHERE DATE(submitted_at) = CURRENT_DATE()) as requests_today
-            ");
-            $totals = $stmtTotals->fetch(PDO::FETCH_ASSOC);
-            $stats = array_merge($stats, $totals);
 
-            // User & Wallet Totals
+            // ── Check which optional tables exist on this environment ──────────────
+            // api_transactions and admin_withdrawals may not be migrated on live yet.
+            // We detect their existence once and use it to build safe queries.
+            $apiTxnExists = (bool)$this->db
+                ->query("SELECT COUNT(*) FROM information_schema.tables
+                          WHERE table_schema = DATABASE()
+                          AND table_name = 'api_transactions'")
+                ->fetchColumn();
+
+            $adminWdExists = (bool)$this->db
+                ->query("SELECT COUNT(*) FROM information_schema.tables
+                          WHERE table_schema = DATABASE()
+                          AND table_name = 'admin_withdrawals'")
+                ->fetchColumn();
+
+            // ── Unified counts ─────────────────────────────────────────────────────
+            if ($apiTxnExists) {
+                $stmtTotals = $this->db->query("
+                    SELECT
+                        (SELECT COUNT(*) FROM manual_requests) + (SELECT COUNT(*) FROM api_transactions) as total_requests,
+                        (SELECT COUNT(*) FROM manual_requests WHERE status = 'completed') +
+                        (SELECT COUNT(*) FROM api_transactions WHERE gv_status = 'completed') as total_completed,
+                        (SELECT COUNT(*) FROM manual_requests WHERE status IN ('submitted', 'pending')) +
+                        (SELECT COUNT(*) FROM api_transactions WHERE gv_status = 'pending') as total_pending,
+                        (SELECT COUNT(*) FROM manual_requests WHERE status = 'under_review') as total_under_review,
+                        (SELECT COUNT(*) FROM manual_requests WHERE status = 'processing') +
+                        (SELECT COUNT(*) FROM api_transactions WHERE gv_status = 'processing') as total_processing,
+                        (SELECT COUNT(*) FROM manual_requests WHERE status IN ('rejected', 'cancelled')) +
+                        (SELECT COUNT(*) FROM api_transactions WHERE gv_status IN ('failed', 'refunded')) as total_rejected,
+                        (SELECT COUNT(*) FROM manual_requests WHERE DATE(submitted_at) = CURRENT_DATE()) +
+                        (SELECT COUNT(*) FROM api_transactions WHERE DATE(submitted_at) = CURRENT_DATE()) as requests_today
+                ");
+            } else {
+                // api_transactions not yet migrated — count only manual_requests
+                $stmtTotals = $this->db->query("
+                    SELECT
+                        (SELECT COUNT(*) FROM manual_requests) as total_requests,
+                        (SELECT COUNT(*) FROM manual_requests WHERE status = 'completed') as total_completed,
+                        (SELECT COUNT(*) FROM manual_requests WHERE status IN ('submitted', 'pending')) as total_pending,
+                        (SELECT COUNT(*) FROM manual_requests WHERE status = 'under_review') as total_under_review,
+                        (SELECT COUNT(*) FROM manual_requests WHERE status = 'processing') as total_processing,
+                        (SELECT COUNT(*) FROM manual_requests WHERE status IN ('rejected', 'cancelled')) as total_rejected,
+                        (SELECT COUNT(*) FROM manual_requests WHERE DATE(submitted_at) = CURRENT_DATE()) as requests_today
+                ");
+            }
+            $totals = $stmtTotals->fetch(PDO::FETCH_ASSOC);
+            $stats  = array_merge($stats, $totals);
+
+            // ── User & Wallet Totals ───────────────────────────────────────────────
             $stmtUsers = $this->db->query("
-                SELECT 
+                SELECT
                     (SELECT COUNT(*) FROM users WHERE is_active = 1) as total_users,
                     (SELECT COUNT(*) FROM users WHERE is_active = 1 AND updated_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)) as active_users,
                     (SELECT COALESCE(SUM(balance), 0) FROM wallets) as total_wallet_liability
             ");
             $userStats = $stmtUsers->fetch(PDO::FETCH_ASSOC);
-            $stats = array_merge($stats, $userStats);
+            $stats     = array_merge($stats, $userStats);
 
-            // Revenue calculation from single source of truth (completed wallet debits)
+            // ── Revenue (completed wallet debits) ──────────────────────────────────
             $stmtRev = $this->db->query("
-                SELECT 
+                SELECT
                     COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE() THEN amount ELSE 0 END), 0) as revenue_today,
                     COALESCE(SUM(amount), 0) as total_revenue
-                FROM transactions 
+                FROM transactions
                 WHERE type = 'debit' AND status = 'completed'
             ");
-            $revData = $stmtRev->fetch(PDO::FETCH_ASSOC);
+            $revData      = $stmtRev->fetch(PDO::FETCH_ASSOC);
             $revenueToday = (float)($revData['revenue_today'] ?? 0);
             $totalRevenue = (float)($revData['total_revenue'] ?? 0);
 
-            $completedWithdrawals = (float) ($this->db->query("SELECT COALESCE(SUM(amount), 0) FROM admin_withdrawals WHERE status = 'completed'")->fetchColumn() ?: 0);
+            // Guard: admin_withdrawals table may not exist on live yet
+            $completedWithdrawals = 0.0;
+            if ($adminWdExists) {
+                $completedWithdrawals = (float)($this->db
+                    ->query("SELECT COALESCE(SUM(amount), 0) FROM admin_withdrawals WHERE status = 'completed'")
+                    ->fetchColumn() ?: 0);
+            }
+
             $stats['revenue_today']       = $revenueToday;
             $stats['total_revenue']       = $totalRevenue;
             $stats['profit_today']        = $revenueToday * 0.25;
@@ -70,56 +106,91 @@ class StatsController
             $stats['withdrawable_profit'] = max(0, ($totalRevenue * 0.25) - $completedWithdrawals);
             $stats['provider_balance']    = 0.00;
 
-            // By status (unified)
-            $stmtStatus = $this->db->query("
-                SELECT status, COUNT(*) as count FROM (
-                    SELECT status FROM manual_requests
-                    UNION ALL
-                    SELECT gv_status as status FROM api_transactions
-                ) s GROUP BY status
-            ");
+            // ── By status (unified) ────────────────────────────────────────────────
+            if ($apiTxnExists) {
+                $stmtStatus = $this->db->query("
+                    SELECT status, COUNT(*) as count FROM (
+                        SELECT status FROM manual_requests
+                        UNION ALL
+                        SELECT gv_status as status FROM api_transactions
+                    ) s GROUP BY status
+                ");
+            } else {
+                $stmtStatus = $this->db->query("
+                    SELECT status, COUNT(*) as count FROM manual_requests GROUP BY status
+                ");
+            }
             $stats['requests_by_status'] = $stmtStatus->fetchAll(PDO::FETCH_ASSOC);
 
-            // By category (unified)
-            $stmtCategory = $this->db->query("
-                SELECT category, COUNT(*) as count FROM (
-                    SELECT c.name as category 
-                    FROM manual_requests r 
-                    JOIN services s ON r.service_id = s.id 
+            // ── By category (unified) ──────────────────────────────────────────────
+            if ($apiTxnExists) {
+                $stmtCategory = $this->db->query("
+                    SELECT category, COUNT(*) as count FROM (
+                        SELECT c.name as category
+                        FROM manual_requests r
+                        JOIN services s ON r.service_id = s.id
+                        JOIN service_categories c ON s.category_id = c.id
+                        UNION ALL
+                        SELECT c.name as category
+                        FROM api_transactions at
+                        JOIN services s ON at.service_id = s.id
+                        JOIN service_categories c ON s.category_id = c.id
+                    ) cat GROUP BY category
+                ");
+            } else {
+                $stmtCategory = $this->db->query("
+                    SELECT c.name as category, COUNT(*) as count
+                    FROM manual_requests r
+                    JOIN services s ON r.service_id = s.id
                     JOIN service_categories c ON s.category_id = c.id
-                    UNION ALL
-                    SELECT c.name as category 
-                    FROM api_transactions at 
-                    JOIN services s ON at.service_id = s.id 
-                    JOIN service_categories c ON s.category_id = c.id
-                ) cat GROUP BY category
-            ");
+                    GROUP BY category
+                ");
+            }
             $stats['requests_by_category'] = $stmtCategory->fetchAll(PDO::FETCH_ASSOC);
 
-            // Top services (unified)
-            $stmtTop = $this->db->query("
-                SELECT name, COUNT(*) as request_count FROM (
-                    SELECT s.name FROM manual_requests r JOIN services s ON r.service_id = s.id
-                    UNION ALL
-                    SELECT s.name FROM api_transactions at JOIN services s ON at.service_id = s.id
-                ) top_s GROUP BY name ORDER BY request_count DESC LIMIT 5
-            ");
+            // ── Top services (unified) ─────────────────────────────────────────────
+            if ($apiTxnExists) {
+                $stmtTop = $this->db->query("
+                    SELECT name, COUNT(*) as request_count FROM (
+                        SELECT s.name FROM manual_requests r JOIN services s ON r.service_id = s.id
+                        UNION ALL
+                        SELECT s.name FROM api_transactions at JOIN services s ON at.service_id = s.id
+                    ) top_s GROUP BY name ORDER BY request_count DESC LIMIT 5
+                ");
+            } else {
+                $stmtTop = $this->db->query("
+                    SELECT s.name, COUNT(*) as request_count
+                    FROM manual_requests r JOIN services s ON r.service_id = s.id
+                    GROUP BY name ORDER BY request_count DESC LIMIT 5
+                ");
+            }
             $stats['top_services'] = $stmtTop->fetchAll(PDO::FETCH_ASSOC);
 
-            // Recent requests (unified)
-            $stmtRecent = $this->db->query("
-                SELECT reference, status, price_paid, submitted_at, service_name FROM (
+            // ── Recent requests (unified) ──────────────────────────────────────────
+            if ($apiTxnExists) {
+                $stmtRecent = $this->db->query("
+                    SELECT reference, status, price_paid, submitted_at, service_name FROM (
+                        SELECT r.reference, r.status, r.price_paid, r.submitted_at, s.name as service_name
+                        FROM manual_requests r
+                        JOIN services s ON r.service_id = s.id
+                        UNION ALL
+                        SELECT at.gv_reference as reference, at.gv_status as status,
+                               COALESCE(sp.price, t.amount, 0) as price_paid,
+                               at.submitted_at, s.name as service_name
+                        FROM api_transactions at
+                        JOIN services s ON at.service_id = s.id
+                        LEFT JOIN service_pricing sp ON at.pricing_id = sp.id
+                        LEFT JOIN transactions t ON at.transaction_id = t.id
+                    ) reqs ORDER BY submitted_at DESC LIMIT 10
+                ");
+            } else {
+                $stmtRecent = $this->db->query("
                     SELECT r.reference, r.status, r.price_paid, r.submitted_at, s.name as service_name
                     FROM manual_requests r
                     JOIN services s ON r.service_id = s.id
-                    UNION ALL
-                    SELECT at.gv_reference as reference, at.gv_status as status, COALESCE(sp.price, t.amount, 0) as price_paid, at.submitted_at, s.name as service_name
-                    FROM api_transactions at
-                    JOIN services s ON at.service_id = s.id
-                    LEFT JOIN service_pricing sp ON at.pricing_id = sp.id
-                    LEFT JOIN transactions t ON at.transaction_id = t.id
-                ) reqs ORDER BY submitted_at DESC LIMIT 10
-            ");
+                    ORDER BY r.submitted_at DESC LIMIT 10
+                ");
+            }
             $stats['recent_requests'] = $stmtRecent->fetchAll(PDO::FETCH_ASSOC);
 
             Response::success($stats);

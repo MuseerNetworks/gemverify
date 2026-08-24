@@ -94,7 +94,7 @@ class ProviderBalanceController {
             ]);
 
         } catch (\Throwable $e) {
-            Response::error('Failed to query provider balances: ' . $e->getMessage(), 500);
+            Response::error('Failed to query provider balances: ' . $e->getMessage(), [], 500);
         }
     }
 }

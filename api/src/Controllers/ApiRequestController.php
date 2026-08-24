@@ -427,14 +427,42 @@ class ApiRequestController
                     ]);
                 }
             } else {
-                // Soft failure — user was charged, request failed
+                // Soft failure — provider returned error immediately after charge.
+                // Auto-refund the user so they are not stuck waiting for manual admin action.
+                $autoRefunded = false;
+                if ($price > 0) {
+                    try {
+                        $this->walletService->creditAtomically(
+                            $this->userId,
+                            $price,
+                            'Auto-refund: API job failed — ' . $gvReference,
+                            null
+                        );
+                        // Mark transaction as refunded
+                        $this->db->prepare("
+                            UPDATE api_transactions
+                            SET gv_status = 'refunded', refund_issued = 1, completed_at = NOW()
+                            WHERE id = ?
+                        ")->execute([$apiTxId]);
+                        $autoRefunded = true;
+                    } catch (\Throwable $refundErr) {
+                        error_log('[ApiRequestController] Auto-refund on submit-fail failed for ' . $gvReference . ': ' . $refundErr->getMessage());
+                    }
+                }
+
+                $balanceAfter = $this->walletService->getBalance($this->userId);
+
                 Response::error(
                     $providerResult['error_message'] ?? 'Request failed.',
                     [
-                        'gv_reference' => $gvReference,
-                        'error_code'   => $providerResult['error_code'] ?? null,
-                        'price_paid'   => $price,
-                        'note'         => 'A refund review has been flagged for this transaction.',
+                        'gv_reference'        => $gvReference,
+                        'error_code'          => $providerResult['error_code'] ?? null,
+                        'price_paid'          => $price,
+                        'wallet_balance_after' => $balanceAfter,
+                        'refunded'            => $autoRefunded,
+                        'note'                => $autoRefunded
+                            ? 'Your ₦' . number_format($price, 2) . ' has been automatically refunded to your wallet.'
+                            : 'A refund review has been flagged for this transaction.',
                     ],
                     422
                 );
@@ -712,13 +740,50 @@ class ApiRequestController
                         $upd->execute([json_encode($statusResult['result_data'] ?? []), $tx['id']]);
                         $tx['gv_status'] = 'completed';
                     } elseif ($pStatus === 'failed') {
+                        // Fetch price paid so we can refund the user
+                        $priceStmt = $this->db->prepare("
+                            SELECT COALESCE(sp.price, t.amount, 0) as price_paid
+                            FROM api_transactions at
+                            LEFT JOIN service_pricing sp ON sp.id = at.pricing_id
+                            LEFT JOIN transactions t ON t.id = at.transaction_id
+                            WHERE at.id = ?
+                            LIMIT 1
+                        ");
+                        $priceStmt->execute([$tx['id']]);
+                        $pricePaid = (float)($priceStmt->fetchColumn() ?: 0);
+
+                        // Issue automatic wallet refund if user was charged
+                        $refundIssued = false;
+                        if ($pricePaid > 0 && empty($tx['refund_issued'])) {
+                            try {
+                                $this->walletService->creditAtomically(
+                                    (int)$tx['user_id'],
+                                    $pricePaid,
+                                    'Auto-refund: API job failed — ' . $tx['gv_reference'],
+                                    null
+                                );
+                                $refundIssued = true;
+                            } catch (\Throwable $refundErr) {
+                                error_log('[ApiRequestController] Auto-refund failed for ' . $tx['gv_reference'] . ': ' . $refundErr->getMessage());
+                            }
+                        }
+
+                        $newStatus = $refundIssued ? 'refunded' : 'failed';
                         $upd = $this->db->prepare("
                             UPDATE api_transactions
-                            SET gv_status = 'failed', provider_status = 'failed', error_message = ?
+                            SET gv_status = ?, provider_status = 'failed',
+                                error_message = ?,
+                                refund_issued = ?,
+                                completed_at  = NOW()
                             WHERE id = ?
                         ");
-                        $upd->execute([$statusResult['error_message'] ?? 'Provider failed request', $tx['id']]);
-                        $tx['gv_status'] = 'failed';
+                        $upd->execute([
+                            $newStatus,
+                            $statusResult['error_message'] ?? 'Provider failed request',
+                            $refundIssued ? 1 : 0,
+                            $tx['id']
+                        ]);
+                        $tx['gv_status'] = $newStatus;
                     }
                 }
             }

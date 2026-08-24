@@ -26,6 +26,7 @@ namespace Controllers\Admin;
 
 use Helpers\Response;
 use Services\AuditService;
+use Services\WalletService;
 use PDO;
 use Exception;
 
@@ -33,6 +34,7 @@ class ApiTransactionController
 {
     private PDO $db;
     private AuditService $auditService;
+    private WalletService $walletService;
     private int $adminId;
 
     private const PAGE_SIZE = 25;
@@ -42,9 +44,10 @@ class ApiTransactionController
 
     public function __construct()
     {
-        $this->db          = db();
+        $this->db           = db();
         $this->auditService = new AuditService($this->db);
-        $this->adminId     = (int)($_SERVER['ADMIN_ID'] ?? 1);
+        $this->walletService = new WalletService($this->db);
+        $this->adminId      = (int)($_SERVER['ADMIN_ID'] ?? 1);
     }
 
     // ── Endpoints ─────────────────────────────────────────────────────────────
@@ -354,13 +357,11 @@ class ApiTransactionController
     /**
      * POST /admin/api-transactions/{ref}/refund-flag
      *
-     * Flags a failed/stuck API transaction for wallet refund processing.
-     * Sets refund_issued = 1 to mark it as handled, and records audit trail.
+     * Issues an immediate wallet refund for a failed/stuck API transaction.
+     * Calls WalletService::creditAtomically() to credit the user's wallet,
+     * sets refund_issued = 1 and gv_status = 'refunded', and records an audit trail.
      *
      * Body: { "note": "reason for refund" }
-     *
-     * NOTE: Actual wallet credit must be performed separately by a super_admin
-     * using the existing Refund flow or manual wallet adjustment.
      */
     public function flagForRefund(string $ref): void
     {
@@ -380,52 +381,70 @@ class ApiTransactionController
             }
 
             if ($tx['refund_issued']) {
-                Response::error('This transaction is already flagged for refund.', [], 409);
+                Response::error('This transaction has already been refunded.', [], 409);
                 return;
             }
 
             // Only failed or stuck transactions should be refunded
             if (!in_array($tx['gv_status'], ['failed', 'pending', 'processing'], true)) {
                 Response::error(
-                    'Refund flag only applies to failed/pending/processing transactions. Current status: ' . $tx['gv_status'],
+                    'Refund only applies to failed/pending/processing transactions. Current status: ' . $tx['gv_status'],
                     [], 422
                 );
                 return;
             }
 
+            $pricePaid = (float)($tx['price_paid'] ?? 0);
+            $userId    = (int)$tx['user_id'];
+
+            if ($pricePaid <= 0) {
+                Response::error('Transaction has no chargeable amount to refund.', [], 422);
+                return;
+            }
+
             $this->db->beginTransaction();
 
+            // Credit user wallet atomically
+            $this->walletService->creditAtomically(
+                $userId,
+                $pricePaid,
+                'Admin refund: ' . $ref . ' — ' . $note,
+                null
+            );
+
+            // Mark transaction as refunded
             $this->db->prepare("
                 UPDATE api_transactions
                 SET refund_issued = 1,
-                    gv_status     = 'refunded'
+                    gv_status     = 'refunded',
+                    completed_at  = COALESCE(completed_at, NOW())
                 WHERE id = ?
             ")->execute([$tx['id']]);
 
             $this->auditService->log(
-                'ADMIN_API_TXN_REFUND_FLAGGED',
+                'ADMIN_API_TXN_REFUNDED',
                 $tx['id'],
                 'admin',
                 $this->adminId,
-                ['gv_status' => $tx['gv_status'], 'price' => $tx['price_paid']],
-                ['refund_issued' => 1, 'new_status' => 'refunded'],
+                ['gv_status' => $tx['gv_status'], 'price' => $pricePaid, 'user_id' => $userId],
+                ['refund_issued' => 1, 'new_status' => 'refunded', 'wallet_credited' => true],
                 $note
             );
 
             $this->db->commit();
 
             Response::success([
-                'gv_reference' => $ref,
-                'message'      => 'Transaction flagged for refund. Process wallet credit separately.',
-                'price_paid'   => (float)$tx['price_paid'],
-                'user_id'      => $tx['user_id'],
+                'gv_reference'    => $ref,
+                'message'         => "Refund of ₦" . number_format($pricePaid, 2) . " credited to user wallet successfully.",
+                'amount_refunded' => $pricePaid,
+                'user_id'         => $userId,
             ]);
 
         } catch (Exception $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-            Response::error('Failed to flag refund: ' . $e->getMessage(), [], 500);
+            Response::error('Failed to process refund: ' . $e->getMessage(), [], 500);
         }
     }
 

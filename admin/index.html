@@ -1185,11 +1185,9 @@ async function fetchApiTransactions(page) {
   var tbody = document.getElementById('atxn-body');
   if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">Loading\u2026</td></tr>';
 
-  fetch('../api/admin/api-transactions?' + qs, {
-    headers: { 'Authorization': 'Bearer ' + token }
-  }).then(function(res){ return res.json(); }).then(function(json){
+  gvAdminFetch('../api/admin/api-transactions?' + qs).then(function(raw){ return raw.json(); }).then(function(json){
     if (!json.success) {
-      if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger)">Error loading transactions.</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger)">Error loading transactions: ' + (json.message || 'Unknown error') + '</td></tr>';
       return;
     }
     var items = (json.data && json.data.items) || json.items || [];
@@ -1198,7 +1196,7 @@ async function fetchApiTransactions(page) {
     renderAtxnPagination(totalPages, page);
     fetchApiTxnStats();
   }).catch(function(e){
-    if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger)">Network error.</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger)">Network error: ' + e.message + '</td></tr>';
   });
 }
 
@@ -1252,9 +1250,7 @@ function renderAtxnPagination(totalPages, currentPage) {
 function fetchApiTxnStats() {
   var token = localStorage.getItem('gv_admin_token');
   if (!token) return;
-  fetch('../api/admin/api-transactions/stats', {
-    headers: { 'Authorization': 'Bearer ' + token }
-  }).then(function(res){ return res.json(); }).then(function(json){
+  gvAdminFetch('../api/admin/api-transactions/stats').then(function(raw){ return raw.json(); }).then(function(json){
     if (!json.success) return;
     var data  = json.data || json;
     var today = data.today || {};
