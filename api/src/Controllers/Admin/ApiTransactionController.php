@@ -442,13 +442,125 @@ class ApiTransactionController
 
         } catch (Exception $e) {
             if ($this->db->inTransaction()) {
-                $this->db->rollBack();
+            $this->db->rollBack();
             }
             Response::error('Failed to process refund: ' . $e->getMessage(), [], 500);
         }
     }
 
+    /**
+     * POST /admin/api-transactions/batch-refund
+     *
+     * Bulk-refunds ALL api_transactions that are failed/processing/pending
+     * with refund_issued = 0. Intended to recover user money from pre-fix
+     * failed jobs that were never automatically refunded.
+     *
+     * Super admin only. Idempotent — safe to run multiple times.
+     */
+    public function batchRefund(): void
+    {
+        try {
+            AdminMiddleware::requireRole('super_admin');
+
+            // Fetch all unrefunded failed/stuck transactions
+            $stmt = $this->db->query("
+                SELECT
+                    at.id, at.gv_reference, at.user_id, at.gv_status,
+                    COALESCE(sp.price, t.amount, 0) AS price_paid
+                FROM api_transactions at
+                LEFT JOIN service_pricing sp ON sp.id = at.pricing_id
+                LEFT JOIN transactions   t  ON t.id  = at.transaction_id
+                WHERE at.gv_status IN ('failed', 'pending', 'processing')
+                  AND at.refund_issued = 0
+            ");
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($rows)) {
+                Response::success([
+                    'message'        => 'No unrefunded failed transactions found. All clear.',
+                    'refunded_count' => 0,
+                    'total_amount'   => 0,
+                    'errors'         => []
+                ]);
+                return;
+            }
+
+            $refundedCount  = 0;
+            $totalAmount    = 0.0;
+            $errors         = [];
+
+            foreach ($rows as $tx) {
+                $pricePaid = (float)$tx['price_paid'];
+                if ($pricePaid <= 0) {
+                    // Nothing to refund — just mark as handled
+                    $this->db->prepare("
+                        UPDATE api_transactions
+                        SET refund_issued = 1, gv_status = 'refunded',
+                            completed_at = COALESCE(completed_at, NOW())
+                        WHERE id = ?
+                    ")->execute([$tx['id']]);
+                    continue;
+                }
+
+                try {
+                    $this->db->beginTransaction();
+
+                    $this->walletService->creditAtomically(
+                        (int)$tx['user_id'],
+                        $pricePaid,
+                        'Batch auto-refund: ' . $tx['gv_reference'] . ' (' . $tx['gv_status'] . ')',
+                        null
+                    );
+
+                    $this->db->prepare("
+                        UPDATE api_transactions
+                        SET gv_status = 'refunded', refund_issued = 1,
+                            completed_at = COALESCE(completed_at, NOW())
+                        WHERE id = ?
+                    ")->execute([$tx['id']]);
+
+                    $this->auditService->log(
+                        'ADMIN_BATCH_REFUND',
+                        $tx['id'],
+                        'admin',
+                        $this->adminId,
+                        ['gv_status' => $tx['gv_status'], 'price' => $pricePaid],
+                        ['refund_issued' => 1, 'new_status' => 'refunded'],
+                        'Batch refund by admin'
+                    );
+
+                    $this->db->commit();
+
+                    $refundedCount++;
+                    $totalAmount += $pricePaid;
+
+                } catch (\Throwable $e) {
+                    if ($this->db->inTransaction()) {
+                        $this->db->rollBack();
+                    }
+                    $errors[] = [
+                        'ref'     => $tx['gv_reference'],
+                        'user_id' => $tx['user_id'],
+                        'error'   => $e->getMessage()
+                    ];
+                }
+            }
+
+            Response::success([
+                'message'        => "Batch refund complete. {$refundedCount} transaction(s) refunded totalling ₦" . number_format($totalAmount, 2) . '.',
+                'refunded_count' => $refundedCount,
+                'total_amount'   => $totalAmount,
+                'skipped_count'  => count($errors),
+                'errors'         => $errors
+            ]);
+
+        } catch (Exception $e) {
+            Response::error('Batch refund failed: ' . $e->getMessage(), [], 500);
+        }
+    }
+
     // ── Private Helpers ────────────────────────────────────────────────────────
+
 
     /**
      * Find a single api_transaction by GV reference (no user restriction — admin view).

@@ -89,6 +89,10 @@ addRoute('POST',  '/admin/api-transactions/{ref}/refund-flag', function ($p) {
     \Middleware\AdminMiddleware::requireRole('admin');
     (new ApiTransactionController())->flagForRefund($p['ref']);
 });
+addRoute('POST',  '/admin/api-transactions/batch-refund',      function () {
+    \Middleware\AdminMiddleware::requireRole('super_admin');
+    (new ApiTransactionController())->batchRefund();
+});
 
 // GemPrint (Admin)
 addRoute('GET',    '/admin/gemprint/config',                     function ()    { 

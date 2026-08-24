@@ -560,7 +560,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 </section>
 
 
-<section id="page-api-transactions" class="page"><div class="heading"><div><h1>API Transactions</h1><p>TechHub-powered service requests — NIN, BVN, Self-Service, Personalization, IPE.</p></div><div style="display:flex;gap:8px;align-items:center"><select id="atxn-filter-status" onchange="fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px"><option value="">All Statuses</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select><input id="atxn-search" type="text" placeholder="Search ref / ticket…" onkeydown="if(event.key==='Enter')fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;width:200px"><button class="primary" onclick="fetchApiTransactions(1)" style="height:36px;padding:0 14px;font-size:13px">🔄 Refresh</button></div></div><div id="atxn-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div><div class="card"><table id="atxn-table"><thead><tr><th>GV Reference</th><th>User</th><th>Service</th><th>Variant</th><th>Method</th><th>Status</th><th>Provider</th><th>Amount</th><th>Submitted</th><th>Actions</th></tr></thead><tbody id="atxn-body"><tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr></tbody></table></div><div id="atxn-pagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px"></div>
+<section id="page-api-transactions" class="page"><div class="heading"><div><h1>API Transactions</h1><p>TechHub-powered service requests — NIN, BVN, Self-Service, Personalization, IPE.</p></div><div style="display:flex;gap:8px;align-items:center"><button id="btn-batch-refund" onclick="batchRefundFailed()" style="height:36px;padding:0 14px;font-size:13px;border-radius:8px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;font-weight:600" title="Refund all failed/stuck transactions with no refund issued">⚠ Refund All Failed</button><select id="atxn-filter-status" onchange="fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px"><option value="">All Statuses</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select><input id="atxn-search" type="text" placeholder="Search ref / ticket…" onkeydown="if(event.key==='Enter')fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;width:200px"><button class="primary" onclick="fetchApiTransactions(1)" style="height:36px;padding:0 14px;font-size:13px">🔄 Refresh</button></div></div><div id="atxn-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div><div class="card"><table id="atxn-table"><thead><tr><th>GV Reference</th><th>User</th><th>Service</th><th>Variant</th><th>Method</th><th>Status</th><th>Provider</th><th>Amount</th><th>Submitted</th><th>Actions</th></tr></thead><tbody id="atxn-body"><tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr></tbody></table></div><div id="atxn-pagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px"></div>
 
 <!-- API Transaction Detail Modal -->
 <div id="atxn-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
@@ -574,12 +574,12 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 <div id="atxn-refund-modal" style="display:none;position:fixed;inset:0;z-index:210;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
 <div style="background:var(--card);border-radius:16px;max-width:480px;width:100%;padding:28px;position:relative">
 <button onclick="document.getElementById('atxn-refund-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text)">✕</button>
-<h2 style="margin:0 0 16px;font-size:16px">⚠ Flag for Refund</h2>
+<h2 style="margin:0 0 16px;font-size:16px">⚠ Issue Wallet Refund</h2>
 <p id="atxn-refund-info" style="font-size:13px;margin-bottom:12px;opacity:.7"></p>
 <textarea id="atxn-refund-note" placeholder="Reason for refund…" style="width:100%;height:80px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
 <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
 <button onclick="document.getElementById('atxn-refund-modal').style.display='none'" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text);cursor:pointer">Cancel</button>
-<button id="atxn-refund-confirm" class="primary" style="padding:8px 18px;border-radius:8px">Confirm Refund Flag</button>
+<button id="atxn-refund-confirm" class="primary" style="padding:8px 18px;border-radius:8px">Confirm & Credit Wallet</button>
 </div></div></div>
 
 </section>
@@ -1285,8 +1285,8 @@ function viewAtxnDetail(ref) {
     var errorRow = tx.error_code ? '<div style="grid-column:1/-1"><strong>Error</strong><br><span style="color:#ef4444">[' + tx.error_code + '] ' + (tx.error_message||'') + '</span></div>' : '';
     var summaryRow = tx.input_summary ? '<div style="grid-column:1/-1"><strong>Input Summary (masked)</strong><br><code style="font-size:11px;opacity:.8">' + tx.input_summary + '</code></div>' : '';
     var resultRow  = tx.has_result ? '<div style="grid-column:1/-1"><span style="color:#22c55e">\u2713 Result data available</span></div>' : '';
-    var refundBtn  = (!tx.refund_issued && (tx.gv_status==='failed'||tx.gv_status==='pending'))
-      ? '<div style="margin-top:16px;display:flex;justify-content:flex-end"><button onclick="openAtxnRefundModal(\'' + tx.gv_reference + '\',\'' + ((tx.user && tx.user.business_name)||'').replace(/'/g,"\\'") + '\',' + (tx.price_paid||0) + ')" style="padding:8px 18px;border-radius:8px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer">Flag for Refund</button></div>'
+    var refundBtn  = (!tx.refund_issued && (tx.gv_status==='failed'||tx.gv_status==='pending'||tx.gv_status==='processing'))
+      ? '<div style="margin-top:16px;display:flex;justify-content:flex-end"><button onclick="openAtxnRefundModal(\'' + tx.gv_reference + '\',\'' + ((tx.user && tx.user.business_name)||'').replace(/'/g,"\\'") + '\',' + (tx.price_paid||0) + ')" style="padding:8px 18px;border-radius:8px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;font-weight:600">⚠ Issue Refund</button></div>'
       : '';
     content.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">'
       + '<div><strong>GV Reference</strong><br><code style="font-size:12px">' + tx.gv_reference + '</code></div>'
@@ -1317,7 +1317,7 @@ function openAtxnRefundModal(ref, userName, price) {
   var info  = document.getElementById('atxn-refund-info');
   var note  = document.getElementById('atxn-refund-note');
   var modal = document.getElementById('atxn-refund-modal');
-  if (info) info.textContent = 'Flag ' + ref + ' (' + userName + ') \u2014 \u20a6' + Number(price).toLocaleString() + ' for wallet refund. This marks the transaction and sets status to "refunded". Process actual wallet credit separately.';
+  if (info) info.textContent = 'Issue wallet refund for ' + ref + ' (' + userName + ') — ₦' + Number(price).toLocaleString() + '. This will immediately credit the user\'s wallet and mark the transaction as refunded.';
   if (note) note.value = '';
   if (modal) modal.style.display = 'flex';
   document.getElementById('atxn-modal').style.display = 'none';
@@ -1328,27 +1328,58 @@ function openAtxnRefundModal(ref, userName, price) {
 function confirmAtxnRefund(ref) {
   var noteEl = document.getElementById('atxn-refund-note');
   var note   = noteEl ? noteEl.value.trim() : '';
-  var token  = localStorage.getItem('gv_admin_token');
-  if (!note) { alert('Please enter a reason.'); return; }
+  if (!note) { alert('Please enter a reason for the refund.'); return; }
   var btn = document.getElementById('atxn-refund-confirm');
   if (btn) { btn.disabled = true; btn.textContent = 'Processing\u2026'; }
-  fetch('../api/admin/api-transactions/' + ref + '/refund-flag', {
+  gvAdminFetch('../api/admin/api-transactions/' + ref + '/refund-flag', {
     method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ note: note })
   }).then(function(res){ return res.json(); }).then(function(json){
     if (json.success) {
       document.getElementById('atxn-refund-modal').style.display = 'none';
       fetchApiTransactions(atxnCurrentPage);
-      var uid = (json.data && json.data.user_id) || json.user_id || '?';
-      alert('\u2713 ' + ref + ' flagged for refund. Process wallet credit for user_id=' + uid + '.');
+      var msg = (json.data && json.data.message) || json.message || 'Refund processed.';
+      if (typeof gvShowToast === 'function') {
+        gvShowToast('\u2713 ' + msg, 'success');
+      } else {
+        alert('\u2713 ' + msg);
+      }
     } else {
       alert('Error: ' + (json.message || 'Unknown error'));
     }
   }).catch(function(e){
     alert('Network error: ' + e.message);
   }).finally(function(){
-    if (btn) { btn.disabled = false; btn.textContent = 'Confirm Refund Flag'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirm & Credit Wallet'; }
+  });
+}
+
+function batchRefundFailed() {
+  if (!confirm('This will immediately refund ALL failed/stuck API transactions to user wallets.\n\nAre you sure? This is irreversible.')) return;
+  var btn = document.getElementById('btn-batch-refund');
+  if (btn) { btn.disabled = true; btn.textContent = 'Processing\u2026'; }
+  gvAdminFetch('../api/admin/api-transactions/batch-refund', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }).then(function(raw){ return raw.json(); }).then(function(json){
+    if (json.success) {
+      var d = json.data || json;
+      var msg = d.message || 'Batch refund complete.';
+      if (typeof gvShowToast === 'function') {
+        gvShowToast('\u2713 ' + msg, 'success');
+      } else {
+        alert('\u2713 ' + msg);
+      }
+      fetchApiTransactions(1);
+      if (typeof loadStats === 'function') loadStats();
+    } else {
+      alert('Batch refund error: ' + (json.message || 'Unknown'));
+    }
+  }).catch(function(e){
+    alert('Network error: ' + e.message);
+  }).finally(function(){
+    if (btn) { btn.disabled = false; btn.textContent = '\u26a0 Refund All Failed'; }
   });
 }
 let services = [];
@@ -2600,27 +2631,48 @@ async function refreshProviderBalances(){
   try {
     const totalEl = document.getElementById('providerTotal');
     if (totalEl) totalEl.textContent = 'Syncing...';
-    
+
     const raw = await gvAdminFetch('../api/admin/provider-balances');
     const res = await raw.json();
     if (res && res.success && res.data) {
       const data = res.data;
       if (totalEl) totalEl.textContent = money(data.total_balance || 0);
-      
+
       const tableBody = document.querySelector('#providerTable tbody');
       if (tableBody && Array.isArray(data.providers)) {
-        tableBody.innerHTML = data.providers.map(p => `
+        tableBody.innerHTML = data.providers.map(p => {
+          // Determine status pill colour
+          var pillClass = p.status === 'Active' ? 'green' : (p.status === 'High Load' ? 'amber' : 'red');
+          // Build extra job-count columns if present
+          var jobInfo = '';
+          if (p.jobs_completed !== undefined) {
+            jobInfo = `<span style="font-size:11px;color:var(--muted)">
+              ✓ ${p.jobs_completed} done &nbsp;
+              ⏳ ${p.jobs_pending} pending &nbsp;
+              ✗ ${p.jobs_failed} failed
+            </span>`;
+          }
+          var spendLabel = p.spend_total !== undefined
+            ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">Pending: ${money(p.spend_pending || 0)}</div>`
+            : '';
+          return `
           <tr>
-            <td><b>${p.name}</b></td>
+            <td><b>${p.name}</b>${p.note ? `<br><span style="font-size:10px;opacity:.6">${p.note}</span>` : ''}</td>
             <td><small>${p.category}</small></td>
-            <td><strong style="color:${p.available_balance > 0 ? '#16a34a' : 'inherit'}">${money(p.available_balance)}</strong></td>
-            <td>${money(p.threshold)}</td>
-            <td><span class="pill ${p.status === 'Healthy' ? 'green' : 'amber'}">${p.status}</span></td>
+            <td>
+              <strong style="color:#16a34a">${money(p.spend_total !== undefined ? p.spend_total : p.available_balance)}</strong>
+              ${spendLabel}
+            </td>
+            <td>${jobInfo}</td>
+            <td><span class="pill ${pillClass}">${p.status}</span></td>
             <td><small>${p.last_sync}</small></td>
-            <td><button class="secondary" style="padding:4px 8px;font-size:11px" onclick="viewProvider('${escapeJs(p.name)}')">View</button></td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
       }
+      // Update column headers to reflect new data
+      const thead = document.querySelector('#providerTable thead tr');
+      if (thead) thead.innerHTML = '<th>Provider</th><th>Category</th><th>Total Spend</th><th>Jobs</th><th>Status</th><th>Last Sync</th>';
     } else {
       alert('Failed to refresh provider balances: ' + (res?.message || 'Unknown error'));
     }
@@ -2658,6 +2710,11 @@ function openKpiPage(page){
     go('active-users');
     return;
   }
+  // Failed Txns → API Transactions page filtered to failed status
+  if (page === 'failed-txns') {
+    openFailedTransactions();
+    return;
+  }
   const pages = {
     'registered-accounts': ['Registered Accounts', 'users'],
     'wallet-liability':    ['Wallet Liability', 'wallet-funding'],
@@ -2666,12 +2723,23 @@ function openKpiPage(page){
     'profit-today':        ['Profit Today', 'profit'],
     'total-profit':        ['Total Profit', 'profit'],
     'successful-txn':      ['Successful Transactions', 'completed'],
-    'failed-txns':         ['Failed Transactions', 'rejected'],
     'withdrawable-profit': ['Withdrawable Profit', 'profit'],
     'provider-balance':    ['Providers Balance', 'provider-balance']
   };
   const item = pages[page];
   if(item) go(item[1]);
+}
+
+function openFailedTransactions() {
+  go('api-transactions');
+  // Set the status filter to "failed" and reload
+  var sel = document.getElementById('atxn-filter-status');
+  if (sel) {
+    sel.value = 'failed';
+  }
+  if (typeof fetchApiTransactions === 'function') {
+    fetchApiTransactions(1);
+  }
 }
 
 function closeKpiDetail(){
