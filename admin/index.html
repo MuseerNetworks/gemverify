@@ -840,10 +840,14 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   </div>
 </div>
 <section id="page-refunds" class="page">
-  <div class="heading"><div><h1>Refunds</h1><p>Refund requests and processed refunds.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>Refunds Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Refund transactions recorded.</td></tr></tbody></table></div>
+  <div class="heading"><div><h1>Refunds</h1><p>All refunded transactions — manual and API-based.</p></div><button class="secondary" onclick="go('dashboard')">&#8592; Dashboard</button></div>
+  <div id="refunds-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px"></div>
+  <div class="card">
+    <div class="card-head"><h3>Refunded Transactions</h3><span id="refunds-count" style="color:var(--muted);font-size:13px">Loading...</span></div>
+    <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Type</th><th>Amount</th><th>Date</th></tr></thead>
+    <tbody id="refunds-body"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr></tbody>
+    </table>
+  </div>
 </section>
 <section id="page-active-users" class="page" style="display:none"><!-- merged above --></section>
 <section id="page-suspended-users" class="page" style="display:none"><!-- merged above --></section>
@@ -859,9 +863,6 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
   <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No custom roles configured. Standard RBAC active.</td></tr></tbody></table></div>
 </section>
-<section id="page-suspended-users" class="page" style="display:none"><!-- duplicate --></section>
-<section id="page-notifications" class="page" style="display:none"><!-- duplicate --></section>
-<section id="page-roles" class="page" style="display:none"><!-- duplicate --></section>
 
 
 <section id="page-provider-balance" class="page">
@@ -1262,7 +1263,7 @@ function fetchApiTxnStats() {
     stats.innerHTML =
       '<div class="stat"><small>Today\'s Requests</small><strong>' + (today.cnt||0) + '</strong></div>' +
       '<div class="stat"><small>Today\'s Revenue</small><strong>\u20a6' + Number(today.revenue||0).toLocaleString() + '</strong></div>' +
-      '<div class="stat"><small>Pending / Processing</small><strong style="color:#f59e0b">' + (data.pending_count||0) + '</strong></div>' +
+      '<div class="stat"><small>Pending / Processing</small><strong style="color:#f59e0b">' + ((data.total_pending||0) + (data.total_processing||0)) + '</strong></div>' +
       '<div class="stat"><small>Failed (Unrefunded)</small><strong style="color:#ef4444">' + (data.failed_pending_refund||0) + '</strong></div>';
   }).catch(function(e){});
 }
@@ -1489,9 +1490,7 @@ async function fetchDashboardData(){
   const token = localStorage.getItem('gv_admin_token');
   if(!token) return;
   try {
-    const res = await fetch('../api/admin/stats', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
+    const res = await gvAdminFetch('../api/admin/stats');
     const json = await res.json();
     if(json.success) {
       const data = json.data;
@@ -1536,9 +1535,7 @@ async function renderLiveQueue(pageNumber) {
   tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr>';
   if (paginEl) paginEl.style.display = 'none';
   try {
-    const res = await fetch('../api/admin/requests?per_page=' + PER_PAGE + '&page=' + pageNumber, {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
+    const res = await gvAdminFetch('../api/admin/requests?per_page=' + PER_PAGE + '&page=' + pageNumber);
     const json = await res.json();
     if (json.success && json.data) {
       const list = json.data.requests || [];
@@ -1604,7 +1601,7 @@ async function renderRequestsQueue(page, statusFilter, pageNumber) {
     let url = '../api/admin/requests?per_page=10&page=' + pageNumber;
     if (statusFilter) url += '&status=' + statusFilter;
 
-    const res  = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    const res  = await gvAdminFetch(url);
     const json = await res.json();
 
     if (json.success && json.data) {
@@ -1673,14 +1670,15 @@ async function renderRequestsQueue(page, statusFilter, pageNumber) {
       }
     }
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:var(--muted)">Error loading requests.</td></tr>`;
+    const errMsg = (e && e.message) ? e.message : 'Error loading requests. Please try again.';
+    tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:#ef4444">${errMsg}</td></tr>`;
     console.error('[renderRequestsQueue]', e);
   }
 }
 
 
 function logout(){document.getElementById('app').classList.remove('on');document.getElementById('login').style.display='grid'}
-function go(page,btn){
+async function go(page,btn){
  window.scrollTo(0,0);
  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
  const p=document.getElementById('page-'+page);if(p)p.classList.add('active');
@@ -1692,12 +1690,14 @@ function go(page,btn){
  window.scrollTo(0,0);
 
   // Fetch queue data dynamically on navigation
-  if(page === "requests") renderRequestsQueue("requests");
+  if(page === "requests") await renderRequestsQueue("requests");
   if(page === "products" || page === "orders" || page === "print-jobs" || page === "inventory" || page === "gemprint" || page === "settings") fetchGemPrintAdminData();
-  if(page === "pending") renderRequestsQueue("pending", "submitted");
-  if(page === "processing") renderRequestsQueue("processing", "processing");
-  if(page === "completed") renderRequestsQueue("completed", "completed");
-  if(page === "rejected") renderRequestsQueue("rejected", "rejected");
+  if(page === "pending") await renderRequestsQueue("pending", "submitted");
+  if(page === "processing") await renderRequestsQueue("processing", "processing");
+  if(page === "completed") await renderRequestsQueue("completed", "completed");
+  if(page === "rejected") loadFailedTxns();
+  if(page === "refunds") loadRefunds();
+  if(page === "api-transactions") { if(typeof fetchApiTransactions==="function") fetchApiTransactions(1); if(typeof fetchApiTxnStats==="function") fetchApiTxnStats(); }
   if(page === "services") fetchAdminServices();
   if(page === "wallet-funding") fetchWalletTopups(1);
   if(page === "admin-profile") { gvInitProfileUI(); gvLoadAdminList(); }
@@ -1710,6 +1710,62 @@ function go(page,btn){
   }
   if(page === "suspended-users") fetchAdminUsers(1, 'suspended');
   if(page === "transactions") fetchAdminTransactions(1);
+  // ── Smart back button ─────────────────────────────────────────────────────
+  gvUpdateAdminBackBtn(page);
+}
+// Back button target map for admin pages
+const _gvAdminBackMap = {
+  // No back button
+  "dashboard": null,
+  // Level-2 pages → parent section
+  "active-users":    "users",
+  "suspended-users": "users",
+  "admin-profile":   "settings",
+  // Service detail pages → requests queue
+  "nin-modification":   "requests",
+  "nin-dob":            "requests",
+  "nin-ipe":            "requests",
+  "nin-validation":     "requests",
+  "nin-delinking":      "requests",
+  "bvn-modification":   "requests",
+  "bvn-risk":           "requests",
+  "bvn-license":        "requests",
+  "bvn-nonappearance":  "requests",
+  "cac-business":       "requests",
+  "cac-ltd":            "requests",
+  "cac-verification":   "requests",
+  "tin":                "requests",
+  "attestation":        "requests",
+  "jamb-result":        "requests",
+  "jamb-slip":          "requests",
+  "jamb-admission":     "requests",
+  "jamb-reprints":      "requests",
+  "jamb-all":           "requests",
+};
+function gvUpdateAdminBackBtn(page) {
+  // Remove any existing back button
+  document.querySelectorAll('.gv-admin-back-btn').forEach(el => el.remove());
+  const target = Object.prototype.hasOwnProperty.call(_gvAdminBackMap, page)
+    ? _gvAdminBackMap[page]
+    : "dashboard"; // All other pages default to ← Dashboard
+  if (!target) return; // Dashboard — no back button
+  const targetLabel = target === "dashboard" ? "Dashboard"
+    : target === "users" ? "Users"
+    : target === "requests" ? "Requests"
+    : target === "settings" ? "Settings"
+    : "Dashboard";
+  const pageEl = document.getElementById('page-' + page);
+  if (!pageEl) return;
+  const headingDiv = pageEl.querySelector('.heading');
+  if (!headingDiv) return;
+  const btn = document.createElement('button');
+  btn.className = 'gv-admin-back-btn';
+  btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 5 5 12 12 19"/></svg> ' + targetLabel;
+  btn.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:none;border:none;padding:0;font-size:12px;font-weight:500;color:#6b7280;cursor:pointer;margin-bottom:6px;transition:color .15s;width:100%;';
+  btn.onmouseenter = () => btn.style.color = '#0b5cff';
+  btn.onmouseleave = () => btn.style.color = '#6b7280';
+  btn.onclick = () => go(target);
+  headingDiv.insertBefore(btn, headingDiv.firstChild);
 }
 function toggleSidebar(){
  const side=document.getElementById('side');
@@ -2834,6 +2890,48 @@ function loadFailedTxns() {
   });
 }
 
+function loadRefunds() {
+  var tbody = document.getElementById('refunds-body');
+  var countEl = document.getElementById('refunds-count');
+  var summaryEl = document.getElementById('refunds-summary');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr>';
+  gvAdminFetch('../api/admin/requests?status=refunded&per_page=200')
+    .then(function(r) { return r.json(); })
+    .then(function(json) {
+      var items = (json.data && json.data.requests) || json.requests || [];
+      if (summaryEl) {
+        var mc = items.filter(function(r){ return r.request_type === 'manual'; }).length;
+        var ac = items.filter(function(r){ return r.request_type === 'api'; }).length;
+        var tot = items.reduce(function(s,r){ return s + Number(r.price_paid||0); }, 0);
+        summaryEl.innerHTML =
+          '<div class="stat"><small>Manual Refunds</small><strong style="color:#8b5cf6">' + mc + '</strong></div>' +
+          '<div class="stat"><small>API Refunds</small><strong style="color:#8b5cf6">' + ac + '</strong></div>' +
+          '<div class="stat"><small>Total Refunded</small><strong style="color:#8b5cf6">&#8358;' + Number(tot).toLocaleString() + '</strong></div>';
+      }
+      if (!items.length) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">No refunded transactions found.</td></tr>';
+        if (countEl) countEl.textContent = '0 records';
+        return;
+      }
+      if (countEl) countEl.textContent = items.length + ' record' + (items.length !== 1 ? 's' : '');
+      if (tbody) tbody.innerHTML = items.map(function(r) {
+        var pill = r.request_type === 'api'
+          ? '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#dbeafe;color:#1d4ed8;font-weight:600">API</span>'
+          : '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#f3e8ff;color:#7c3aed;font-weight:600">Manual</span>';
+        return '<tr>' +
+          '<td><code style="font-size:11px">' + (r.reference||'&mdash;') + '</code></td>' +
+          '<td>' + ((r.user&&r.user.business_name)||'&mdash;') + '</td>' +
+          '<td>' + ((r.service&&r.service.name)||'&mdash;') + '</td>' +
+          '<td>' + pill + '</td>' +
+          '<td><span style="color:#8b5cf6;font-weight:600">&#8358;' + Number(r.price_paid||0).toLocaleString() + '</span></td>' +
+          '<td><small>' + (r.submitted_at ? r.submitted_at.slice(0,16) : '&mdash;') + '</small></td>' +
+          '</tr>';
+      }).join('');
+    })
+    .catch(function(e) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#ef4444">Error loading refunds: ' + e.message + '</td></tr>';
+    });
+}
 function closeKpiDetail(){
   const m=document.getElementById('kpiDetailModal');
   if(m){m.classList.remove('show');m.setAttribute('aria-hidden','true');}
@@ -3599,8 +3697,13 @@ async function gvRestoreSession() {
   const overlay = document.getElementById('gv-session-overlay');
   if (overlay) overlay.style.display = 'flex';
 
+  // Abort after 6 seconds to prevent indefinite "Restoring session..." hang
+  const ctrl = new AbortController();
+  const timeoutId = setTimeout(() => ctrl.abort(), 6000);
+
   try {
-    const res = await gvAdminFetch('../api/auth/me');
+    const res = await gvAdminFetch('../api/auth/me', { signal: ctrl.signal });
+    clearTimeout(timeoutId);
 
     if (res.ok) {
       // Token valid — restore the session without a page reload
@@ -3618,8 +3721,10 @@ async function gvRestoreSession() {
       if (overlay) overlay.style.display = 'none';
     }
   } catch (e) {
-    // 401/403 already handled by gvAdminFetch (token cleared, logout called)
-    // Network error falls here too — just hide overlay and show login
+    clearTimeout(timeoutId);
+    // Network error or timeout — clear stale token so next load skips restore loop
+    localStorage.removeItem('gv_admin_token');
+    localStorage.removeItem('gv_admin');
     if (overlay) overlay.style.display = 'none';
     console.warn('[gvRestoreSession]', e.message || e);
   }

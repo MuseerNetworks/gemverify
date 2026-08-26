@@ -142,15 +142,12 @@ class RequestController
             }, $requests);
 
             Response::success([
-                'success' => true,
-                'data' => [
-                    'requests' => $formattedRequests,
-                    'pagination' => [
-                        'total' => $total,
-                        'page' => $page,
-                        'per_page' => $perPage,
-                        'total_pages' => ceil($total / $perPage)
-                    ]
+                'requests' => $formattedRequests,
+                'pagination' => [
+                    'total' => $total,
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'total_pages' => (int)ceil($total / $perPage)
                 ]
             ]);
         } catch (Exception $e) {

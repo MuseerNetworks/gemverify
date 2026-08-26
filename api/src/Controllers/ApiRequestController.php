@@ -452,11 +452,26 @@ class ApiRequestController
 
                 $balanceAfter = $this->walletService->getBalance($this->userId);
 
+                // Translate provider-side balance errors so users aren't confused.
+                // TechHub returns HTTP 400 "Insufficient balance." when our API
+                // account credits are exhausted — this has NOTHING to do with the
+                // user's GemVerify wallet. Show a clear, honest message instead.
+                $rawMsg    = $providerResult['error_message'] ?? 'Request failed.';
+                $errorCode = $providerResult['error_code'] ?? null;
+                if ($errorCode === 'HTTP_400' && stripos($rawMsg, 'insufficient balance') !== false) {
+                    $displayMsg = 'This service is temporarily unavailable due to a provider issue on our end. '
+                        . ($autoRefunded
+                            ? 'You have NOT been charged — your payment has been automatically refunded.'
+                            : 'A refund review has been flagged for your transaction.');
+                } else {
+                    $displayMsg = $rawMsg;
+                }
+
                 Response::error(
-                    $providerResult['error_message'] ?? 'Request failed.',
+                    $displayMsg,
                     [
                         'gv_reference'        => $gvReference,
-                        'error_code'          => $providerResult['error_code'] ?? null,
+                        'error_code'          => $errorCode,
                         'price_paid'          => $price,
                         'wallet_balance_after' => $balanceAfter,
                         'refunded'            => $autoRefunded,
