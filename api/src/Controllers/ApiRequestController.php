@@ -160,10 +160,14 @@ class ApiRequestController
             return;
         }
 
-        // ── 2. Mixed-mode variant routing ─────────────────────────────────
-        // Certain variants on API-based services are silently processed by
-        // the manual engine (Option B decision for 'Retrieval NIN Details').
-        if ($this->isManualVariantOverride($serviceSlug, $variantKey)) {
+        // ── 2. Dynamic Manual Routing Check ──────────────────────────────
+        // Check if the service is marked as manual (is_manual = 1) in the database,
+        // or matches a manual variant override, and route directly to the manual engine.
+        $svcStmt = $this->db->prepare("SELECT id, is_manual FROM services WHERE slug = ? AND is_active = 1 LIMIT 1");
+        $svcStmt->execute([$serviceSlug]);
+        $svcRow = $svcStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (($svcRow && (int)$svcRow['is_manual'] === 1) || $this->isManualVariantOverride($serviceSlug, $variantKey)) {
             $this->delegateToManualEngine($serviceSlug, $variantKey, $formData, $idempotencyKey, $pin);
             return;
         }

@@ -1680,7 +1680,21 @@ async function renderRequestsQueue(page, statusFilter, pageNumber) {
 }
 
 
-function logout(){document.getElementById('app').classList.remove('on');document.getElementById('login').style.display='grid'}
+function logout() {
+  localStorage.removeItem('gv_admin_token');
+  localStorage.removeItem('gv_admin');
+  document.getElementById('app').classList.remove('on');
+  document.getElementById('login').style.display = 'grid';
+  const btn = document.getElementById('loginBtn');
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = 'Sign In to Admin Hub';
+  }
+  const pwd = document.getElementById('password');
+  if (pwd) pwd.value = '';
+  const errEl = document.getElementById('loginError');
+  if (errEl) errEl.style.display = 'none';
+}
 async function go(page,btn){
  window.scrollTo(0,0);
  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
