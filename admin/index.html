@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <link rel="icon" type="image/png" href="../assets/img/auth-shield.png">
@@ -246,6 +246,9 @@ body.dark-mode .modal-head{border-color:#1f2937}
 body.dark-mode .modal-foot{background:#0f172a;border-color:#1f2937}
 body.dark-mode div[style*="f8fafc"]{background:#0f172a!important;border-color:#1f2937!important}
 body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!important;border-color:#4a3a17!important}
+@keyframes gv-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.animate-spin { animation: gv-spin 0.75s linear infinite !important; display: inline-block !important; vertical-align: middle; }
+.gv-spinner { width: 14px; height: 14px; display: inline-block; vertical-align: middle; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: gv-spin 0.75s linear infinite; }
 </style>
 </head>
 <body>
@@ -1457,7 +1460,7 @@ async function login(){
     errEl.style.display = 'block';
     return;
   }
-  btn.disabled = true; btn.textContent = 'Authenticating...';
+  btn.disabled = true; btn.innerHTML = '<span class="gv-spinner" style="border:2px solid #fff;border-top-color:transparent;border-radius:50%;width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:8px;animation:gv-spin .7s linear infinite;"></span> Authenticating...';
   try {
     const res = await fetch('../api/admin/auth/login', {
       method: 'POST',
