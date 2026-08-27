@@ -125,12 +125,16 @@ class ManualRequestController
                     c.name as category, 
                     s.est_time as est_time, 
                     s.slug as service_slug,
+                    r.variant_key,
+                    rfd.form_data as form_data,
+                    NULL as input_summary,
                     CASE WHEN r.result_file_id IS NOT NULL THEN 1 ELSE 0 END as has_result,
                     'manual' as request_type,
                     NULL as provider_ticket_id
                 FROM manual_requests r
                 JOIN services s ON r.service_id = s.id
                 JOIN service_categories c ON s.category_id = c.id
+                LEFT JOIN request_form_data rfd ON rfd.request_id = r.id
                 WHERE r.user_id = :userId1 {$statusClause1}
 
                 UNION ALL
@@ -144,6 +148,9 @@ class ManualRequestController
                     c.name as category, 
                     COALESCE(s.est_time, 'Instant') as est_time, 
                     s.slug as service_slug,
+                    t.variant_key,
+                    NULL as form_data,
+                    t.input_summary,
                     CASE WHEN t.result_data IS NOT NULL THEN 1 ELSE 0 END as has_result,
                     'api' as request_type,
                     t.provider_ticket_id

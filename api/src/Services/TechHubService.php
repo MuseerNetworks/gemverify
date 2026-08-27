@@ -567,34 +567,68 @@ class TechHubService
 
     /**
      * Generate a masked summary of input data for audit logging.
-     * Masks sensitive digits — e.g. "12345678901" → "123****901"
+     * Stores full identifiers for all GemVerify service types (no masking).
      */
     public function buildInputSummary(string $slug, ?string $inputMethod, array $formData): string
     {
         $parts = ["service={$slug}"];
 
+        // NIN — used by NIN Verification, Enrollment, Modification, Validation, Self-Service etc.
         if (!empty($formData['nin'])) {
-            $nin = preg_replace('/\D/', '', $formData['nin']);
-            $parts[] = 'NIN:' . substr($nin, 0, 3) . '****' . substr($nin, -3);
+            $parts[] = 'NIN:' . preg_replace('/\D/', '', $formData['nin']);
         }
+        // BVN — used by BVN Verification, Retrieval, Modification, Risk etc.
+        if (!empty($formData['bvn'])) {
+            $parts[] = 'BVN:' . preg_replace('/\D/', '', $formData['bvn']);
+        }
+        // Phone numbers
         if (!empty($formData['phone'])) {
-            $ph = preg_replace('/\D/', '', $formData['phone']);
-            $parts[] = 'phone:' . substr($ph, 0, 4) . '***' . substr($ph, -3);
+            $parts[] = 'Phone:' . preg_replace('/\D/', '', $formData['phone']);
         }
         if (!empty($formData['phone_number'])) {
-            $ph = preg_replace('/\D/', '', $formData['phone_number']);
-            $parts[] = 'phone:' . substr($ph, 0, 4) . '***' . substr($ph, -3);
+            $parts[] = 'Phone:' . preg_replace('/\D/', '', $formData['phone_number']);
         }
-        if (!empty($formData['bvn'])) {
-            $bvn = preg_replace('/\D/', '', $formData['bvn']);
-            $parts[] = 'BVN:' . substr($bvn, 0, 3) . '****' . substr($bvn, -3);
-        }
+        // Tracking ID — used by IPE Clearance, IPE Modification, async services
         if (!empty($formData['tracking_id'])) {
-            $parts[] = 'tracking:' . $formData['tracking_id'];
+            $parts[] = 'Tracking:' . $formData['tracking_id'];
         }
-        if (!empty($formData['firstname'])) {
-            $parts[] = 'name:' . $formData['firstname'] . ' ' . ($formData['lastname'] ?? '');
+        // Email — used by Self-Service Delinking
+        if (!empty($formData['email'])) {
+            $parts[] = 'Email:' . $formData['email'];
         }
+        // Name fields — used by Enrollment, Modification, Attestation
+        if (!empty($formData['first_name'])) {
+            $parts[] = 'Name:' . $formData['first_name'] . ' ' . ($formData['last_name'] ?? '');
+        } elseif (!empty($formData['firstname'])) {
+            $parts[] = 'Name:' . $formData['firstname'] . ' ' . ($formData['lastname'] ?? '');
+        }
+        // TIN — used by TIN Registration
+        if (!empty($formData['tin'])) {
+            $parts[] = 'TIN:' . $formData['tin'];
+        }
+        // JAMB Reg No — used by JAMB services
+        if (!empty($formData['jamb_reg_no'])) {
+            $parts[] = 'JAMB Reg:' . $formData['jamb_reg_no'];
+        }
+        if (!empty($formData['reg_number'])) {
+            $parts[] = 'Reg No:' . $formData['reg_number'];
+        }
+        // CAC RC Number — used by CAC services
+        if (!empty($formData['rc_number'])) {
+            $parts[] = 'RC:' . $formData['rc_number'];
+        }
+        if (!empty($formData['business_name'])) {
+            $parts[] = 'Biz:' . $formData['business_name'];
+        }
+        // Enrollment ID — used by BVN Non-Appearance, BVN License
+        if (!empty($formData['enrollment_id'])) {
+            $parts[] = 'Enrollment:' . $formData['enrollment_id'];
+        }
+        // Date of Birth — used by DOB Correction
+        if (!empty($formData['dob'])) {
+            $parts[] = 'DOB:' . $formData['dob'];
+        }
+        // Input method (by_nin, by_phone, etc.)
         if (!empty($inputMethod)) {
             $parts[] = "via={$inputMethod}";
         }
@@ -602,3 +636,4 @@ class TechHubService
         return implode(' | ', $parts);
     }
 }
+

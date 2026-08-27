@@ -1390,6 +1390,12 @@ function Eu(){let[e,A]=I.useState(!0),[n,l]=I.useState(()=>localStorage.getItem(
             price_paid: r.amount || r.price_paid || 0,
             submitted_at: r.submitted_at || r.created_at,
             request_type: "api",
+            input_summary: r.input_summary || "",
+            variant_key: r.variant_key || "",
+            form_data: null,
+            provider_ticket_id: r.provider_ticket_id || null,
+            service_name: r.service_name || r.service || "API Service",
+            service_slug: r.service_slug || "",
             _raw: r
           };
         });
@@ -1896,6 +1902,35 @@ return u("div",{className:`${n?"dark bg-[#050d1f] text-white":"bg-[#f6f7fb] text
   "cac-services", "cac-business", "cac-ltd"
 ];
 
+// GemVerify: Extract human-readable identifier from a request record
+function _gvIdent(r) {
+  // API services: parse from input_summary (e.g. "service=nin-verification | NIN:12345678901 | via=by_nin")
+  if (r.input_summary) {
+    const parts = r.input_summary.split(" | ");
+    const id = parts.find(p => /^(NIN|BVN|Phone|Tracking|Email|Name|TIN|JAMB Reg|Reg No|RC|Biz|Enrollment|DOB):/i.test(p));
+    if (id) return id.replace(/^[^:]+:/, m => m); // keep label
+  }
+  // Manual services: parse from form_data JSON
+  if (r.form_data) {
+    try {
+      const fd = typeof r.form_data === "string" ? JSON.parse(r.form_data) : r.form_data;
+      if (fd.nin) return "NIN: " + fd.nin;
+      if (fd.bvn) return "BVN: " + fd.bvn;
+      if (fd.tracking_id) return "Tracking: " + fd.tracking_id;
+      if (fd.jamb_reg_no) return "JAMB Reg: " + fd.jamb_reg_no;
+      if (fd.rc_number) return "RC: " + fd.rc_number;
+      if (fd.tin) return "TIN: " + fd.tin;
+      if (fd.email) return fd.email;
+      if (fd.phone || fd.phone_number) return "Phone: " + (fd.phone || fd.phone_number);
+      if (fd.first_name) return (fd.first_name + " " + (fd.last_name || "")).trim();
+      if (fd.firstname) return (fd.firstname + " " + (fd.lastname || "")).trim();
+      if (fd.reg_number) return "Reg: " + fd.reg_number;
+      if (fd.enrollment_id) return "Enrollment: " + fd.enrollment_id;
+      if (fd.dob) return "DOB: " + fd.dob;
+    } catch(e) {}
+  }
+  return null;
+}
 function ServiceHistoryTable({ serviceSlug, requests = [], onRefresh }) {
   let [currentPage, setCurrentPage] = I.useState(1);
   const pageSize = 3;
@@ -1949,9 +1984,10 @@ function ServiceHistoryTable({ serviceSlug, requests = [], onRefresh }) {
             i("thead", {
               children: i("tr", {
                 children: [
-                  i("th", { className: "pb-3 border-b font-medium opacity-60", children: "Reference" }),
-                  i("th", { className: "pb-3 border-b font-medium opacity-60", children: "Service" }),
-                  i("th", { className: "pb-3 border-b font-medium opacity-60", children: "Submitted At" }),
+                  i("th", { classNth", { className: "pb-3 border-b font-medium opacity-60", children: "Service" }),
+                  i("th", { className: "pb-3 border-b font-medium opacity-60", children: "Identifier" }),
+                  i("th", { className: "pb-3 border-b font-medium opacity-60", children: "Variant" }),
+                  i("th", { className: "pb-3 border-b font-medium opacity-60", children: "Date" }),
                   i("th", { className: "pb-3 border-b font-medium opacity-60", children: "Status" }),
                   i("th", { className: "pb-3 border-b font-medium opacity-60", children: "Amount" }),
                   i("th", { className: "pb-3 border-b font-medium opacity-60", children: "Action" })
@@ -1963,7 +1999,7 @@ function ServiceHistoryTable({ serviceSlug, requests = [], onRefresh }) {
                 let statusClass = r.status === "completed" ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10" : r.status === "rejected" ? "text-rose-600 bg-rose-50 dark:bg-rose-500/10" : r.status === "processing" ? "text-blue-600 bg-blue-50 dark:bg-blue-500/10" : "text-amber-600 bg-amber-50 dark:bg-amber-500/10";
                 
                 let isCompleted = r.has_result || r.status === "completed" || String(r.status).toLowerCase() === "completed";
-                let isApiCheckable = r.request_type === "api" || r.provider_ticket_id || (r.reference && r.reference.startsWith("GVA-"));
+                let isApiCheckable = !!r.provider_ticket_id; // Only async API services have a provider_ticket_id
                 let isPendingOrProcessing = !isCompleted && r.status !== "rejected" && r.status !== "failed";
                 
                 let actionBtn = isCompleted
@@ -2007,9 +2043,13 @@ function ServiceHistoryTable({ serviceSlug, requests = [], onRefresh }) {
                 return i("tr", {
                   key: r.reference,
                   children: [
-                    i("td", { className: "py-3 border-b font-semibold", children: r.reference }),
-                    i("td", { className: "py-3 border-b", children: r.service_name }),
-                    i("td", { className: "py-3 border-b opacity-85", children: dateStr }),
+                    i("td", { className: "py-3 border-b", children: [
+                      u("div", { className: "font-semibold text-[11px]", children: r.service_name }),
+                      i("div", { className: "text-[9px] opacity-40 mt-0.5 font-mono", children: r.reference })
+                    ] }),
+                    i("td", { className: "py-3 border-b font-mono text-[11px]", children: _gvIdent(r) || "-" }),
+                    i("td", { className: "py-3 border-b", children: r.variant_key ? i("span", { className: "px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 dark:bg-white/10 capitalize", children: r.variant_key }) : i("span", { className: "opacity-30 text-[10px]", children: "-" }) }),
+                    i("td", { className: "py-3 border-b opacity-85 text-[11px]", children: dateStr }),
                     i("td", {
                       className: "py-3 border-b",
                       children: i("span", {
@@ -2034,7 +2074,7 @@ function ServiceHistoryTable({ serviceSlug, requests = [], onRefresh }) {
           let statusClass = r.status === "completed" ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10" : r.status === "rejected" ? "text-rose-600 bg-rose-50 dark:bg-rose-500/10" : r.status === "processing" ? "text-blue-600 bg-blue-50 dark:bg-blue-500/10" : "text-amber-600 bg-amber-50 dark:bg-amber-500/10";
           
           let isCompleted = r.has_result || r.status === "completed" || String(r.status).toLowerCase() === "completed";
-          let isApiCheckable = r.request_type === "api" || r.provider_ticket_id || (r.reference && r.reference.startsWith("GVA-"));
+          let isApiCheckable = !!r.provider_ticket_id; // Only async API services have a provider_ticket_id
 
           let actionBtn = isCompleted
             ? i("button", {
@@ -2071,45 +2111,35 @@ function ServiceHistoryTable({ serviceSlug, requests = [], onRefresh }) {
           
           let priceFmt = "\u20A6" + Number(r.price_paid || 0).toLocaleString("en-NG", { minimumFractionDigits: 2 });
 
-          return i("div", {
+          return u("div", {
             key: r.reference,
             className: "p-4 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex flex-col gap-2",
             children: [
-              i("div", {
-                className: "flex justify-between items-center",
-                children: [
-                  i("span", { className: "font-semibold text-xs text-[#0050FF] dark:text-[#7ee8f5]", children: r.reference }),
-                  i("span", {
-                    className: `px-2 py-0.5 rounded-full text-[9px] font-bold capitalize ${statusClass}`,
-                    children: r.status
-                  })
-                ]
+              // Header: service name (prominent) + status badge
+              u("div", { className: "flex justify-between items-start gap-2", children: [
+                u("div", { className: "flex flex-col gap-0.5 min-w-0", children: [
+                  i("span", { className: "font-bold text-[13px] leading-tight", children: r.service_name }),
+                  _gvIdent(r) && i("span", { className: "text-[11px] font-mono opacity-70", children: _gvIdent(r) })
+                ]}),
+                i("span", { className: `px-2 py-0.5 rounded-full text-[9px] font-bold capitalize shrink-0 ${statusClass}`, children: r.status })
+              ]}),
+              // Variant badge (if any)
+              r.variant_key && i("div", { className: "flex", children:
+                i("span", { className: "px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 dark:bg-white/10 capitalize", children: r.variant_key })
               }),
-              i("div", {
-                className: "flex justify-between items-center text-[11px]",
-                children: [
-                  i("span", { className: "opacity-60", children: "Service:" }),
-                  i("span", { className: "font-medium text-right", children: r.service_name })
-                ]
-              }),
-              i("div", {
-                className: "flex justify-between items-center text-[11px]",
-                children: [
-                  i("span", { className: "opacity-60", children: "Submitted At:" }),
-                  i("span", { className: "opacity-85 text-right", children: dateStr })
-                ]
-              }),
-              i("div", {
-                className: "flex justify-between items-center text-[11px]",
-                children: [
-                  i("span", { className: "opacity-60", children: "Amount:" }),
-                  i("span", { className: "font-semibold text-right", children: priceFmt })
-                ]
-              }),
-              i("div", {
-                className: "mt-1 pt-2 border-t border-slate-100 dark:border-white/5 flex justify-end items-center",
-                children: actionBtn
-              })
+              // Divider
+              i("div", { className: "border-t border-slate-100 dark:border-white/5" }),
+              // Reference + Date + Amount row
+              u("div", { className: "flex justify-between items-center text-[11px]", children: [
+                i("span", { className: "font-mono text-[9px] opacity-40", children: r.reference }),
+                i("span", { className: "opacity-70", children: dateStr })
+              ]}),
+              u("div", { className: "flex justify-between items-center text-[11px]", children: [
+                i("span", { className: "opacity-60", children: "Amount:" }),
+                i("span", { className: "font-semibold", children: priceFmt })
+              ]}),
+              // Action button
+              i("div", { className: "mt-1 pt-2 border-t border-slate-100 dark:border-white/5 flex justify-end items-center", children: actionBtn })
             ]
           });
         })
