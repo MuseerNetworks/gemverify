@@ -142,11 +142,14 @@ class TechHubClient
             CURLOPT_URL            => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => $this->timeout,
-            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 8,
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Accept: application/json'],
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
+            CURLOPT_TCP_NODELAY    => true,
+            CURLOPT_TCP_KEEPALIVE  => 1,
         ];
 
         if ($method === 'POST') {

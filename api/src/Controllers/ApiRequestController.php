@@ -275,7 +275,10 @@ class ApiRequestController
             $this->db->prepare("UPDATE transactions SET related_request_id = ? WHERE id = ?")
                      ->execute([$apiTxId, $txResult['id']]);
 
-            // ── 15. Call TechHub ───────────────────────────────────────────
+            // Commit initial deduction & record so DB row lock is immediately released (<5ms)
+            $this->db->commit();
+
+            // ── 15. Call TechHub (Outside DB Transaction to prevent locking) ─
             if ($resultType === 'pdf_base64') {
                 $providerResult = $this->techHubService->submitSync(
                     $serviceSlug, $variantKey, $inputMethod, $formData
@@ -286,14 +289,32 @@ class ApiRequestController
                 );
             }
 
-            // ── 16. Handle provider hard failure (before any processing) ───
-            // A hard failure means TechHub never accepted the request —
-            // we rollback so the user is NOT charged.
+            // ── 16. Handle provider hard failure ───────────────────────────
+            // A hard failure means TechHub never processed the request —
+            // we immediately refund the user atomically.
             if (!$providerResult['success'] && $this->isHardFailure($providerResult)) {
-                $this->db->rollBack();
+                $this->walletService->creditAtomically(
+                    $this->userId,
+                    $price,
+                    "Refund: Provider unavailable for {$serviceName} ({$gvReference})",
+                    $apiTxId
+                );
+                $this->db->prepare("
+                    UPDATE api_transactions
+                    SET gv_status = 'failed',
+                        provider_status = 'hard_fail',
+                        error_code = ?,
+                        error_message = ?,
+                        provider_responded_at = NOW()
+                    WHERE id = ?
+                ")->execute([
+                    $providerResult['error_code'] ?? 'PROVIDER_ERROR',
+                    $providerResult['error_message'] ?? 'Provider unavailable',
+                    $apiTxId
+                ]);
                 $this->logProviderError($serviceSlug, $gvReference, $providerResult);
                 Response::error(
-                    'Provider unavailable — you have not been charged. Please try again.',
+                    'Provider temporarily unavailable — you have not been charged (wallet automatically refunded).',
                     ['error_code' => $providerResult['error_code'] ?? 'PROVIDER_ERROR'],
                     502
                 );
@@ -352,8 +373,10 @@ class ApiRequestController
                 ]);
             }
 
-            // ── 18. Commit ─────────────────────────────────────────────────
-            $this->db->commit();
+            // ── 18. Commit (if in transaction) ────────────────────────────
+            if ($this->db->inTransaction()) {
+                $this->db->commit();
+            }
 
             // ── 19. Post-commit: notifications + audit ─────────────────────
             if ($providerResult['success']) {
