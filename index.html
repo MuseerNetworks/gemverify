@@ -154,26 +154,96 @@ footer{background:#061426;color:#aebbd0;padding:60px 0 30px}
   .cta{align-items:flex-start;flex-direction:column}
 }
 @media(max-width:640px){
-  .nav .logo img{width:130px!important}
-  .container{width:min(100% - 28px,1180px)}
-  .nav{height:66px}
-  .hero{padding:35px 0 55px}
-  .hero-grid{gap:35px}
-  h1{font-size:40px;letter-spacing:-2px}
-  .hero-copy{font-size:14.5px}
-  .dashboard-card{padding:14px;border-radius:20px}
-  .mock-grid{grid-template-columns:1fr 1fr}
-  .section{padding:65px 0}
-  .section h2{font-size:30px}
-  .service-grid,.steps,.security{grid-template-columns:1fr}
-  .hub-list,.hub-services,.gp-items{grid-template-columns:1fr}
-  .gemprint{padding:28px 20px;border-radius:24px}
-  .cta{padding:32px 22px;border-radius:24px}
-  .cta h2{font-size:26px}
-  .footer-grid{grid-template-columns:1fr}
+  .nav .logo img{width:125px!important}
+  .container{width:min(100% - 24px,1180px)}
+  .nav{height:62px}
+  
+  /* Hero section compression */
+  .hero{padding:28px 0 42px}
+  .hero-grid{gap:26px}
+  h1{font-size:35px;letter-spacing:-1.8px;margin:14px 0 12px;line-height:1.08}
+  .hero-copy{font-size:13.5px;line-height:1.55}
+  .hero-actions{margin:18px 0 16px;gap:8px}
+  .hero-actions .btn{padding:9px 14px;font-size:12px}
+  .trust{gap:12px;font-size:10.5px}
+  
+  .dashboard-card{padding:12px;border-radius:18px}
+  .window-bar{margin-bottom:12px}
+  .balance{padding:12px 14px;margin-bottom:10px;border-radius:14px}
+  .balance strong{font-size:21px}
+  .mock-grid{grid-template-columns:repeat(3,1fr);gap:6px}
+  .mock-stat{padding:8px;border-radius:10px}
+  .mock-stat b{font-size:12px;margin-top:2px}
+  .mock-stat small{font-size:7.5px}
+  .verify-card{padding:10px;margin-top:10px;border-radius:12px}
+  .verify-row{padding:6px 0;font-size:10px}
+  
+  /* Section Padding & Spacing */
+  .section{padding:38px 0}
+  .section-head{margin-bottom:22px}
+  .section h2{font-size:24px;letter-spacing:-1px;margin:6px 0 8px}
+  .section-head p{font-size:12.5px;line-height:1.5}
+  
+  /* 2-Column Compact Services Grid */
+  .service-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .service-card{padding:13px;border-radius:16px}
+  .service-icon{width:34px;height:34px;font-size:11px;border-radius:10px}
+  .service-card h3{font-size:13px;margin:10px 0 4px}
+  .service-card p{font-size:9.5px;line-height:1.45;margin:0 0 10px}
+  .service-link{font-size:9.5px}
+  
+  /* 2-Column Hub & Mini Services */
+  .hub{gap:12px}
+  .hub-panel{padding:20px 16px;border-radius:20px}
+  .hub-panel h3{font-size:20px;margin:6px 0 8px}
+  .hub-panel p{font-size:11.5px;line-height:1.5}
+  .hub-list{grid-template-columns:repeat(2,1fr);gap:6px;margin-top:16px}
+  .hub-list span{padding:8px 10px;font-size:8.5px;border-radius:8px}
+  
+  .hub-services{grid-template-columns:repeat(2,1fr);gap:8px}
+  .mini{padding:12px;border-radius:14px}
+  .mini b{font-size:11.5px}
+  .mini p{font-size:9px;line-height:1.4;margin:3px 0 0}
+  
+  /* Compact Step Rows */
+  .steps{grid-template-columns:1fr;gap:9px}
+  .step{padding:14px 16px;border-radius:16px;display:flex;align-items:center;gap:13px}
+  .step .num{width:30px;height:30px;font-size:10.5px;border-radius:9px;flex-shrink:0;margin:0}
+  .step-body{flex:1;min-width:0}
+  .step h3{font-size:13px;margin:0 0 2px}
+  .step p{font-size:10px;line-height:1.4}
+  
+  /* 2-Column GemPrint Features */
+  .gemprint{padding:22px 16px;border-radius:20px;gap:18px}
+  .gemprint h2{font-size:22px}
+  .gp-items{grid-template-columns:repeat(2,1fr);gap:8px}
+  .gp-item{padding:12px;border-radius:13px}
+  .gp-item b{font-size:11px}
+  .gp-item p{font-size:8.5px;line-height:1.4}
+  
+  /* Business & Security Cards */
+  .security{grid-template-columns:1fr;gap:9px}
+  .security-card{padding:15px;border-radius:16px}
+  .security-card b{font-size:13px}
+  .security-card p{font-size:10px;margin-top:4px}
+  
+  /* CTA Banner */
+  .cta{padding:26px 18px;border-radius:20px;gap:16px}
+  .cta h2{font-size:22px}
+  .cta p{font-size:12px}
+  .cta .btn{width:100%;text-align:center;padding:12px}
+  
+  /* 2-Column Compact Footer */
+  footer{padding:42px 0 24px}
+  .footer-grid{grid-template-columns:repeat(2,1fr);gap:20px}
   .footer-brand{grid-column:1/-1}
-  .footer-bottom{flex-direction:column;text-align:center;gap:8px}
-  .nav-actions .btn-primary{padding:9px 13px}
+  .footer-brand p{font-size:10.5px;max-width:100%;margin-top:10px}
+  .footer-col h4{font-size:11px;margin-bottom:6px}
+  .footer-col a{font-size:10.5px}
+  .footer-bottom{margin-top:28px;padding-top:16px;font-size:9px;flex-direction:column;text-align:center;gap:6px}
+  
+  .nav-actions .btn-primary{padding:8px 12px;font-size:11.5px}
+  .nav-actions .btn-whatsapp{padding:8px 10px;font-size:11.5px}
 }
 </style>
 </head>
@@ -295,9 +365,9 @@ footer{background:#061426;color:#aebbd0;padding:60px 0 30px}
   <div class="container">
     <div class="section-head center"><span class="kicker">Simple workflow</span><h2>From request to result without the confusion.</h2><p>GemVerify is designed around the way Business Centres and service users actually work.</p></div>
     <div class="steps">
-      <article class="step"><span class="num">01</span><h3>Choose a service</h3><p>Select the verification or document service you need and provide the required information.</p></article>
-      <article class="step"><span class="num">02</span><h3>Submit & track</h3><p>Send your request and follow its progress from your GemVerify dashboard.</p></article>
-      <article class="step"><span class="num">03</span><h3>Get your result</h3><p>Receive the completed result or document through the appropriate delivery workflow.</p></article>
+      <article class="step"><span class="num">01</span><div class="step-body"><h3>Choose a service</h3><p>Select the verification or document service you need and provide the required information.</p></div></article>
+      <article class="step"><span class="num">02</span><div class="step-body"><h3>Submit & track</h3><p>Send your request and follow its progress from your GemVerify dashboard.</p></div></article>
+      <article class="step"><span class="num">03</span><div class="step-body"><h3>Get your result</h3><p>Receive the completed result or document through the appropriate delivery workflow.</p></div></article>
     </div>
   </div>
 </section>
