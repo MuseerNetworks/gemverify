@@ -101,18 +101,38 @@ class WithdrawalController {
             $description   = trim($body['description'] ?? 'Company Profit Withdrawal');
 
             if ($amount < 100) {
-                Response::error('Minimum withdrawal amount is ₦100.', 422);
+                Response::error('Minimum withdrawal amount is ₦100.00.', 422);
                 return;
             }
             if (!$bankCode || !$accountNumber || !$accountName) {
-                Response::error('bank_code, account_number, and account_name are required.', 422);
+                Response::error('Destination bank, account number, and account holder name are required.', 422);
+                return;
+            }
+
+            // ── Atomic Server-Side Profit Balance Check ────────────────────────
+            // Calculate live withdrawable company earnings (settled customer debits)
+            $totalRevenue = (float)$this->db
+                ->query("SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'debit' AND status = 'completed'")
+                ->fetchColumn();
+
+            $completedWithdrawals = (float)$this->db
+                ->query("SELECT COALESCE(SUM(amount), 0) FROM admin_withdrawals WHERE status IN ('completed', 'pending')")
+                ->fetchColumn();
+
+            $withdrawableProfit = max(0, ($totalRevenue * 0.25) - $completedWithdrawals);
+
+            if ($amount > $withdrawableProfit) {
+                Response::error(
+                    'Withdrawal request of ₦' . number_format($amount, 2) . ' exceeds available withdrawable profit (₦' . number_format($withdrawableProfit, 2) . ').',
+                    422
+                );
                 return;
             }
 
             // Generate unique reference
             $ref = 'WD_' . date('YmdHis') . '_' . rand(1000, 9999);
 
-            // Log pending withdrawal
+            // Log pending withdrawal in database
             $stmt = $this->db->prepare("
                 INSERT INTO admin_withdrawals
                   (reference, admin_id, amount, bank_code, bank_name, account_number, account_name, description, status, created_at)
@@ -142,17 +162,27 @@ class WithdrawalController {
                     'reference'      => $ref
                 ]);
 
-                $katpayRef = $payoutResult['reference'] ?? $payoutResult['id'] ?? $ref;
+                $katpayRef = $payoutResult['reference'] ?? $payoutResult['merchant_reference'] ?? $payoutResult['id'] ?? $ref;
+                $rawStatus = strtolower($payoutResult['status'] ?? ($payoutResult['success'] ? 'completed' : 'pending'));
 
-                // Update to completed
+                // Accurate financial status mapping
+                $finalStatus = 'completed';
+                if (in_array($rawStatus, ['pending', 'processing', 'queued'], true)) {
+                    $finalStatus = 'pending';
+                } elseif (in_array($rawStatus, ['failed', 'rejected'], true)) {
+                    $finalStatus = 'failed';
+                }
+
+                // Update database
                 $uStmt = $this->db->prepare("
                     UPDATE admin_withdrawals SET
-                      status = 'completed',
+                      status = ?,
                       katpay_reference = ?,
                       response_payload = ?
                     WHERE id = ?
                 ");
                 $uStmt->execute([
+                    $finalStatus,
                     $katpayRef,
                     json_encode($payoutResult),
                     $withdrawalId
@@ -162,13 +192,16 @@ class WithdrawalController {
                     'admin',
                     (string)$adminId,
                     'PROFIT_WITHDRAWAL',
-                    "Withdrew ₦{$amount} to {$accountName} ({$bankName} - {$accountNumber}). Ref: {$ref}"
+                    "Withdrew ₦" . number_format($amount, 2) . " to {$accountName} ({$bankName} - {$accountNumber}). Ref: {$ref} [Status: {$finalStatus}]"
                 );
 
                 Response::success([
-                    'message'          => 'Withdrawal executed successfully via KatPay Payouts API.',
+                    'message'          => $finalStatus === 'completed' 
+                        ? 'Withdrawal executed and transferred successfully via KatPay.' 
+                        : 'Withdrawal initiated and queued for transfer via KatPay.',
                     'reference'        => $ref,
                     'katpay_reference' => $katpayRef,
+                    'status'           => $finalStatus,
                     'amount'           => $amount,
                     'account_number'   => $accountNumber,
                     'bank_name'        => $bankName
@@ -188,7 +221,7 @@ class WithdrawalController {
                     $withdrawalId
                 ]);
 
-                Response::error('KatPay Payout Error: ' . $errMsg, 400);
+                Response::error($errMsg, 400);
             }
 
         } catch (\Throwable $e) {

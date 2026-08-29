@@ -186,6 +186,12 @@ class TopUpController {
             return;
         }
 
+        if (str_starts_with($callbackEvent, 'payout') || $callbackEvent === 'payout_transfer.completed' || $callbackEvent === 'payout_transfer.failed') {
+            // Payout / Withdrawal callback
+            $this->handlePayoutCallback($callbackEvent, $data, $rawBody, $deliveryId);
+            return;
+        }
+
         if ($callbackEvent !== 'transfer_payment.completed') {
             // Unknown event — acknowledge and ignore gracefully
             http_response_code(200);
@@ -625,5 +631,47 @@ class TopUpController {
             }
         }
         return '';
+    }
+    /**
+     * Handle incoming asynchronous KatPay Payout webhooks.
+     */
+    private function handlePayoutCallback(string $event, array $data, string $rawBody, string $deliveryId): void {
+        $ref       = $data['merchant_reference'] ?? $data['merchantReference'] ?? $data['reference'] ?? '';
+        $katpayRef = $data['id'] ?? $data['reference'] ?? '';
+        $status    = strtolower($data['status'] ?? '');
+
+        if (empty($ref) && empty($katpayRef)) {
+            http_response_code(200);
+            echo json_encode(['received' => true, 'note' => 'Missing reference']);
+            return;
+        }
+
+        $db = db();
+        $targetStatus = 'pending';
+        if (in_array($status, ['completed', 'successful', 'success'], true) || str_ends_with($event, '.completed') || str_ends_with($event, '.successful')) {
+            $targetStatus = 'completed';
+        } elseif (in_array($status, ['failed', 'rejected', 'reversed'], true) || str_ends_with($event, '.failed') || str_ends_with($event, '.reversed')) {
+            $targetStatus = 'failed';
+        }
+
+        $stmt = $db->prepare("
+            UPDATE admin_withdrawals
+            SET status = ?, 
+                katpay_reference = COALESCE(NULLIF(?, ''), katpay_reference), 
+                response_payload = ?
+            WHERE reference = ? OR katpay_reference = ?
+        ");
+        $stmt->execute([
+            $targetStatus,
+            $katpayRef,
+            json_encode(['event' => $event, 'data' => $data, 'received_at' => date('Y-m-d H:i:s')]),
+            $ref,
+            $katpayRef
+        ]);
+
+        $this->logCallback('PAYOUT_CALLBACK_' . strtoupper($targetStatus) . ':' . $ref, $rawBody, $deliveryId);
+
+        http_response_code(200);
+        echo json_encode(['received' => true, 'status' => $targetStatus]);
     }
 }

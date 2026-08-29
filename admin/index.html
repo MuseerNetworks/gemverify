@@ -2673,8 +2673,14 @@ function escapeJs(str) {
 
 async function confirmWithdraw(amount, bankCode, bankName, acctNo, acctName, reason){
   try {
-    document.getElementById('modalBody').innerHTML = '<div style="padding:30px;text-align:center">Processing KatPay Payout... Please wait...</div>';
-    
+    document.getElementById('modalBody').innerHTML = `
+      <div style="padding:32px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px">
+        <div style="width:38px;height:38px;border:3px solid #dbeafe;border-top-color:#0050FF;border-radius:50%;animation:gv-spin 0.75s linear infinite"></div>
+        <b style="font-size:14px;color:var(--navy)">Executing KatPay Payout...</b>
+        <p style="font-size:11px;color:var(--muted);max-width:320px;margin:0">Communicating with KatPay inter-bank network. Please do not close or refresh this page.</p>
+      </div>`;
+    document.getElementById('modalFoot').innerHTML = '<button class="secondary" disabled style="opacity:0.5;cursor:not-allowed">Processing...</button>';
+
     const raw = await gvAdminFetch('../api/admin/withdrawals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2692,7 +2698,7 @@ async function confirmWithdraw(amount, bankCode, bankName, acctNo, acctName, rea
     closeModal();
 
     if (res && res.success) {
-      alert('✓ KatPay Payout Executed Successfully!\n\nRef: ' + (res.data.reference || '') + '\nAmount: ' + money(amount) + '\nAccount: ' + acctName + ' (' + acctNo + ')');
+      alert('✓ KatPay Payout Initiated Successfully!\n\nRef: ' + (res.data.reference || '') + '\nStatus: ' + (res.data.status || 'completed').toUpperCase() + '\nAmount: ' + money(amount) + '\nRecipient: ' + acctName + ' (' + bankName + ' - ' + acctNo + ')');
       if (typeof fetchAdminDashboardData === 'function') fetchAdminDashboardData();
     } else {
       alert('Payout Failed: ' + (res.message || 'Unknown error occurred.'));
