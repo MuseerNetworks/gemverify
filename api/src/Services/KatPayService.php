@@ -291,51 +291,76 @@ class KatPayService {
         return abs(time() - (int) $timestamp) <= $maxAgeSeconds;
     }
 
-    /**
+        /**
      * Get list of supported NUBAN banks for payouts from KatPay.
-     * GET /api/bank-list or /v1/bank-list
+     * GET https://api.katpay.co/api/bank-list
      */
     public function getBankList(): array {
         try {
-            if (!empty($this->secretKey) && $this->secretKey !== 'your_katpay_secret_key_here') {
-                $response = $this->get('/bank-list');
-                if (isset($response['data']) && is_array($response['data']) && !empty($response['data'])) {
-                    return $response['data'];
-                }
-                if (is_array($response) && isset($response[0])) {
-                    return $response;
+            $ch = curl_init('https://api.katpay.co/api/bank-list');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 10,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_HTTPHEADER     => [
+                    'Accept: application/json',
+                    'User-Agent: GemVerify/1.0',
+                ],
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
+            ]);
+            $raw = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($code === 200 && $raw) {
+                $decoded = json_decode($raw, true);
+                $rawBanks = $decoded['banks'] ?? $decoded['data'] ?? [];
+                if (is_array($rawBanks) && !empty($rawBanks)) {
+                    $banks = [];
+                    foreach ($rawBanks as $b) {
+                        $c = (string) ($b['bankCode'] ?? $b['bank_code'] ?? $b['code'] ?? '');
+                        $n = (string) ($b['bankName'] ?? $b['bank_name'] ?? $b['name'] ?? '');
+                        if ($c !== '' && $n !== '') {
+                            $banks[$c] = [
+                                'code'      => $c,
+                                'bank_code' => $c,
+                                'name'      => $n,
+                                'bank_name' => $n,
+                            ];
+                        }
+                    }
+                    uasort($banks, static fn($a, $b) => strcasecmp($a['name'], $b['name']));
+                    return array_values($banks);
                 }
             }
         } catch (\Throwable $e) {
-            // Fall through to comprehensive bank list
+            // Fall through to verified KatPay 6-digit bank list
         }
 
-        // Return verified CBN / NIBSS Nigerian commercial & digital banks
+        // Verified KatPay NIP 6-digit routing codes
         return [
-            ['code' => '999991', 'bank_code' => '999991', 'name' => 'PalmPay', 'bank_name' => 'PalmPay'],
-            ['code' => '999992', 'bank_code' => '999992', 'name' => 'OPay (PayCom)', 'bank_name' => 'OPay (PayCom)'],
-            ['code' => '50515',  'bank_code' => '50515',  'name' => 'Moniepoint Microfinance Bank', 'bank_name' => 'Moniepoint Microfinance Bank'],
-            ['code' => '090267', 'bank_code' => '090267', 'name' => 'Kuda Bank', 'bank_name' => 'Kuda Bank'],
-            ['code' => '058',    'bank_code' => '058',    'name' => 'Guaranty Trust Bank (GTBank)', 'bank_name' => 'Guaranty Trust Bank (GTBank)'],
-            ['code' => '011',    'bank_code' => '011',    'name' => 'First Bank of Nigeria', 'bank_name' => 'First Bank of Nigeria'],
-            ['code' => '057',    'bank_code' => '057',    'name' => 'Zenith Bank', 'bank_name' => 'Zenith Bank'],
-            ['code' => '033',    'bank_code' => '033',    'name' => 'United Bank for Africa (UBA)', 'bank_name' => 'United Bank for Africa (UBA)'],
-            ['code' => '044',    'bank_code' => '044',    'name' => 'Access Bank', 'bank_name' => 'Access Bank'],
-            ['code' => '070',    'bank_code' => '070',    'name' => 'Fidelity Bank', 'bank_name' => 'Fidelity Bank'],
-            ['code' => '214',    'bank_code' => '214',    'name' => 'First City Monument Bank (FCMB)', 'bank_name' => 'First City Monument Bank (FCMB)'],
-            ['code' => '221',    'bank_code' => '221',    'name' => 'Stanbic IBTC Bank', 'bank_name' => 'Stanbic IBTC Bank'],
-            ['code' => '232',    'bank_code' => '232',    'name' => 'Sterling Bank', 'bank_name' => 'Sterling Bank'],
-            ['code' => '032',    'bank_code' => '032',    'name' => 'Union Bank of Nigeria', 'bank_name' => 'Union Bank of Nigeria'],
-            ['code' => '035',    'bank_code' => '035',    'name' => 'Wema Bank (ALAT)', 'bank_name' => 'Wema Bank (ALAT)'],
-            ['code' => '076',    'bank_code' => '076',    'name' => 'Polaris Bank', 'bank_name' => 'Polaris Bank'],
-            ['code' => '050',    'bank_code' => '050',    'name' => 'Ecobank Nigeria', 'bank_name' => 'Ecobank Nigeria'],
-            ['code' => '215',    'bank_code' => '215',    'name' => 'Unity Bank', 'bank_name' => 'Unity Bank'],
-            ['code' => '301',    'bank_code' => '301',    'name' => 'Jaiz Bank', 'bank_name' => 'Jaiz Bank'],
-            ['code' => '302',    'bank_code' => '302',    'name' => 'TAJ Bank', 'bank_name' => 'TAJ Bank'],
+            ['code' => '100004', 'bank_code' => '100004', 'name' => 'OPay', 'bank_name' => 'OPay'],
+            ['code' => '100033', 'bank_code' => '100033', 'name' => 'PalmPay', 'bank_name' => 'PalmPay'],
+            ['code' => '090405', 'bank_code' => '090405', 'name' => 'Moniepoint Microfinance Bank', 'bank_name' => 'Moniepoint Microfinance Bank'],
+            ['code' => '090267', 'bank_code' => '090267', 'name' => 'Kuda MFB', 'bank_name' => 'Kuda MFB'],
+            ['code' => '000013', 'bank_code' => '000013', 'name' => 'Guaranty Trust Bank (GTBank)', 'bank_name' => 'Guaranty Trust Bank (GTBank)'],
+            ['code' => '000014', 'bank_code' => '000014', 'name' => 'Access Bank', 'bank_name' => 'Access Bank'],
+            ['code' => '000015', 'bank_code' => '000015', 'name' => 'Zenith Bank', 'bank_name' => 'Zenith Bank'],
+            ['code' => '000016', 'bank_code' => '000016', 'name' => 'First Bank Of Nigeria', 'bank_name' => 'First Bank Of Nigeria'],
+            ['code' => '000004', 'bank_code' => '000004', 'name' => 'United Bank For Africa (UBA)', 'bank_name' => 'United Bank For Africa (UBA)'],
+            ['code' => '000007', 'bank_code' => '000007', 'name' => 'Fidelity Bank', 'bank_name' => 'Fidelity Bank'],
+            ['code' => '000003', 'bank_code' => '000003', 'name' => 'First City Monument Bank (FCMB)', 'bank_name' => 'First City Monument Bank (FCMB)'],
+            ['code' => '000012', 'bank_code' => '000012', 'name' => 'Stanbic IBTC Bank', 'bank_name' => 'Stanbic IBTC Bank'],
+            ['code' => '000001', 'bank_code' => '000001', 'name' => 'Sterling Bank', 'bank_name' => 'Sterling Bank'],
+            ['code' => '000018', 'bank_code' => '000018', 'name' => 'Union Bank of Nigeria', 'bank_name' => 'Union Bank of Nigeria'],
+            ['code' => '000017', 'bank_code' => '000017', 'name' => 'Wema Bank (ALAT)', 'bank_name' => 'Wema Bank (ALAT)'],
+            ['code' => '000006', 'bank_code' => '000006', 'name' => 'Polaris Bank', 'bank_name' => 'Polaris Bank'],
+            ['code' => '000010', 'bank_code' => '000010', 'name' => 'Ecobank Nigeria', 'bank_name' => 'Ecobank Nigeria'],
+            ['code' => '000011', 'bank_code' => '000011', 'name' => 'Unity Bank', 'bank_name' => 'Unity Bank'],
+            ['code' => '000019', 'bank_code' => '000019', 'name' => 'Jaiz Bank', 'bank_name' => 'Jaiz Bank'],
+            ['code' => '000026', 'bank_code' => '000026', 'name' => 'TAJ Bank', 'bank_name' => 'TAJ Bank'],
             ['code' => '090110', 'bank_code' => '090110', 'name' => 'VFD Microfinance Bank', 'bank_name' => 'VFD Microfinance Bank'],
-            ['code' => '090405', 'bank_code' => '090405', 'name' => 'Moniepoint MFB (090405)', 'bank_name' => 'Moniepoint MFB (090405)'],
-            ['code' => '100033', 'bank_code' => '100033', 'name' => 'PalmPay (100033)', 'bank_name' => 'PalmPay (100033)'],
-            ['code' => '100004', 'bank_code' => '100004', 'name' => 'OPay (100004)', 'bank_name' => 'OPay (100004)'],
         ];
     }
 
@@ -348,42 +373,50 @@ class KatPayService {
     public function createPayout(array $params): array {
         $this->assertConfigured();
 
-        $bankCode = (string) ($params['bank_code'] ?? $params['bankCode'] ?? '');
-        $acctNo   = (string) ($params['account_number'] ?? $params['accountNumber'] ?? '');
-        $acctName = (string) ($params['account_name'] ?? $params['accountName'] ?? '');
-        $amount   = (float)  $params['amount'];
-        $ref      = (string) ($params['reference'] ?? ('WD_' . date('YmdHis') . '_' . rand(1000, 9999)));
-        $desc     = (string) ($params['description'] ?? 'GemVerify Admin Profit Withdrawal');
+        $amount   = round((float) ($params['amount'] ?? 0), 2);
+        $bankCode = trim((string) ($params['bank_code'] ?? $params['bankCode'] ?? ''));
+        $acctNo   = preg_replace('/\D+/', '', (string) ($params['account_number'] ?? $params['accountNumber'] ?? '')) ?? '';
+        $acctName = trim((string) ($params['account_name'] ?? $params['accountName'] ?? ''));
+        $ref      = trim((string) ($params['reference'] ?? ('WD_' . date('YmdHis') . '_' . rand(1000, 9999))));
+        $desc     = trim((string) ($params['description'] ?? 'GemVerify Admin Profit Withdrawal'));
 
+        if ($amount < 100) {
+            throw new RuntimeException('KatPay payout minimum amount is ₦100.00.');
+        }
+        if (!preg_match('/^\d{10}$/', $acctNo)) {
+            throw new RuntimeException('KatPay payout requires a valid 10-digit NUBAN account number.');
+        }
+        if ($bankCode === '' || $acctName === '') {
+            throw new RuntimeException('KatPay payout requires destination bank and account name.');
+        }
+
+        // Clean payload matching GemData's exact working structure
         $body = [
-            'amount'             => $amount,
-            'bank_code'          => $bankCode,
-            'bankCode'           => $bankCode,
-            'account_number'     => $acctNo,
-            'accountNumber'      => $acctNo,
-            'account_name'       => $acctName,
-            'accountName'        => $acctName,
-            'description'        => $desc,
-            'narration'          => $desc,
-            'reference'          => $ref,
-            'merchant_reference' => $ref,
-            'merchantReference'  => $ref,
-            'merchantID'         => $this->merchantId,
-            'merchant_id'        => $this->merchantId,
-            'currency'           => 'NGN',
+            'amount'         => $amount,
+            'bank_code'      => $bankCode,
+            'account_number' => $acctNo,
+            'account_name'   => $acctName,
+            'description'    => $desc,
+            'reference'      => $ref,
         ];
 
         $response = $this->post('/payouts', $body);
 
-        $status = strtolower($response['status'] ?? ($response['success'] ? 'completed' : 'failed'));
-        $isSuccess = !empty($response['success']) || in_array($status, ['completed', 'successful', 'success', 'pending', 'processing', 'queued'], true) || isset($response['id']);
+        $status = strtolower(trim((string) (
+            $response['status']
+            ?? $response['data']['status']
+            ?? $response['data']['payout_status']
+            ?? $response['code']
+            ?? ($response['success'] ?? false ? 'successful' : '')
+        )));
 
-        if (!$isSuccess) {
-            $msg = $response['message'] ?? $response['error'] ?? 'Unknown KatPay payout failure';
-            if (str_contains(strtolower($msg), 'internal error') || str_contains(strtolower($msg), 'failed') || str_contains(strtolower($msg), 'error')) {
-                $msg .= ' [Note: Ensure Payouts feature is enabled in KatPay Merchant Settings and your KatPay settlement balance is funded]';
-            }
-            throw new RuntimeException('KatPay payout rejected: ' . $msg);
+        if (is_bool($response['status'] ?? null)) {
+            $status = $response['status'] === true ? 'successful' : 'failed';
+        }
+
+        if (in_array($status, ['failed', 'failure', 'error', 'reversed', 'rejected'], true)) {
+            $msg = $response['message'] ?? $response['error'] ?? 'KatPay payout rejected by payment gateway.';
+            throw new RuntimeException($msg);
         }
 
         return $response['data'] ?? $response;
