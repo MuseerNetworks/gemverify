@@ -37,8 +37,12 @@ class Response
         self::send(true, $message, $data, [], $httpCode);
     }
 
-    public static function error(string $message, array $errors = [], int $httpCode = 400): never
+    public static function error(string $message, array|int $errors = [], int $httpCode = 400): never
     {
+        if (is_int($errors)) {
+            $httpCode = $errors;
+            $errors = [];
+        }
         self::send(false, $message, [], $errors, $httpCode);
     }
 

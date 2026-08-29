@@ -68,7 +68,7 @@ class WithdrawalController {
             $banks = $this->katpay->getBankList();
             Response::success($banks);
         } catch (\Throwable $e) {
-            Response::error('Failed to fetch bank list: ' . $e->getMessage(), 500);
+            Response::error('Failed to fetch bank list: ' . $e->getMessage(), [], 500);
         }
     }
 
@@ -109,7 +109,7 @@ class WithdrawalController {
                 ]
             ]);
         } catch (\Throwable $e) {
-            Response::error('Failed to list withdrawals: ' . $e->getMessage(), 500);
+            Response::error('Failed to list withdrawals: ' . $e->getMessage(), [], 500);
         }
     }
 
@@ -132,11 +132,11 @@ class WithdrawalController {
             $description   = trim($body['description'] ?? 'Company Profit Withdrawal');
 
             if ($amount < 100) {
-                Response::error('Minimum withdrawal amount is ₦100.00.', 422);
+                Response::error('Minimum withdrawal amount is ₦100.00.', [], [], 422);
                 return;
             }
             if (!$bankCode || !$accountNumber || !$accountName) {
-                Response::error('Destination bank, account number, and account holder name are required.', 422);
+                Response::error('Destination bank, account number, and account holder name are required.', [], [], 422);
                 return;
             }
 
@@ -154,8 +154,7 @@ class WithdrawalController {
             if ($amount > $withdrawableProfit) {
                 Response::error(
                     'Withdrawal request of ₦' . number_format($amount, 2) . ' exceeds available withdrawable profit (₦' . number_format($withdrawableProfit, 2) . ').',
-                    422
-                );
+                    [], 422);
                 return;
             }
 
@@ -265,12 +264,12 @@ class WithdrawalController {
                     $withdrawalId
                 ]);
 
-                Response::error($errMsg, 400);
+                Response::error($errMsg, [], 400);
             }
 
         } catch (\Throwable $e) {
             error_log('[GemVerify Withdrawal Exception] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-            Response::error($e->getMessage(), 400);
+            Response::error($e->getMessage(), [], 400);
         }
     }
 }
