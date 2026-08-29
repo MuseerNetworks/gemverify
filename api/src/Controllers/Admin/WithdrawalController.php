@@ -188,12 +188,28 @@ class WithdrawalController {
                     $withdrawalId
                 ]);
 
-                $this->audit->log(
-                    'admin',
-                    (string)$adminId,
-                    'PROFIT_WITHDRAWAL',
-                    "Withdrew ₦" . number_format($amount, 2) . " to {$accountName} ({$bankName} - {$accountNumber}). Ref: {$ref} [Status: {$finalStatus}]"
-                );
+                // Safe audit logging (wrapped in try-catch so it never interrupts payout response)
+                try {
+                    $this->audit->log(
+                        'PROFIT_WITHDRAWAL',
+                        null,
+                        'admin',
+                        $adminId,
+                        null,
+                        [
+                            'amount'         => $amount,
+                            'bank_name'      => $bankName,
+                            'account_number' => $accountNumber,
+                            'account_name'   => $accountName,
+                            'reference'      => $ref,
+                            'status'         => $finalStatus
+                        ],
+                        "Withdrew ₦" . number_format($amount, 2) . " to {$accountName} ({$bankName} - {$accountNumber}). Ref: {$ref} [Status: {$finalStatus}]",
+                        $_SERVER['REMOTE_ADDR'] ?? null
+                    );
+                } catch (\Throwable $auditEx) {
+                    error_log('[GemVerify Audit Log Warning] ' . $auditEx->getMessage());
+                }
 
                 Response::success([
                     'message'          => $finalStatus === 'completed' 
@@ -225,7 +241,8 @@ class WithdrawalController {
             }
 
         } catch (\Throwable $e) {
-            Response::error($e->getMessage(), 500);
+            error_log('[GemVerify Withdrawal Exception] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            Response::error('Withdrawal error: ' . $e->getMessage(), 400);
         }
     }
 }
