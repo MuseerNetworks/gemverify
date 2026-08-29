@@ -25,6 +25,37 @@ class WithdrawalController {
         $this->db     = db();
         $this->katpay = new KatPayService();
         $this->audit  = new AuditService($this->db);
+        $this->ensureTableExists();
+    }
+
+    /**
+     * Auto-migrate admin_withdrawals table if missing on live environment.
+     */
+    private function ensureTableExists(): void {
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS admin_withdrawals (
+                    id                 BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    reference          VARCHAR(50) NOT NULL UNIQUE,
+                    admin_id           BIGINT UNSIGNED NOT NULL,
+                    amount             DECIMAL(15,2) NOT NULL,
+                    bank_code          VARCHAR(20) NOT NULL,
+                    bank_name          VARCHAR(100) NULL,
+                    account_number     VARCHAR(20) NOT NULL,
+                    account_name       VARCHAR(150) NOT NULL,
+                    description        VARCHAR(255) NULL,
+                    katpay_reference   VARCHAR(100) NULL,
+                    status             ENUM('pending','completed','failed') NOT NULL DEFAULT 'pending',
+                    response_payload   LONGTEXT NULL,
+                    created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_reference (reference),
+                    INDEX idx_admin (admin_id),
+                    INDEX idx_status (status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+        } catch (\Throwable $e) {
+            error_log('[GemVerify Migration Notice] ' . $e->getMessage());
+        }
     }
 
     /**
@@ -110,7 +141,6 @@ class WithdrawalController {
             }
 
             // ── Atomic Server-Side Profit Balance Check ────────────────────────
-            // Calculate live withdrawable company earnings (settled customer debits)
             $totalRevenue = (float)$this->db
                 ->query("SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'debit' AND status = 'completed'")
                 ->fetchColumn();
@@ -165,7 +195,6 @@ class WithdrawalController {
                 $katpayRef = $payoutResult['reference'] ?? $payoutResult['merchant_reference'] ?? $payoutResult['id'] ?? $ref;
                 $rawStatus = strtolower($payoutResult['status'] ?? ($payoutResult['success'] ? 'completed' : 'pending'));
 
-                // Accurate financial status mapping
                 $finalStatus = 'completed';
                 if (in_array($rawStatus, ['pending', 'processing', 'queued'], true)) {
                     $finalStatus = 'pending';
@@ -173,7 +202,6 @@ class WithdrawalController {
                     $finalStatus = 'failed';
                 }
 
-                // Update database
                 $uStmt = $this->db->prepare("
                     UPDATE admin_withdrawals SET
                       status = ?,
@@ -188,7 +216,7 @@ class WithdrawalController {
                     $withdrawalId
                 ]);
 
-                // Safe audit logging (wrapped in try-catch so it never interrupts payout response)
+                // Safe audit logging
                 try {
                     $this->audit->log(
                         'PROFIT_WITHDRAWAL',
@@ -224,7 +252,7 @@ class WithdrawalController {
                 ]);
 
             } catch (\Throwable $payoutErr) {
-                // Mark as failed
+                // Mark as failed in DB
                 $errMsg = $payoutErr->getMessage();
                 $fStmt = $this->db->prepare("
                     UPDATE admin_withdrawals SET
@@ -242,7 +270,7 @@ class WithdrawalController {
 
         } catch (\Throwable $e) {
             error_log('[GemVerify Withdrawal Exception] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-            Response::error('Withdrawal error: ' . $e->getMessage(), 400);
+            Response::error($e->getMessage(), 400);
         }
     }
 }

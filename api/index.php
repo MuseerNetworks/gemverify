@@ -88,10 +88,10 @@ foreach ($routes as $route) {
         try {
             call_user_func($route['handler'], $params);
         } catch (Throwable $e) {
-            if (defined('APP_DEBUG') && APP_DEBUG) {
-                Response::serverError($e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            error_log('[GemVerify] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            if ((defined('APP_DEBUG') && APP_DEBUG) || str_starts_with($uri, '/admin/')) {
+                Response::serverError($e->getMessage());
             } else {
-                error_log('[GemVerify] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
                 Response::serverError('An internal error occurred. Please try again.');
             }
         }
