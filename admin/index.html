@@ -916,15 +916,18 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 <section id="page-profit" class="page">
   <div class="heading">
     <div><h1>Profit & Withdrawals</h1><p>Control settled company earnings without touching customer wallet liability.</p></div>
-    <button class="primary" onclick="openWithdraw()">Withdraw Profit</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="secondary" style="background:#0284c7;border-color:#0284c7;color:#fff;font-weight:700" onclick="openWithdraw('business_cash')">Withdraw Business Cash</button>
+      <button class="primary" onclick="openWithdraw('profit')">Withdraw Profit</button>
+    </div>
   </div>
   <div class="grid4" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
     <div class="stat"><small>Revenue Today</small><strong id="profitRevenueToday">₦0</strong></div>
-    <div class="stat"><small>Total Revenue</small><strong id="profitTotalRevenue">₦0</strong></div>
     <div class="stat"><small>Profit Today</small><strong id="profitToday">₦0</strong></div>
-    <div class="stat"><small>Total Profit</small><strong id="profitTotalProfit">₦0</strong></div>
-    <div class="stat"><small>Withdrawable Profit</small><strong id="withdrawablePage">₦0</strong></div>
-    <div class="stat"><small>Customer Liability</small><strong id="profitCustomerLiability">₦0</strong></div>
+    <div class="stat"><small>User Payments (Total)</small><strong id="profitTotalRevenue">₦0</strong></div>
+    <div class="stat"><small>Withdrawable Business Cash</small><strong id="withdrawableBusinessCash" style="color:#0284c7">₦0</strong><small style="color:var(--muted);font-size:9px">Funds API Providers</small></div>
+    <div class="stat"><small>Withdrawable Profit</small><strong id="withdrawablePage" style="color:var(--brand)">₦0</strong><small style="color:var(--muted);font-size:9px">Owner Earnings</small></div>
+    <div class="stat"><small>Customer Liability</small><strong id="profitCustomerLiability">₦0</strong><small style="color:var(--muted);font-size:9px">Protected Escrow</small></div>
   </div>
   <div class="card" style="margin-top:16px">
     <div class="card-head"><h3>Withdrawal History</h3><span>Every withdrawal must be auditable</span></div>
@@ -1507,6 +1510,7 @@ async function fetchDashboardData(){
       if(document.getElementById('statCompleted')) document.getElementById('statCompleted').textContent = data.total_completed || 0;
       if(document.getElementById('statRejected')) document.getElementById('statRejected').textContent = data.total_rejected || 0;
       withdrawableProfit = Number(data.withdrawable_profit || 0);
+      withdrawableBusinessCash = Number(data.withdrawable_business_cash || 0);
       if(document.getElementById('withdrawableStat')) document.getElementById('withdrawableStat').textContent = money(data.withdrawable_profit || 0);
       if(document.getElementById('providerBalanceStat')) document.getElementById('providerBalanceStat').textContent = money(data.provider_balance || 0);
       if(document.getElementById('finCustomerLiability')) document.getElementById('finCustomerLiability').textContent = money(data.total_wallet_liability || 0);
@@ -1516,6 +1520,7 @@ async function fetchDashboardData(){
       if(document.getElementById('profitTotalRevenue')) document.getElementById('profitTotalRevenue').textContent = money(data.total_revenue || 0);
       if(document.getElementById('profitToday')) document.getElementById('profitToday').textContent = money(data.profit_today || 0);
       if(document.getElementById('profitTotalProfit')) document.getElementById('profitTotalProfit').textContent = money(data.total_profit || 0);
+      if(document.getElementById('withdrawableBusinessCash')) document.getElementById('withdrawableBusinessCash').textContent = money(data.withdrawable_business_cash || 0);
       if(document.getElementById('withdrawablePage')) document.getElementById('withdrawablePage').textContent = money(data.withdrawable_profit || 0);
       if(document.getElementById('profitCustomerLiability')) document.getElementById('profitCustomerLiability').textContent = money(data.total_wallet_liability || 0);
       renderLiveQueue();
@@ -2292,11 +2297,25 @@ function openService(id){
  let pricingHtml = '';
  if (s.pricing && s.pricing.length > 0) {
      pricingHtml = s.pricing.map(p => {
-         let label = p.variant_key ? `Price for '${p.variant_key}' (₦)` : 'Price (₦)';
-         return `<div class="field"><label>${label}</label><input class="mVariantPrice" data-pid="${p.pricing_id}" type="number" value="${p.price}"></div>`;
+         let label = p.variant_key ? `Pricing for '${p.variant_key}'` : 'Service Pricing';
+         return `
+           <div style="background:#f8fafc;border:1px solid var(--line);padding:12px;border-radius:10px;margin-bottom:10px">
+             <b style="font-size:12px;color:var(--navy)">${label}</b>
+             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
+               <div><label style="font-size:11px">Selling Price (₦)</label><input class="mVariantPrice" data-pid="${p.pricing_id}" type="number" value="${p.price}" placeholder="Customer pays"></div>
+               <div><label style="font-size:11px">Provider Cost (₦)</label><input class="mVariantCost" data-pid="${p.pricing_id}" type="number" value="${p.cost_price || 0}" placeholder="Provider charges"></div>
+             </div>
+           </div>`;
      }).join('');
  } else {
-     pricingHtml = `<div class="field"><label>Price (₦)</label><input class="mVariantPrice" data-pid="" type="number" value="${s.price}"></div>`;
+     pricingHtml = `
+       <div style="background:#f8fafc;border:1px solid var(--line);padding:12px;border-radius:10px;margin-bottom:10px">
+         <b style="font-size:12px;color:var(--navy)">Standard Pricing</b>
+         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
+           <div><label style="font-size:11px">Selling Price (₦)</label><input class="mVariantPrice" data-pid="" type="number" value="${s.price}" placeholder="Customer pays"></div>
+           <div><label style="font-size:11px">Provider Cost (₦)</label><input class="mVariantCost" data-pid="" type="number" value="0" placeholder="Provider charges"></div>
+         </div>
+       </div>`;
  }
  
  document.getElementById('modalTitle').textContent='Edit Service';
@@ -2347,11 +2366,13 @@ async function saveService(id){
       throw new Error(errJson.message || "Failed to update service settings");
     }
     
-    // 2. Update variant prices
+    // 2. Update variant prices and provider costs
     const priceInputs = document.querySelectorAll('.mVariantPrice');
     for (let input of priceInputs) {
       let pid = input.getAttribute('data-pid');
       let val = Number(input.value) || 0;
+      let costInput = document.querySelector(`.mVariantCost[data-pid="${pid}"]`);
+      let costVal = costInput ? (Number(costInput.value) || 0) : 0;
       if (val > 0 && pid) {
         const resPrice = await fetch(`../api/admin/services/${s.id}/pricing/${pid}`, {
           method: 'PATCH',
@@ -2359,7 +2380,7 @@ async function saveService(id){
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ price: val })
+          body: JSON.stringify({ price: val, cost_price: costVal })
         });
         if (!resPrice.ok) {
           const errP = await resPrice.json().catch(() => ({}));
@@ -2593,65 +2614,59 @@ async function loadKatPayBanks() {
   return katpayBanksList;
 }
 
-async function openWithdraw(){
-  document.getElementById('modalTitle').textContent = 'Withdraw Company Profit via KatPay';
+async function openWithdraw(type = 'profit'){
+  const isBusinessCash = type === 'business_cash';
+  const availableAmount = isBusinessCash ? withdrawableBusinessCash : withdrawableProfit;
+  const poolDesc = isBusinessCash ? 'Funds to top-up and replenish your API Provider (TechHub) wallet.' : 'Personal business earnings ready for payout.';
+
+  document.getElementById('modalTitle').textContent = isBusinessCash ? 'Withdraw Business Cash via KatPay' : 'Withdraw Company Profit via KatPay';
   document.getElementById('modalBody').innerHTML = `
-    <div style="background:#eff6ff;border:1px solid #dbeafe;padding:14px;border-radius:13px;margin-bottom:16px">
-      <small style="color:var(--muted);font-weight:800">AVAILABLE FOR WITHDRAWAL</small>
-      <div style="font-size:24px;font-weight:900;margin-top:4px">${money(withdrawableProfit)}</div>
-      <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Transfers are processed instantly via KatPay Payouts API directly to NUBAN bank accounts.</p>
+    <div style="background:${isBusinessCash ? '#f0f9ff;border:1px solid #bae6fd' : '#eff6ff;border:1px solid #dbeafe'};padding:14px;border-radius:13px;margin-bottom:16px">
+      <small style="color:var(--muted);font-weight:800">AVAILABLE ${isBusinessCash ? 'BUSINESS CASH (PROVIDER FUNDS)' : 'PROFIT'}</small>
+      <div style="font-size:24px;font-weight:900;margin-top:4px;color:${isBusinessCash ? '#0284c7' : 'var(--navy)'}">${money(availableAmount)}</div>
+      <p style="font-size:10px;color:var(--muted);margin:5px 0 0">${poolDesc} Transfers are processed instantly via KatPay Payouts API directly to NUBAN bank accounts.</p>
     </div>
-    <div class="field"><label>Withdrawal Amount (NGN)</label><input id="withdrawAmount" type="number" min="100" max="${withdrawableProfit}" placeholder="Min ₦100"></div>
+    <div class="field"><label>Withdrawal Amount (NGN)</label><input id="withdrawAmount" type="number" min="100" max="${availableAmount}" placeholder="Min ₦100"></div>
     <div class="field"><label>Destination Bank</label><select id="withdrawBank"><option value="">Loading banks...</option></select></div>
     <div class="field"><label>NUBAN Account Number</label><input id="withdrawAcctNo" type="text" maxlength="10" placeholder="10-digit account number"></div>
     <div class="field"><label>Account Holder Name</label><input id="withdrawAcctName" type="text" placeholder="Account owner full name"></div>
-    <div class="field"><label>Narration / Reference</label><input id="withdrawReason" placeholder="e.g. Weekly profit settlement"></div>`;
+    <div class="field"><label>Narration / Reference</label><input id="withdrawReason" placeholder="e.g. ${isBusinessCash ? 'TechHub Provider Funding' : 'Weekly Profit Settlement'}"></div>`;
   
   document.getElementById('modalFoot').innerHTML =
     `<button class="secondary" onclick="closeModal()">Cancel</button>
-     <button class="primary" onclick="submitWithdraw()">Withdraw</button>`;
+     <button class="primary" style="background:${isBusinessCash ? '#0284c7;border-color:#0284c7' : ''}" onclick="submitWithdraw('${type}')">Withdraw ${isBusinessCash ? 'Business Cash' : 'Profit'}</button>`;
   document.getElementById('modal').classList.add('show');
 
   const banks = await loadKatPayBanks();
   const bankSelect = document.getElementById('withdrawBank');
   if (bankSelect) {
-    if (banks.length > 0) {
-      bankSelect.innerHTML = '<option value="">-- Select Destination Bank --</option>' + 
-        banks.map(b => `<option value="${b.code || b.bank_code}">${b.name || b.bank_name} (${b.code || b.bank_code})</option>`).join('');
-    } else {
-      bankSelect.innerHTML = `
-        <option value="">-- Select Bank --</option>
-        <option value="058">GTBank (058)</option>
-        <option value="011">First Bank (011)</option>
-        <option value="057">Zenith Bank (057)</option>
-        <option value="033">United Bank for Africa (033)</option>
-        <option value="044">Access Bank (044)</option>
-        <option value="999991">PalmPay (999991)</option>
-        <option value="999992">OPay (999992)</option>
-        <option value="50515">Moniepoint (50515)</option>
-      `;
-    }
+    bankSelect.innerHTML = '<option value="">-- Select Destination Bank --</option>' + 
+      banks.map(b => `<option value="${b.code || b.bank_code}">${b.name || b.bank_name} (${b.code || b.bank_code})</option>`).join('');
   }
 }
 
-function submitWithdraw(){
+function submitWithdraw(type = 'profit'){
+  const isBusinessCash = type === 'business_cash';
+  const availableAmount = isBusinessCash ? withdrawableBusinessCash : withdrawableProfit;
   const amount = Number(document.getElementById('withdrawAmount').value);
   const bankSelect = document.getElementById('withdrawBank');
   const bankCode = bankSelect ? bankSelect.value : '';
   const bankName = bankSelect && bankSelect.options[bankSelect.selectedIndex] ? bankSelect.options[bankSelect.selectedIndex].text : '';
   const acctNo = document.getElementById('withdrawAcctNo').value.trim();
   const acctName = document.getElementById('withdrawAcctName').value.trim();
-  const reason = document.getElementById('withdrawReason').value.trim() || 'Profit withdrawal';
+  const defaultReason = isBusinessCash ? 'TechHub Provider Funding' : 'Profit withdrawal';
+  const reason = document.getElementById('withdrawReason').value.trim() || defaultReason;
 
   if (!amount || amount < 100) { alert('Minimum withdrawal amount is ₦100.'); return; }
-  if (amount > withdrawableProfit) { alert('Withdrawal exceeds settled withdrawable profit.'); return; }
+  if (amount > availableAmount) { alert(`Withdrawal exceeds available ${isBusinessCash ? 'Business Cash' : 'Profit'}.`); return; }
   if (!bankCode) { alert('Please select a destination bank.'); return; }
   if (!acctNo || acctNo.length !== 10) { alert('Please enter a valid 10-digit NUBAN account number.'); return; }
   if (!acctName) { alert('Please enter the account holder name.'); return; }
 
-  document.getElementById('modalTitle').textContent = 'Confirm KatPay Payout Withdrawal';
+  document.getElementById('modalTitle').textContent = `Confirm ${isBusinessCash ? 'Business Cash' : 'Profit'} Payout`;
   document.getElementById('modalBody').innerHTML = `
     <div style="padding:15px;border:1px solid var(--line);border-radius:13px;background:var(--bg)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Type:</span><b style="color:${isBusinessCash ? '#0284c7' : 'var(--brand)'}">${isBusinessCash ? 'Business Cash (Provider Replenishment)' : 'Company Profit'}</b></div>
       <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Amount:</span><b style="color:var(--brand)">${money(amount)}</b></div>
       <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Bank:</span><b>${bankName}</b></div>
       <div style="display:flex;justify-content:space-between;margin-bottom:9px"><span>Account Number:</span><b style="font-family:monospace">${acctNo}</b></div>
@@ -2659,19 +2674,19 @@ function submitWithdraw(){
       <div style="display:flex;justify-content:space-between"><span>Narration:</span><b>${reason}</b></div>
     </div>
     <div style="margin-top:12px;background:#fff7e6;color:#92400e;border:1px solid #fde68a;padding:10px;border-radius:10px;font-size:11px">
-      ⚠ Funds will be transferred directly from KatPay merchant balance to <b>${acctName}</b>. This action is final.
+      ⚠ Funds will be transferred directly from KatPay merchant balance to <b>${acctName}</b>.
     </div>`;
   
   document.getElementById('modalFoot').innerHTML =
-    `<button class="secondary" onclick="openWithdraw()">← Edit</button>
-     <button class="primary" style="background:#16a34a;border-color:#16a34a" onclick="confirmWithdraw(${amount}, '${bankCode}', '${escapeJs(bankName)}', '${acctNo}', '${escapeJs(acctName)}', '${escapeJs(reason)}')">Execute Payout Now</button>`;
+    `<button class="secondary" onclick="openWithdraw('${type}')">← Edit</button>
+     <button class="primary" style="background:#16a34a;border-color:#16a34a" onclick="confirmWithdraw(${amount}, '${bankCode}', '${escapeJs(bankName)}', '${acctNo}', '${escapeJs(acctName)}', '${escapeJs(reason)}', '${type}')">Execute Payout Now</button>`;
 }
 
 function escapeJs(str) {
   return (str || '').replace(/'/g, "\\'");
 }
 
-async function confirmWithdraw(amount, bankCode, bankName, acctNo, acctName, reason){
+async function confirmWithdraw(amount, bankCode, bankName, acctNo, acctName, reason, type = 'profit'){
   try {
     document.getElementById('modalBody').innerHTML = `
       <div style="padding:32px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px">
@@ -2686,6 +2701,7 @@ async function confirmWithdraw(amount, bankCode, bankName, acctNo, acctName, rea
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         amount: amount,
+        withdrawal_type: type,
         bank_code: bankCode,
         bank_name: bankName,
         account_number: acctNo,
@@ -2698,7 +2714,7 @@ async function confirmWithdraw(amount, bankCode, bankName, acctNo, acctName, rea
     closeModal();
 
     if (res && res.success) {
-      alert('✓ KatPay Payout Initiated Successfully!\n\nRef: ' + (res.data.reference || '') + '\nStatus: ' + (res.data.status || 'completed').toUpperCase() + '\nAmount: ' + money(amount) + '\nRecipient: ' + acctName + ' (' + bankName + ' - ' + acctNo + ')');
+      alert('✓ KatPay Payout Initiated Successfully!\n\nType: ' + (type === 'business_cash' ? 'Business Cash' : 'Profit') + '\nRef: ' + (res.data.reference || '') + '\nStatus: ' + (res.data.status || 'completed').toUpperCase() + '\nAmount: ' + money(amount) + '\nRecipient: ' + acctName + ' (' + bankName + ' - ' + acctNo + ')');
       if (typeof fetchAdminDashboardData === 'function') fetchAdminDashboardData();
     } else {
       alert('Payout Failed: ' + (res.message || 'Unknown error occurred.'));

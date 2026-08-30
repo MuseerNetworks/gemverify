@@ -14,6 +14,25 @@ class StatsController
     public function __construct()
     {
         $this->db = db();
+        $this->ensureCostPriceColumn();
+    }
+
+    private function ensureCostPriceColumn(): void
+    {
+        try {
+            $hasCostPrice = (bool)$this->db->query("
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'service_pricing'
+                  AND column_name = 'cost_price'
+            ")->fetchColumn();
+
+            if (!$hasCostPrice) {
+                $this->db->exec("ALTER TABLE service_pricing ADD COLUMN cost_price DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER price");
+            }
+        } catch (\Throwable $e) {
+            error_log('[GemVerify Notice] cost_price column check: ' . $e->getMessage());
+        }
     }
 
     public function getStats(): void
@@ -79,7 +98,7 @@ class StatsController
             $userStats = $stmtUsers->fetch(PDO::FETCH_ASSOC);
             $stats     = array_merge($stats, $userStats);
 
-            // ── Revenue (completed wallet debits) ──────────────────────────────────
+            // ── Revenue & Business Cash Calculation ────────────────────────────────
             $stmtRev = $this->db->query("
                 SELECT
                     COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE() THEN amount ELSE 0 END), 0) as revenue_today,
@@ -91,20 +110,74 @@ class StatsController
             $revenueToday = (float)($revData['revenue_today'] ?? 0);
             $totalRevenue = (float)($revData['total_revenue'] ?? 0);
 
-            // Guard: admin_withdrawals table may not exist on live yet
-            $completedWithdrawals = 0.0;
-            if ($adminWdExists) {
-                $completedWithdrawals = (float)($this->db
-                    ->query("SELECT COALESCE(SUM(amount), 0) FROM admin_withdrawals WHERE status = 'completed'")
-                    ->fetchColumn() ?: 0);
+            // Calculate actual provider cost from completed service pricing records
+            $providerCostTotal = 0.0;
+            $providerCostToday = 0.0;
+            if ($apiTxnExists) {
+                $stmtCost = $this->db->query("
+                    SELECT
+                        COALESCE(SUM(CASE WHEN at.gv_status = 'completed' THEN COALESCE(sp.cost_price, 0) ELSE 0 END), 0) AS total_cost,
+                        COALESCE(SUM(CASE WHEN at.gv_status = 'completed' AND DATE(at.submitted_at) = CURRENT_DATE() THEN COALESCE(sp.cost_price, 0) ELSE 0 END), 0) AS cost_today
+                    FROM api_transactions at
+                    LEFT JOIN service_pricing sp ON sp.id = at.pricing_id
+                ");
+                $costRow = $stmtCost->fetch(PDO::FETCH_ASSOC);
+                $providerCostTotal = (float)($costRow['total_cost'] ?? 0);
+                $providerCostToday = (float)($costRow['cost_today'] ?? 0);
             }
 
-            $stats['revenue_today']       = $revenueToday;
-            $stats['total_revenue']       = $totalRevenue;
-            $stats['profit_today']        = $revenueToday * 0.25;
-            $stats['total_profit']        = $totalRevenue * 0.25;
-            $stats['withdrawable_profit'] = max(0, ($totalRevenue * 0.25) - $completedWithdrawals);
-            $stats['provider_balance']    = 0.00;
+            // Fallback estimation if cost_price is zero
+            if ($providerCostTotal === 0.0 && $totalRevenue > 0) {
+                $providerCostTotal = round($totalRevenue * 0.70, 2); // 70% provider cost default
+                $providerCostToday = round($revenueToday * 0.70, 2);
+            }
+
+            // Formula: Business Cash = User Payments - Profit
+            $totalProfit = max(0, $totalRevenue - $providerCostTotal);
+            $profitToday = max(0, $revenueToday - $providerCostToday);
+            $totalBusinessCash = $providerCostTotal;
+            $businessCashToday = $providerCostToday;
+
+            // Check completed withdrawals by type
+            $withdrawnProfit = 0.0;
+            $withdrawnBusinessCash = 0.0;
+            if ($adminWdExists) {
+                // Check if withdrawal_type column exists
+                $hasTypeCol = (bool)$this->db->query("
+                    SELECT COUNT(*) FROM information_schema.columns
+                    WHERE table_schema = DATABASE()
+                      AND table_name = 'admin_withdrawals'
+                      AND column_name = 'withdrawal_type'
+                ")->fetchColumn();
+
+                if ($hasTypeCol) {
+                    $stmtWd = $this->db->query("
+                        SELECT
+                            COALESCE(SUM(CASE WHEN withdrawal_type = 'profit' THEN amount ELSE 0 END), 0) as withdrawn_profit,
+                            COALESCE(SUM(CASE WHEN withdrawal_type = 'business_cash' THEN amount ELSE 0 END), 0) as withdrawn_cash,
+                            COALESCE(SUM(amount), 0) as total_withdrawn
+                        FROM admin_withdrawals WHERE status = 'completed'
+                    ");
+                    $wdRow = $stmtWd->fetch(PDO::FETCH_ASSOC);
+                    $withdrawnProfit = (float)($wdRow['withdrawn_profit'] ?? 0);
+                    $withdrawnBusinessCash = (float)($wdRow['withdrawn_cash'] ?? 0);
+                } else {
+                    $totalWithdrawn = (float)$this->db->query("SELECT COALESCE(SUM(amount), 0) FROM admin_withdrawals WHERE status = 'completed'")->fetchColumn();
+                    $withdrawnProfit = $totalWithdrawn;
+                }
+            }
+
+            $stats['revenue_today']              = $revenueToday;
+            $stats['total_revenue']              = $totalRevenue;
+            $stats['user_payments']              = $totalRevenue;
+            $stats['profit_today']               = $profitToday;
+            $stats['total_profit']               = $totalProfit;
+            $stats['business_cash_today']        = $businessCashToday;
+            $stats['total_business_cash']        = $totalBusinessCash;
+            $stats['withdrawable_business_cash'] = max(0, $totalBusinessCash - $withdrawnBusinessCash);
+            $stats['withdrawable_profit']        = max(0, $totalProfit - $withdrawnProfit);
+            $stats['total_withdrawable']         = max(0, $totalRevenue - ($withdrawnProfit + $withdrawnBusinessCash));
+            $stats['provider_balance']           = 0.00;
 
             // ── By status (unified) ────────────────────────────────────────────────
             if ($apiTxnExists) {
@@ -304,7 +377,7 @@ class StatsController
             }
 
             foreach ($services as &$service) {
-                $stmtPrice = $this->db->prepare("SELECT id as pricing_id, variant_key, price FROM service_pricing WHERE service_id = ?");
+                $stmtPrice = $this->db->prepare("SELECT id as pricing_id, variant_key, price, COALESCE(cost_price, 0) as cost_price FROM service_pricing WHERE service_id = ?");
                 $stmtPrice->execute([$service['id']]);
                 $service['pricing'] = $stmtPrice->fetchAll(PDO::FETCH_ASSOC);
             }
@@ -733,24 +806,25 @@ class StatsController
     public function updateServicePrice(string $id, string $pricingId): void
     {
         $input = json_decode(file_get_contents('php://input'), true);
-        $price = $input['price'] ?? null;
+        $price = isset($input['price']) ? (float)$input['price'] : null;
+        $costPrice = isset($input['cost_price']) ? (float)$input['cost_price'] : 0.00;
 
         if ($price === null || $price <= 0) {
-            Response::error('Valid price > 0 is required', [], 400);
+            Response::error('Valid selling price > 0 is required', [], 400);
         }
 
         try {
             $this->db->beginTransaction();
 
-            $stmt = $this->db->prepare("UPDATE service_pricing SET price = ? WHERE id = ? AND service_id = ?");
-            $stmt->execute([$price, $pricingId, $id]);
+            $stmt = $this->db->prepare("UPDATE service_pricing SET price = ?, cost_price = ? WHERE id = ? AND service_id = ?");
+            $stmt->execute([$price, $costPrice, $pricingId, $id]);
 
             $adminId = \Middleware\AdminMiddleware::getAdminId();
             $stmtAudit = $this->db->prepare("INSERT INTO audit_logs (actor_type, actor_id, action, notes) VALUES ('admin', ?, 'PRICE_UPDATED', ?)");
-            $stmtAudit->execute([$adminId, "Updated pricing $pricingId for service $id to $price"]);
+            $stmtAudit->execute([$adminId, "Updated pricing $pricingId for service $id: Selling Price = $price, Provider Cost Price = $costPrice"]);
 
             $this->db->commit();
-            Response::success(['success' => true, 'message' => 'Price updated successfully']);
+            Response::success(['success' => true, 'message' => 'Pricing and provider cost updated successfully']);
         } catch (Exception $e) {
             $this->db->rollBack();
             Response::error($e->getMessage(), [], 500);

@@ -38,6 +38,7 @@ class WithdrawalController {
                     id                 BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                     reference          VARCHAR(50) NOT NULL UNIQUE,
                     admin_id           BIGINT UNSIGNED NOT NULL,
+                    withdrawal_type    ENUM('profit', 'business_cash') NOT NULL DEFAULT 'profit',
                     amount             DECIMAL(15,2) NOT NULL,
                     bank_code          VARCHAR(20) NOT NULL,
                     bank_name          VARCHAR(100) NULL,
@@ -50,12 +51,25 @@ class WithdrawalController {
                     created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     INDEX idx_reference (reference),
                     INDEX idx_admin (admin_id),
+                    INDEX idx_type (withdrawal_type),
                     INDEX idx_status (status)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             ");
         } catch (\Throwable $e) {
             error_log('[GemVerify Migration Notice] ' . $e->getMessage());
         }
+        try {
+            $hasTypeCol = (bool)$this->db->query("
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'admin_withdrawals'
+                  AND column_name = 'withdrawal_type'
+            ")->fetchColumn();
+
+            if (!$hasTypeCol) {
+                $this->db->exec("ALTER TABLE admin_withdrawals ADD COLUMN withdrawal_type ENUM('profit', 'business_cash') NOT NULL DEFAULT 'profit' AFTER admin_id");
+            }
+        } catch (\Throwable $e) {}
     }
 
     /**
@@ -124,12 +138,14 @@ class WithdrawalController {
 
             $body = json_decode(file_get_contents('php://input'), true) ?? [];
 
-            $amount        = (float) ($body['amount'] ?? 0);
-            $bankCode      = trim($body['bank_code'] ?? '');
-            $bankName      = trim($body['bank_name'] ?? '');
-            $accountNumber = trim($body['account_number'] ?? '');
-            $accountName   = trim($body['account_name'] ?? '');
-            $description   = trim($body['description'] ?? 'Company Profit Withdrawal');
+            $amount         = (float) ($body['amount'] ?? 0);
+            $withdrawalType = in_array($body['withdrawal_type'] ?? '', ['business_cash', 'profit'], true) ? $body['withdrawal_type'] : 'profit';
+            $bankCode       = trim($body['bank_code'] ?? '');
+            $bankName       = trim($body['bank_name'] ?? '');
+            $accountNumber  = trim($body['account_number'] ?? '');
+            $accountName    = trim($body['account_name'] ?? '');
+            $typeLabel      = $withdrawalType === 'business_cash' ? 'Provider Business Cash' : 'Company Profit';
+            $description    = trim($body['description'] ?? "GemVerify $typeLabel Withdrawal");
 
             if ($amount < 100) {
                 Response::error('Minimum withdrawal amount is ₦100.00.', [], [], 422);
@@ -149,7 +165,7 @@ class WithdrawalController {
                 ->query("SELECT COALESCE(SUM(amount), 0) FROM admin_withdrawals WHERE status IN ('completed', 'pending')")
                 ->fetchColumn();
 
-            $withdrawableProfit = max(0, ($totalRevenue * 0.25) - $completedWithdrawals);
+            $withdrawableProfit = max(0, $totalRevenue - $completedWithdrawals);
 
             if ($amount > $withdrawableProfit) {
                 Response::error(
@@ -164,13 +180,14 @@ class WithdrawalController {
             // Log pending withdrawal in database
             $stmt = $this->db->prepare("
                 INSERT INTO admin_withdrawals
-                  (reference, admin_id, amount, bank_code, bank_name, account_number, account_name, description, status, created_at)
+                  (reference, admin_id, withdrawal_type, amount, bank_code, bank_name, account_number, account_name, description, status, created_at)
                 VALUES
-                  (?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+                  (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
             ");
             $stmt->execute([
                 $ref,
                 $adminId,
+                $withdrawalType,
                 $amount,
                 $bankCode,
                 $bankName,
