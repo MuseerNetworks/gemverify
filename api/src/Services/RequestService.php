@@ -277,7 +277,7 @@ class RequestService {
             $errors = [];
             
             // Basic generic validation rules example
-            if ($serviceSlug === 'nin-validation') {
+            if ($serviceSlug === 'nin-validation' || $serviceSlug === 'nin-validation-single' || $serviceSlug === 'nin-validation-bulk') {
                 if (empty($data['nin'])) $errors['nin'] = 'NIN is required';
             } elseif ($serviceSlug === 'bvn-verification') {
                 if (empty($data['bvn'])) $errors['bvn'] = 'BVN is required';

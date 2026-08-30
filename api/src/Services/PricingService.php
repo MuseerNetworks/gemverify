@@ -84,7 +84,19 @@ class PricingService {
             }
         }
 
+        // Slug fallback support for single/bulk validation
         if (!$row || (float)$row['price'] <= 0) {
+            $fallbackSlug = null;
+            if ($serviceSlug === 'nin-validation-single' || $serviceSlug === 'nin-validation-bulk') {
+                $fallbackSlug = 'nin-validation';
+            } elseif ($serviceSlug === 'nin-validation') {
+                $fallbackSlug = 'nin-validation-single';
+            }
+            if ($fallbackSlug) {
+                try {
+                    return $this->getPrice($fallbackSlug, $variantKey);
+                } catch (\Throwable $t) {}
+            }
             throw new RuntimeException("Pricing not configured or invalid for service slug: $serviceSlug");
         }
 

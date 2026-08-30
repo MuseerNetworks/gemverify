@@ -30,9 +30,68 @@ class StatsController
             if (!$hasCostPrice) {
                 $this->db->exec("ALTER TABLE service_pricing ADD COLUMN cost_price DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER price");
             }
-            // Auto-rename 'NIN Validation Bulk' to 'NIN Validation (Single & Bulk)' for clear transparency
-            $this->db->exec("UPDATE services SET name = 'NIN Validation (Single & Bulk)' WHERE slug = 'nin-validation'");
-            // Normalize vNIN validation variant key
+            // Ensure Category 1 (NIN Services)
+            $catStmt = $this->db->query("SELECT id FROM service_categories WHERE slug = 'nin' LIMIT 1");
+            $ninCatId = (int)($catStmt ? $catStmt->fetchColumn() : 1);
+            if ($ninCatId <= 0) $ninCatId = 1;
+
+            // 1. Ensure 'nin-validation-single' service exists
+            $singleStmt = $this->db->prepare("SELECT id FROM services WHERE slug = 'nin-validation-single' LIMIT 1");
+            $singleStmt->execute();
+            $singleSvcId = (int)$singleStmt->fetchColumn();
+            if ($singleSvcId <= 0) {
+                $this->db->prepare("INSERT INTO services (category_id, name, slug, description, is_manual, est_time, is_active, created_at) VALUES (?, 'NIN Validation — Single', 'nin-validation-single', 'Single NIN Validation service', 1, 'Instant', 1, NOW())")
+                         ->execute([$ninCatId]);
+                $singleSvcId = (int)$this->db->lastInsertId();
+            } else {
+                $this->db->prepare("UPDATE services SET name = 'NIN Validation — Single', is_active = 1 WHERE id = ?")->execute([$singleSvcId]);
+            }
+
+            // 2. Ensure 'nin-validation-bulk' service exists
+            $bulkStmt = $this->db->prepare("SELECT id FROM services WHERE slug = 'nin-validation-bulk' LIMIT 1");
+            $bulkStmt->execute();
+            $bulkSvcId = (int)$bulkStmt->fetchColumn();
+            if ($bulkSvcId <= 0) {
+                $this->db->prepare("INSERT INTO services (category_id, name, slug, description, is_manual, est_time, is_active, created_at) VALUES (?, 'NIN Validation — Bulk', 'nin-validation-bulk', 'Bulk NIN Validation service', 1, 'Instant', 1, NOW())")
+                         ->execute([$ninCatId]);
+                $bulkSvcId = (int)$this->db->lastInsertId();
+            } else {
+                $this->db->prepare("UPDATE services SET name = 'NIN Validation — Bulk', is_active = 1 WHERE id = ?")->execute([$bulkSvcId]);
+            }
+
+            // Standard variants list
+            $valVariants = [
+                ['No Record Found', 'No Record Found', 300.00],
+                ['SIM Validation', 'SIM Validation', 200.00],
+                ['vNIN validation', 'vNIN validation', 250.00],
+                ['Update Records Validation', 'Update Records Validation', 400.00],
+                ['Bank Validation', 'Bank Validation', 300.00],
+                ['Modification Validation', 'Modification Validation', 350.00],
+                ['Photographic Error', 'Photographic Error', 300.00],
+            ];
+
+            // Seed/sync variants for Single
+            foreach ($valVariants as $v) {
+                $check = $this->db->prepare("SELECT id FROM service_pricing WHERE service_id = ? AND variant_key = ? LIMIT 1");
+                $check->execute([$singleSvcId, $v[0]]);
+                if (!$check->fetchColumn()) {
+                    $this->db->prepare("INSERT INTO service_pricing (service_id, variant_key, variant_label, price, cost_price, is_active) VALUES (?, ?, ?, ?, 0.00, 1)")
+                             ->execute([$singleSvcId, $v[0], $v[1], $v[2]]);
+                }
+            }
+
+            // Seed/sync variants for Bulk
+            foreach ($valVariants as $v) {
+                $check = $this->db->prepare("SELECT id FROM service_pricing WHERE service_id = ? AND variant_key = ? LIMIT 1");
+                $check->execute([$bulkSvcId, $v[0]]);
+                if (!$check->fetchColumn()) {
+                    $this->db->prepare("INSERT INTO service_pricing (service_id, variant_key, variant_label, price, cost_price, is_active) VALUES (?, ?, ?, ?, 0.00, 1)")
+                             ->execute([$bulkSvcId, $v[0], $v[1], $v[2]]);
+                }
+            }
+
+            // Also normalize legacy 'nin-validation' if it exists
+            $this->db->exec("UPDATE services SET is_active = 0 WHERE slug = 'nin-validation'");
             $this->db->exec("UPDATE service_pricing SET variant_key = 'vNIN validation', variant_label = 'vNIN validation' WHERE variant_key LIKE '%v%nin%validation%'");
         } catch (\Throwable $e) {
             error_log('[GemVerify Notice] cost_price column check: ' . $e->getMessage());
