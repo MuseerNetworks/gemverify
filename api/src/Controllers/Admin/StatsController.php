@@ -30,6 +30,10 @@ class StatsController
             if (!$hasCostPrice) {
                 $this->db->exec("ALTER TABLE service_pricing ADD COLUMN cost_price DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER price");
             }
+            // Auto-rename 'NIN Validation Bulk' to 'NIN Validation (Single & Bulk)' for clear transparency
+            $this->db->exec("UPDATE services SET name = 'NIN Validation (Single & Bulk)' WHERE slug = 'nin-validation'");
+            // Normalize vNIN validation variant key
+            $this->db->exec("UPDATE service_pricing SET variant_key = 'vNIN validation', variant_label = 'vNIN validation' WHERE variant_key LIKE '%v%nin%validation%'");
         } catch (\Throwable $e) {
             error_log('[GemVerify Notice] cost_price column check: ' . $e->getMessage());
         }
@@ -455,14 +459,14 @@ class StatsController
                 ],
                 [
                     'category_slug' => 'nin',
-                    'name' => 'NIN Validation Bulk',
+                    'name' => 'NIN Validation (Single & Bulk)',
                     'slug' => 'nin-validation',
                     'description' => 'Bulk NIN Validation service',
                     'est_time' => 'Instant',
                     'pricing' => [
                         ['variant_key' => 'No Record Found — ₦300', 'variant_label' => 'No Record Found', 'price' => 300],
                         ['variant_key' => 'SIM Validation — ₦200', 'variant_label' => 'SIM Validation', 'price' => 200],
-                        ['variant_key' => 'v.nin validation — ₦250', 'variant_label' => 'v.nin validation', 'price' => 250],
+                        ['variant_key' => 'vNIN validation', 'variant_label' => 'vNIN validation', 'price' => 250],
                         ['variant_key' => 'Update Records Validation — ₦400', 'variant_label' => 'Update Records Validation', 'price' => 400],
                         ['variant_key' => 'Bank Validation — ₦300', 'variant_label' => 'Bank Validation', 'price' => 300],
                         ['variant_key' => 'Modification Validation — ₦350', 'variant_label' => 'Modification Validation', 'price' => 350],

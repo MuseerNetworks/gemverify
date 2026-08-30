@@ -2322,6 +2322,7 @@ function openService(id){
  document.getElementById('modalBody').innerHTML=`
  <div class="field"><label>Service Name</label><input id="mName" value="${s.name}"></div>
  <div class="field"><label>Category</label><select id="mCat" disabled><option value="${s.cat}">${s.cat}</option></select></div>
+ ${s.slug === 'nin-validation' ? '<div style="background:#eff6ff;border:1px solid #dbeafe;color:#1e40af;padding:10px 12px;border-radius:10px;font-size:11px;margin-bottom:12px">💡 <b>Single & Bulk Unified Pricing:</b> The per-item unit price below applies directly to Single Validation (1 NIN) and multiplies per item in Bulk Validation.</div>' : ''}
  ${pricingHtml}
  <div class="field"><label>Estimated Processing Time</label><input id="mEstTime" value="${s.est_time || ''}" placeholder="e.g. Instant, 1-3 days"></div>
  <div class="field"><label>Service Type</label><select id="mType"><option value="Manual" ${s.type==='Manual'?'selected':''}>Manual</option><option value="API-Based" ${s.type==='API-Based'?'selected':''}>API-Based</option></select></div>
