@@ -1,2 +1,11 @@
 # Disable directory index listings site-wide
 Options -Indexes
+
+# Prevent Browser & Proxy Caching of HTML/SPA Application Files
+<IfModule mod_headers.c>
+    <FilesMatch "\.(html|htm|php)$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0"
+        Header set Pragma "no-cache"
+        Header set Expires "Wed, 11 Jan 1984 05:00:00 GMT"
+    </FilesMatch>
+</IfModule>
