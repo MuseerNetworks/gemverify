@@ -2029,14 +2029,17 @@ function ServiceHistoryTable({ serviceSlug, requests = [], onRefresh }) {
     let sSlug = String(r.service_slug).toLowerCase().trim();
     let target = String(serviceSlug).toLowerCase().trim();
     
-    if (target === "jamb-services") {
+    if (target === "jamb-services" || target.startsWith("jamb-")) {
       return sSlug.startsWith("jamb-");
     }
-    if (target === "cac-services") {
+    if (target === "cac-services" || target === "cac-business" || target === "cac-ltd") {
       return sSlug.startsWith("cac-");
     }
     if (target === "ipe-clearance" || target === "ipe-clearance-single") {
       return sSlug === "ipe-clearance" || sSlug === "ipe-clearance-single";
+    }
+    if (target === "nin-validation" || target === "nin-validation-single" || target === "nin-validation-bulk") {
+      return sSlug === "nin-validation" || sSlug === "nin-validation-single" || sSlug === "nin-validation-bulk";
     }
     return sSlug === target;
   });

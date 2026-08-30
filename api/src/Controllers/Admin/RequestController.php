@@ -40,6 +40,7 @@ class RequestController
                 SELECT 
                     r.id, 
                     r.reference, 
+                    t.reference as wallet_reference,
                     r.status, 
                     r.price_paid, 
                     r.submitted_at, 
@@ -57,12 +58,14 @@ class RequestController
                 JOIN services s ON r.service_id = s.id
                 JOIN service_categories c ON s.category_id = c.id
                 LEFT JOIN admins a ON r.assigned_admin_id = a.id
+                LEFT JOIN transactions t ON r.transaction_id = t.id
 
                 UNION ALL
 
                 SELECT 
                     at.id, 
                     at.gv_reference as reference, 
+                    t.reference as wallet_reference,
                     at.gv_status as status, 
                     COALESCE(sp.price, t.amount, 0) as price_paid, 
                     at.submitted_at, 
@@ -96,10 +99,25 @@ class RequestController
                     $params[] = $status;
                 }
             }
-            if ($serviceSlug) { $query .= " AND service_slug = ?"; $params[] = $serviceSlug; }
+            if ($serviceSlug) {
+                $slugList = array_filter(array_map('trim', explode(',', $serviceSlug)));
+                if (count($slugList) === 1) {
+                    $query .= " AND service_slug = ?";
+                    $params[] = $slugList[0];
+                } elseif (count($slugList) > 1) {
+                    $placeholders = implode(',', array_fill(0, count($slugList), '?'));
+                    $query .= " AND service_slug IN ($placeholders)";
+                    foreach ($slugList as $sl) { $params[] = $sl; }
+                }
+            }
             if ($category) { $query .= " AND category = ?"; $params[] = $category; }
             if ($userId) { $query .= " AND user_id = ?"; $params[] = $userId; }
-            if ($reference) { $query .= " AND reference = ?"; $params[] = $reference; }
+            if ($reference) {
+                $refTrim = trim($reference);
+                $query .= " AND (reference LIKE ? OR wallet_reference LIKE ?)";
+                $params[] = '%' . $refTrim . '%';
+                $params[] = '%' . $refTrim . '%';
+            }
             if ($dateFrom) { $query .= " AND DATE(submitted_at) >= ?"; $params[] = $dateFrom; }
             if ($dateTo) { $query .= " AND DATE(submitted_at) <= ?"; $params[] = $dateTo; }
             if ($assignedAdminId) { $query .= " AND assigned_admin_id = ?"; $params[] = $assignedAdminId; }
@@ -125,6 +143,7 @@ class RequestController
             $formattedRequests = array_map(function($req) {
                 return [
                     'reference' => $req['reference'],
+                    'wallet_reference' => $req['wallet_reference'] ?? null,
                     'user' => [
                         'business_name' => $req['business_name'],
                         'email' => $req['user_email'],

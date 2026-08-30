@@ -1591,9 +1591,10 @@ async function renderLiveQueue(pageNumber) {
 }
 window.gvAdminPages = window.gvAdminPages || {};
 
-async function renderRequestsQueue(page, statusFilter, pageNumber) {
+async function renderRequestsQueue(page, statusFilter, pageNumber, serviceSlug) {
   statusFilter = statusFilter || '';
   pageNumber   = pageNumber   || 1;
+  serviceSlug  = serviceSlug  || '';
   const token  = localStorage.getItem('gv_admin_token');
   if (!token) return;
 
@@ -1607,7 +1608,8 @@ async function renderRequestsQueue(page, statusFilter, pageNumber) {
 
   try {
     let url = '../api/admin/requests?per_page=10&page=' + pageNumber;
-    if (statusFilter) url += '&status=' + statusFilter;
+    if (statusFilter) url += '&status=' + encodeURIComponent(statusFilter);
+    if (serviceSlug) url += '&service_slug=' + encodeURIComponent(serviceSlug);
 
     const res  = await gvAdminFetch(url);
     const json = await res.json();
@@ -1717,6 +1719,32 @@ async function go(page,btn){
   if(page === "pending") await renderRequestsQueue("pending", "submitted");
   if(page === "processing") await renderRequestsQueue("processing", "processing");
   if(page === "completed") await renderRequestsQueue("completed", "completed");
+
+  const serviceSubPages = {
+    "nin-validation": "nin-validation-single,nin-validation-bulk,nin-validation",
+    "nin-ipe": "ipe-clearance,ipe-modification",
+    "nin-personalisation": "personalization",
+    "nin-modification": "nin-modification",
+    "nin-dob": "dob-correction",
+    "nin-delinking": "self-service",
+    "bvn-license": "bvn-license",
+    "bvn-nonappearance": "bvn-nonappearance",
+    "bvn-risk": "bvn-risk",
+    "bvn-modification": "bvn-modification",
+    "jamb-all": "jamb-reprint-original,jamb-original-result,jamb-2026-slip,jamb-admission-letter,jamb-reprints",
+    "jamb-result": "jamb-original-result",
+    "jamb-slip": "jamb-2026-slip",
+    "jamb-admission": "jamb-admission-letter",
+    "jamb-reprints": "jamb-reprints",
+    "cac-business": "cac-business",
+    "cac-ltd": "cac-ltd",
+    "cac-verification": "cac-business,cac-ltd",
+    "tin": "tin-registration",
+    "attestation": "nin-attestation"
+  };
+  if(serviceSubPages[page]) {
+    await renderRequestsQueue(page, '', 1, serviceSubPages[page]);
+  }
   if(page === "rejected") loadFailedTxns();
   if(page === "refunds") loadRefunds();
   if(page === "api-transactions") { if(typeof fetchApiTransactions==="function") fetchApiTransactions(1); if(typeof fetchApiTxnStats==="function") fetchApiTxnStats(); }
