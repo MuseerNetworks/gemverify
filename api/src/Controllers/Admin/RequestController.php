@@ -35,8 +35,9 @@ class RequestController
             $dateFrom = $_GET['date_from'] ?? null;
             $dateTo = $_GET['date_to'] ?? null;
             $assignedAdminId = $_GET['assigned_admin_id'] ?? null;
+            $requestType = $_GET['request_type'] ?? 'manual';
             
-            $query = "SELECT * FROM (
+            $manualSelect = "
                 SELECT 
                     r.id, 
                     r.reference, 
@@ -59,9 +60,9 @@ class RequestController
                 JOIN service_categories c ON s.category_id = c.id
                 LEFT JOIN admins a ON r.assigned_admin_id = a.id
                 LEFT JOIN transactions t ON r.transaction_id = t.id
+            ";
 
-                UNION ALL
-
+            $apiSelect = "
                 SELECT 
                     at.id, 
                     at.gv_reference as reference, 
@@ -84,8 +85,15 @@ class RequestController
                 JOIN service_categories c ON s.category_id = c.id
                 LEFT JOIN service_pricing sp ON at.pricing_id = sp.id
                 LEFT JOIN transactions t ON at.transaction_id = t.id
-            ) unified_reqs
-            WHERE 1=1";
+            ";
+
+            if ($requestType === 'manual') {
+                $query = "SELECT * FROM (" . $manualSelect . ") unified_reqs WHERE 1=1";
+            } elseif ($requestType === 'api') {
+                $query = "SELECT * FROM (" . $apiSelect . ") unified_reqs WHERE 1=1";
+            } else {
+                $query = "SELECT * FROM (" . $manualSelect . " UNION ALL " . $apiSelect . ") unified_reqs WHERE 1=1";
+            }
             
             $params = [];
             

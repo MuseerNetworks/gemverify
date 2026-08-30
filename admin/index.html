@@ -1607,7 +1607,7 @@ async function renderRequestsQueue(page, statusFilter, pageNumber, serviceSlug) 
   tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr>`;
 
   try {
-    let url = '../api/admin/requests?per_page=10&page=' + pageNumber;
+    let url = '../api/admin/requests?request_type=manual&per_page=10&page=' + pageNumber;
     if (statusFilter) url += '&status=' + encodeURIComponent(statusFilter);
     if (serviceSlug) url += '&service_slug=' + encodeURIComponent(serviceSlug);
 
