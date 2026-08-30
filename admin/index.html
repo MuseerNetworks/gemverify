@@ -80,9 +80,14 @@ table{width:100%;min-width:680px;border-collapse:collapse}th,td{padding:12px 15p
   .heading{flex-direction:column;gap:12px;margin-bottom:16px}
   .heading h1{font-size:22px}
   .heading .primary,.heading .secondary{width:100%}
-  .grid4,.service-grid{grid-template-columns:1fr}
-  .stat{padding:15px}
-  .stat strong{font-size:22px}
+  .grid4{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+  .service-grid{grid-template-columns:1fr}
+  .stat{padding:13px 11px!important;border-radius:14px!important}
+  .stat-top{gap:4px!important}
+  .stat-top small{font-size:11px!important;line-height:1.25!important;font-weight:700!important}
+  .stat .ico{width:28px!important;height:28px!important;border-radius:8px!important;font-size:13px!important;flex-shrink:0!important}
+  .stat strong{font-size:18px!important;margin-top:8px!important;letter-spacing:-0.3px!important}
+  .delta{font-size:9.5px!important}
   .card-head{align-items:flex-start;flex-direction:column}
   .queue .q{align-items:flex-start;flex-direction:column}
   .login-box{grid-template-columns:1fr}
@@ -151,7 +156,13 @@ html, body { width:100%; max-width:100%; overflow-x:hidden; }
   .card-head > * { max-width:100%; }
   .card-head input { width:100%; }
 
-  .grid4, .cols, .service-grid {
+  .grid4 {
+    width:100%;
+    max-width:100%;
+    grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+    gap:10px !important;
+  }
+  .cols, .service-grid {
     width:100%;
     max-width:100%;
     grid-template-columns:1fr !important;
