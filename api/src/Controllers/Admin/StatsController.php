@@ -90,9 +90,25 @@ class StatsController
                 }
             }
 
-            // Also normalize legacy 'nin-validation' if it exists
-            $this->db->exec("UPDATE services SET is_active = 0 WHERE slug = 'nin-validation'");
-            $this->db->exec("UPDATE service_pricing SET variant_key = 'vNIN validation', variant_label = 'vNIN validation' WHERE variant_key LIKE '%v%nin%validation%'");
+            // Permanently purge legacy 'nin-validation' service row and reassign history
+            $legStmt = $this->db->query("SELECT id FROM services WHERE slug = 'nin-validation' LIMIT 1");
+            $legacyId = (int)($legStmt ? $legStmt->fetchColumn() : 0);
+            if ($legacyId > 0 && $singleSvcId > 0) {
+                $this->db->exec("UPDATE manual_requests SET service_id = $singleSvcId WHERE service_id = $legacyId");
+                $this->db->exec("UPDATE api_transactions SET service_id = $singleSvcId WHERE service_id = $legacyId");
+                $legacyPricing = $this->db->query("SELECT id, variant_key FROM service_pricing WHERE service_id = $legacyId")->fetchAll(\PDO::FETCH_ASSOC);
+                foreach ($legacyPricing as $lp) {
+                    $nPidStmt = $this->db->prepare("SELECT id FROM service_pricing WHERE service_id = ? AND variant_key = ? LIMIT 1");
+                    $nPidStmt->execute([$singleSvcId, $lp['variant_key']]);
+                    $nPid = (int)$nPidStmt->fetchColumn();
+                    if ($nPid > 0) {
+                        $this->db->exec("UPDATE manual_requests SET pricing_id = $nPid WHERE pricing_id = {$lp['id']}");
+                        $this->db->exec("UPDATE api_transactions SET pricing_id = $nPid WHERE pricing_id = {$lp['id']}");
+                    }
+                }
+                $this->db->exec("DELETE FROM service_pricing WHERE service_id = $legacyId");
+                $this->db->exec("DELETE FROM services WHERE id = $legacyId");
+            }
         } catch (\Throwable $e) {
             error_log('[GemVerify Notice] cost_price column check: ' . $e->getMessage());
         }
