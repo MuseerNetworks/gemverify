@@ -581,7 +581,7 @@ class ApiTransactionController
                 return;
             }
 
-            $techHubService = new \ServicesTechHubService();
+            $techHubService = new \Services\TechHubService();
             $ticketId = !empty($tx['provider_ticket_id']) ? $tx['provider_ticket_id'] : null;
 
             // If no ticket_id, attempt to extract tracking ID from input_summary
