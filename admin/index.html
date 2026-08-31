@@ -1321,7 +1321,7 @@ function viewAtxnDetail(ref) {
       + '<div><strong>Result Type</strong><br>' + (tx.result_type||'\u2014') + '</div>'
       + '<div><strong>Provider</strong><br>' + (tx.provider||'techhub') + '</div>'
       + '<div><strong>Provider Status</strong><br>' + (tx.provider_status||'\u2014') + '</div>'
-      + '<div><strong>Ticket ID</strong><br><code style="font-size:11px">' + (tx.provider_ticket_id||'\u2014') + '</code></div>'
+      + '<div><strong>Ticket ID</strong><br><div style="display:flex;gap:4px;align-items:center;margin-top:2px"><code style="font-size:11px">' + (tx.provider_ticket_id||'\u2014') + '</code><button onclick="promptEditTicket(\'' + tx.gv_reference + '\',\'' + (tx.provider_ticket_id||'').replace(/'/g,"\\'") + '\')" style="padding:1px 6px;font-size:10px;border-radius:4px;border:1px solid var(--border);cursor:pointer;background:none">✏️ Edit</button></div></div>'
       + '<div><strong>Provider TxnID</strong><br><code style="font-size:11px">' + (tx.provider_txn_id||'\u2014') + '</code></div>'
       + '<div><strong>Submitted</strong><br>' + (tx.submitted_at||'\u2014') + '</div>'
       + '<div><strong>Completed</strong><br>' + (tx.completed_at||'\u2014') + '</div>'
@@ -1377,6 +1377,51 @@ function confirmAtxnRefund(ref) {
   });
 }
 
+
+
+function promptEditTicket(ref, currentTicket) {
+  var newTicket = prompt('Enter TechHub Ticket / Tracking ID for ' + ref + ':', currentTicket);
+  if (newTicket === null) return;
+  newTicket = newTicket.trim();
+  if (!newTicket) { alert('Ticket ID cannot be empty.'); return; }
+  gvAdminFetch('../api/admin/api-transactions/' + ref + '/ticket', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticket_id: newTicket })
+  }).then(r => r.json()).then(json => {
+    if (json.success) {
+      if (typeof gvShowToast === 'function') gvShowToast('✓ Ticket ID attached. Syncing with TechHub...', 'info');
+      syncAtxnWithProvider(ref);
+    } else {
+      alert('Error updating ticket: ' + (json.message || 'Unknown error'));
+    }
+  }).catch(e => alert('Network error: ' + e.message));
+}
+
+function openAtxnReconcileModal(ref, currentStatus) {
+  var action = prompt('Reconciliation Action for ' + ref + ':\n1. manual_complete (Mark Completed)\n2. authorized_refund (Refund User)\n3. dismiss_anomaly (Mark Failed)\n\nType one of: manual_complete | authorized_refund | dismiss_anomaly');
+  if (!action) return;
+  action = action.trim();
+  if (!['manual_complete', 'authorized_refund', 'dismiss_anomaly'].includes(action)) {
+    alert('Invalid action. Must be manual_complete, authorized_refund, or dismiss_anomaly');
+    return;
+  }
+  var note = prompt('Enter reason for reconciliation (' + action + '):');
+  if (!note || !note.trim()) { alert('A note is mandatory for reconciliation.'); return; }
+  gvAdminFetch('../api/admin/api-transactions/' + ref + '/reconcile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: action, note: note.trim() })
+  }).then(r => r.json()).then(json => {
+    if (json.success) {
+      alert('✓ ' + json.message);
+      document.getElementById('atxn-modal').style.display = 'none';
+      fetchApiTransactions(atxnCurrentPage);
+    } else {
+      alert('Error: ' + (json.message || 'Reconciliation failed'));
+    }
+  }).catch(e => alert('Network error: ' + e.message));
+}
 
 function syncAtxnWithProvider(ref) {
   var token = localStorage.getItem('gv_admin_token');

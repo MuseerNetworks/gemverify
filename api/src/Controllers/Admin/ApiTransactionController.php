@@ -581,8 +581,27 @@ class ApiTransactionController
                 return;
             }
 
+            // 1. Guard against synchronous slip services (NIN/BVN Verification)
+            if (($tx['result_type'] ?? '') === 'pdf_base64') {
+                if (!empty($tx['has_result'])) {
+                    Response::success([
+                        'gv_reference' => $ref,
+                        'gv_status'    => $tx['gv_status'],
+                        'message'      => 'Instant slip verification — result is already downloaded and saved locally.',
+                    ]);
+                    return;
+                } else {
+                    Response::success([
+                        'gv_reference' => $ref,
+                        'gv_status'    => $tx['gv_status'],
+                        'message'      => 'This is a synchronous slip generator. No remote ticket exists to poll. Use Reconcile or Refund if needed.',
+                    ]);
+                    return;
+                }
+            }
+
             $techHubService = new \Services\TechHubService();
-            $ticketId = !empty($tx['provider_ticket_id']) ? $tx['provider_ticket_id'] : null;
+            $ticketId = !empty($tx['provider_ticket_id']) ? trim($tx['provider_ticket_id']) : null;
 
             // If no ticket_id, attempt to extract tracking ID from input_summary
             if (!$ticketId && !empty($tx['input_summary'])) {
@@ -592,7 +611,7 @@ class ApiTransactionController
             }
 
             if (!$ticketId) {
-                Response::error('Cannot sync: No provider ticket or tracking reference associated with this transaction.', [], 422);
+                Response::error('Cannot sync: No provider ticket or tracking reference associated with this transaction. You can attach a Ticket ID in Details.', [], 422);
                 return;
             }
 
@@ -602,7 +621,36 @@ class ApiTransactionController
             $statusResult = $techHubService->checkAsyncStatus($serviceSlug, $variantKey, $ticketId);
 
             if (!$statusResult['success']) {
-                Response::error('Provider sync query failed: ' . ($statusResult['error_message'] ?? 'Unknown provider error'), [
+                $rawErrMsg = $statusResult['error_message'] ?? 'Unknown provider error';
+                
+                // Gracefully handle "Ticket not found" on TechHub
+                if (stripos($rawErrMsg, 'ticket') !== false && (stripos($rawErrMsg, 'not found') !== false || stripos($rawErrMsg, 'invalid') !== false)) {
+                    $this->db->prepare("
+                        UPDATE api_transactions
+                        SET gv_status = 'reconciliation_required',
+                            provider_status = 'not_found',
+                            reconciliation_notes = ?,
+                            synced_at = NOW(),
+                            synced_by = ?
+                        WHERE id = ?
+                    ")->execute([
+                        'TechHub query: Ticket ' . $ticketId . ' not found on provider system. Flagged for admin reconciliation.',
+                        'admin_' . $this->adminId,
+                        $tx['id']
+                    ]);
+
+                    Response::success([
+                        'gv_reference'     => $ref,
+                        'provider_status'  => 'not_found',
+                        'gv_status'        => 'reconciliation_required',
+                        'synced_at'        => date('Y-m-d H:i:s'),
+                        'ticket_not_found' => true,
+                        'message'          => "TechHub reported: Ticket '{$ticketId}' not found on provider system. Flagged for Admin reconciliation.",
+                    ]);
+                    return;
+                }
+
+                Response::error('Provider sync query failed: ' . $rawErrMsg, [
                     'provider_response' => $statusResult
                 ], 502);
                 return;
@@ -681,6 +729,55 @@ class ApiTransactionController
 
         } catch (Exception $e) {
             Response::error('Failed to sync transaction with provider: ' . $e->getMessage(), [], 500);
+        }
+    }
+
+    /**
+     * PATCH /admin/api-transactions/{ref}/ticket
+     *
+     * Allows admin to update/attach the provider_ticket_id manually and optionally sync immediately.
+     */
+    public function updateTicket(string $ref): void
+    {
+        $input    = json_decode(file_get_contents('php://input'), true) ?? [];
+        $ticketId = trim($input['ticket_id'] ?? '');
+
+        if ($ticketId === '') {
+            Response::error('Ticket ID cannot be empty.', [], 400);
+            return;
+        }
+
+        try {
+            $tx = $this->findByRef($ref);
+            if (!$tx) {
+                Response::error('API transaction not found.', [], 404);
+                return;
+            }
+
+            $this->db->prepare("
+                UPDATE api_transactions
+                SET provider_ticket_id = ?
+                WHERE id = ?
+            ")->execute([$ticketId, $tx['id']]);
+
+            $this->auditService->log(
+                'ADMIN_API_TXN_TICKET_ATTACHED',
+                $tx['id'],
+                'admin',
+                $this->adminId,
+                ['old_ticket' => $tx['provider_ticket_id']],
+                ['new_ticket' => $ticketId],
+                "Admin attached provider ticket: {$ticketId}"
+            );
+
+            Response::success([
+                'gv_reference' => $ref,
+                'ticket_id'    => $ticketId,
+                'message'      => "Provider Ticket ID updated to '{$ticketId}'. You can now sync with TechHub.",
+            ]);
+
+        } catch (Exception $e) {
+            Response::error('Failed to update ticket: ' . $e->getMessage(), [], 500);
         }
     }
 

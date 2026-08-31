@@ -89,6 +89,10 @@ addRoute('POST',  '/admin/api-transactions/{ref}/refund-flag', function ($p) {
     \Middleware\AdminMiddleware::requireRole('admin');
     (new ApiTransactionController())->flagForRefund($p['ref']);
 });
+addRoute('PATCH', '/admin/api-transactions/{ref}/ticket', function ($p) {
+    \Middleware\AdminMiddleware::requireRole('admin');
+    (new ApiTransactionController())->updateTicket($p['ref']);
+});
 addRoute('POST',  '/admin/api-transactions/{ref}/sync', function ($p) {
     \Middleware\AdminMiddleware::requireRole('admin');
     (new ApiTransactionController())->syncWithProvider($p['ref']);
