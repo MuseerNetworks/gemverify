@@ -431,6 +431,31 @@
 .border-t-transparent { border-top-color: transparent !important; }
 .border-white { border-color: #ffffff !important; }
 .animate-spin { animation: gv-spin 0.70s linear infinite !important; display: inline-block !important; }
+
+/* Light & Dark Mode Utility Fixes */
+.bg-amber-500 { background-color: #f59e0b !important; }
+.hover\:bg-amber-600:hover { background-color: #d97706 !important; }
+.text-white { color: #ffffff !important; }
+.bg-emerald-500 { background-color: #10b981 !important; }
+.bg-blue-600 { background-color: #2563eb !important; }
+.text-amber-500 { color: #f59e0b !important; }
+.gv-check-status-btn {
+  background-color: #f59e0b !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  padding: 4px 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease !important;
+}
+.gv-check-status-btn:hover {
+  background-color: #d97706 !important;
+}
+
 </style>
   <!-- ─────────────────────────────────── -->
 
@@ -2138,7 +2163,7 @@ function ServiceHistoryTable({ serviceSlug, requests = [], onRefresh }) {
                               setCheckingRef(null);
                             }
                           },
-                          className: "px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-semibold rounded-lg transition cursor-pointer flex items-center gap-1" + (checkingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
+                          className: "gv-check-status-btn px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-semibold rounded-lg transition cursor-pointer flex items-center gap-1" + (checkingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""), style: { backgroundColor: '#f59e0b', color: '#ffffff' },
                           children: checkingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Checking..."] : "Check Status 🔄"
                         })
                       ]
@@ -2227,7 +2252,7 @@ function ServiceHistoryTable({ serviceSlug, requests = [], onRefresh }) {
                       setCheckingRef(null);
                     }
                   },
-                  className: "px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-semibold rounded-lg transition cursor-pointer flex items-center gap-1" + (checkingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
+                  className: "gv-check-status-btn px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-semibold rounded-lg transition cursor-pointer flex items-center gap-1" + (checkingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""), style: { backgroundColor: '#f59e0b', color: '#ffffff' },
                   children: checkingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Checking..."] : "Check Status 🔄"
                 })
               ]});

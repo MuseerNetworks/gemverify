@@ -2602,8 +2602,8 @@ async function openRequest(ref, defaultServiceTitle) {
 
     document.getElementById('modalBody').innerHTML = `
       <!-- SECTION 1: REQUEST SUMMARY -->
-      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 1 — Request Summary</b>
+      <div style="background:var(--card);border:1px solid var(--border);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:var(--text);text-transform:uppercase;letter-spacing:0.5px">SECTION 1 — Request Summary</b>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:10px;font-size:11px">
           <div><small style="color:var(--muted)">Reference</small><br><b>${req.reference}</b></div>
           <div><small style="color:var(--muted)">Service</small><br><b>${svc.name || defaultServiceTitle}</b></div>
@@ -2615,8 +2615,8 @@ async function openRequest(ref, defaultServiceTitle) {
       </div>
 
       <!-- SECTION 2: CUSTOMER INFORMATION -->
-      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 2 — Customer Information</b>
+      <div style="background:var(--card);border:1px solid var(--border);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:var(--text);text-transform:uppercase;letter-spacing:0.5px">SECTION 2 — Customer Information</b>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:10px;font-size:11px">
           <div><small style="color:var(--muted)">Business / User</small><br><b>${user.business_name || 'N/A'}</b></div>
           <div><small style="color:var(--muted)">Email</small><br><b>${user.email || 'N/A'}</b></div>
@@ -2625,32 +2625,32 @@ async function openRequest(ref, defaultServiceTitle) {
       </div>
 
       <!-- SECTION 3: SUBMITTED FORM DATA -->
-      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 3 — Submitted Form Data</b>
+      <div style="background:var(--card);border:1px solid var(--border);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:var(--text);text-transform:uppercase;letter-spacing:0.5px">SECTION 3 — Submitted Form Data</b>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
           ${formDataHtml}
         </div>
       </div>
 
       <!-- SECTION 4: DOCUMENTS -->
-      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 4 — Uploaded Documents</b>
+      <div style="background:var(--card);border:1px solid var(--border);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:var(--text);text-transform:uppercase;letter-spacing:0.5px">SECTION 4 — Uploaded Documents</b>
         <div style="margin-top:10px">
           ${docsHtml}
         </div>
       </div>
 
       <!-- SECTION 5: STATUS TIMELINE -->
-      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 5 — Status Timeline</b>
+      <div style="background:var(--card);border:1px solid var(--border);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:var(--text);text-transform:uppercase;letter-spacing:0.5px">SECTION 5 — Status Timeline</b>
         <div style="margin-top:10px">
           ${histHtml}
         </div>
       </div>
 
       <!-- SECTION 6: ADMIN NOTES -->
-      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px;margin-bottom:16px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 6 — Admin Notes</b>
+      <div style="background:var(--card);border:1px solid var(--border);padding:14px;border-radius:13px;margin-bottom:16px">
+        <b style="font-size:12px;color:var(--text);text-transform:uppercase;letter-spacing:0.5px">SECTION 6 — Admin Notes</b>
         <div style="margin-top:10px;margin-bottom:10px">
           ${notesHtml}
         </div>
@@ -2661,8 +2661,8 @@ async function openRequest(ref, defaultServiceTitle) {
       </div>
 
       <!-- SECTION 7: ACTIONS -->
-      <div style="background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:13px">
-        <b style="font-size:12px;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px">SECTION 7 — Operational Actions</b>
+      <div style="background:var(--card);border:1px solid var(--border);padding:14px;border-radius:13px">
+        <b style="font-size:12px;color:var(--text);text-transform:uppercase;letter-spacing:0.5px">SECTION 7 — Operational Actions</b>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
           <div class="field" style="margin-bottom:0">
             <label style="font-size:11px">Update Request Status</label>
