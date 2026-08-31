@@ -804,8 +804,7 @@ class StatsController
                                       ON DUPLICATE KEY UPDATE name=VALUES(name), description=VALUES(description), est_time=VALUES(est_time), is_manual=VALUES(is_manual)");
 
             $priceStmt = $pdo->prepare("INSERT INTO service_pricing (service_id, variant_key, variant_label, price) 
-                                        VALUES (:service_id, :variant_key, :variant_label, :price)
-                                        ON DUPLICATE KEY UPDATE price=VALUES(price), variant_label=VALUES(variant_label)");
+                                        VALUES (:service_id, :variant_key, :variant_label, :price)");
 
             foreach ($services as $svc) {
                 if (!isset($catMap[$svc['category_slug']])) continue;
@@ -822,18 +821,21 @@ class StatsController
 
                 if ($serviceId) {
                     foreach ($svc['pricing'] as $price) {
+                        // Check if variant already exists — IF EXISTS, DO NOT OVERWRITE OR DELETE USER PRICING!
                         if ($price['variant_key'] === null) {
-                            $pdo->exec("DELETE FROM service_pricing WHERE service_id = $serviceId AND variant_key IS NULL");
+                            $check = (int)$pdo->query("SELECT COUNT(*) FROM service_pricing WHERE service_id = $serviceId AND variant_key IS NULL")->fetchColumn();
                         } else {
-                            $pdo->exec("DELETE FROM service_pricing WHERE service_id = $serviceId AND variant_key = " . $pdo->quote($price['variant_key']));
+                            $check = (int)$pdo->query("SELECT COUNT(*) FROM service_pricing WHERE service_id = $serviceId AND variant_key = " . $pdo->quote($price['variant_key']))->fetchColumn();
                         }
 
-                        $priceStmt->execute([
-                            'service_id' => $serviceId,
-                            'variant_key' => $price['variant_key'],
-                            'variant_label' => $price['variant_label'],
-                            'price' => $price['price']
-                        ]);
+                        if ($check === 0) {
+                            $priceStmt->execute([
+                                'service_id' => $serviceId,
+                                'variant_key' => $price['variant_key'],
+                                'variant_label' => $price['variant_label'],
+                                'price' => $price['price']
+                            ]);
+                        }
                     }
                 }
             }

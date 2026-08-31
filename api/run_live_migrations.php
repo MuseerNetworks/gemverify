@@ -150,22 +150,16 @@ try {
             $existingId = $checkStmt->fetchColumn();
             
             if ($existingId) {
-                // Update
-                $updStmt = $db->prepare("
-                    UPDATE service_pricing 
-                    SET price = ?, variant_label = ?, is_active = 1 
-                    WHERE id = ?
-                ");
-                $updStmt->execute([$v['price'], $v['label'], $existingId]);
-                echo "✓ Updated pricing for $slug (" . ($v['key'] ?? 'Standard') . ") to ₦" . $v['price'] . "\n";
+                // PRESERVE CUSTOM USER PRICING — Never overwrite price on deployment!
+                echo "[PRESERVED] Kept custom configured price for $slug (" . ($v['key'] ?? 'Standard') . ")\n";
             } else {
-                // Insert
+                // Insert missing default row only if it does not exist at all
                 $insStmt = $db->prepare("
                     INSERT INTO service_pricing (service_id, variant_key, variant_label, price, is_active) 
                     VALUES (?, ?, ?, ?, 1)
                 ");
                 $insStmt->execute([$serviceId, $v['key'], $v['label'], $v['price']]);
-                echo "✓ Created pricing for $slug (" . ($v['key'] ?? 'Standard') . ") at ₦" . $v['price'] . "\n";
+                echo "✓ Created initial default pricing for $slug (" . ($v['key'] ?? 'Standard') . ") at ₦" . $v['price'] . "\n";
             }
         }
     }
