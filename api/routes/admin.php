@@ -89,6 +89,14 @@ addRoute('POST',  '/admin/api-transactions/{ref}/refund-flag', function ($p) {
     \Middleware\AdminMiddleware::requireRole('admin');
     (new ApiTransactionController())->flagForRefund($p['ref']);
 });
+addRoute('POST',  '/admin/api-transactions/{ref}/sync', function ($p) {
+    \Middleware\AdminMiddleware::requireRole('admin');
+    (new ApiTransactionController())->syncWithProvider($p['ref']);
+});
+addRoute('POST',  '/admin/api-transactions/{ref}/reconcile', function ($p) {
+    \Middleware\AdminMiddleware::requireRole('admin');
+    (new ApiTransactionController())->reconcileTransaction($p['ref']);
+});
 addRoute('POST',  '/admin/api-transactions/batch-refund',      function () {
     \Middleware\AdminMiddleware::requireRole('super_admin');
     (new ApiTransactionController())->batchRefund();

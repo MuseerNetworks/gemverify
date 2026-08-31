@@ -289,146 +289,74 @@ class ApiRequestController
                 );
             }
 
-            // ── 16. Handle provider hard failure ───────────────────────────
-            // A hard failure means TechHub never processed the request —
-            // we immediately refund the user atomically.
-            if (!$providerResult['success'] && $this->isHardFailure($providerResult)) {
-                $this->walletService->creditAtomically(
-                    $this->userId,
-                    $price,
-                    "Refund: Provider unavailable for {$serviceName} ({$gvReference})",
-                    $apiTxId
-                );
-                $this->db->prepare("
-                    UPDATE api_transactions
-                    SET gv_status = 'failed',
-                        provider_status = 'hard_fail',
-                        error_code = ?,
-                        error_message = ?,
-                        provider_responded_at = NOW()
-                    WHERE id = ?
-                ")->execute([
-                    $providerResult['error_code'] ?? 'PROVIDER_ERROR',
-                    $providerResult['error_message'] ?? 'Provider unavailable',
-                    $apiTxId
-                ]);
-                $this->logProviderError($serviceSlug, $gvReference, $providerResult);
-                Response::error(
-                    'Provider temporarily unavailable — you have not been charged (wallet automatically refunded).',
-                    ['error_code' => $providerResult['error_code'] ?? 'PROVIDER_ERROR'],
-                    502
-                );
-                return;
-            }
+            // ── 16. CENTRAL FINANCIAL DECISION ENGINE ──────────────────────────
+            $providerAccepted       = $providerResult['provider_accepted'] ?? $providerResult['success'];
+            $providerChargeState    = $providerResult['provider_charge_state'] ?? ($providerAccepted ? 'charged' : 'unknown');
+            $safeToRefund           = $providerResult['safe_to_refund'] ?? false;
+            $requiresReconciliation = $providerResult['requires_reconciliation'] ?? false;
+            $ticketId               = $providerResult['ticket_id'] ?? null;
+            $providerTxnId          = $providerResult['provider_txn_id'] ?? null;
+            $rawMsg                 = $providerResult['error_message'] ?? $providerResult['message'] ?? '';
+            $errorCode              = $providerResult['error_code'] ?? null;
 
-            // ── 17. Update api_transactions with provider response ─────────
-            if ($providerResult['success']) {
+            if ($providerAccepted) {
+                // ── CASE A: PROVIDER ACCEPTED REQUEST ──────────────────────────────
                 if ($resultType === 'pdf_base64') {
                     $this->db->prepare("
                         UPDATE api_transactions
                         SET gv_status = 'completed',
                             provider_status = 'success',
+                            provider_financial_status = 'charged',
                             result_data = ?,
                             provider_txn_id = ?,
+                            provider_ticket_id = ?,
                             provider_responded_at = NOW(),
                             completed_at = NOW()
                         WHERE id = ?
                     ")->execute([
                         $providerResult['pdf_base64'],
-                        $providerResult['provider_txn_id'],
+                        $providerTxnId,
+                        $ticketId,
                         $apiTxId,
                     ]);
                 } else {
-                    // Async: store ticket_id, stay 'processing'
+                    // Async job accepted: stays 'processing', NO AUTO-REFUND
                     $this->db->prepare("
                         UPDATE api_transactions
                         SET gv_status = 'processing',
-                            provider_status = ?,
+                            provider_status = 'processing',
+                            provider_financial_status = 'charged',
                             provider_ticket_id = ?,
                             provider_txn_id = ?,
                             provider_responded_at = NOW()
                         WHERE id = ?
                     ")->execute([
-                        $providerResult['provider_status'] ?? 'pending',
-                        $providerResult['ticket_id'],
-                        $providerResult['provider_txn_id'],
+                        $ticketId,
+                        $providerTxnId,
                         $apiTxId,
                     ]);
                 }
-            } else {
-                // Soft failure: TechHub returned an error but request was received
-                // (e.g. NIN not found). User is charged. Record the error.
-                $this->db->prepare("
-                    UPDATE api_transactions
-                    SET gv_status = 'failed',
-                        provider_status = 'failed',
-                        error_code = ?,
-                        error_message = ?,
-                        provider_responded_at = NOW()
-                    WHERE id = ?
-                ")->execute([
-                    $providerResult['error_code']    ?? 'PROVIDER_SOFT_FAIL',
-                    $providerResult['error_message'] ?? 'Provider returned an error',
+
+                $this->auditService->log(
+                    'API_REQUEST_' . strtoupper($resultType === 'pdf_base64' ? 'COMPLETED' : 'PROCESSING'),
                     $apiTxId,
-                ]);
-            }
-
-            // ── 18. Commit (if in transaction) ────────────────────────────
-            if ($this->db->inTransaction()) {
-                $this->db->commit();
-            }
-
-            // ── 19. Post-commit: notifications + audit ─────────────────────
-            if ($providerResult['success']) {
-                $notifMsg = $resultType === 'pdf_base64'
-                    ? "Your {$serviceName} request ({$gvReference}) completed successfully. PDF ready."
-                    : "Your {$serviceName} request ({$gvReference}) has been submitted and is being processed.";
-
-                $this->notificationService->notify(
+                    'user',
                     $this->userId,
                     null,
-                    'api_request_' . ($resultType === 'pdf_base64' ? 'completed' : 'submitted'),
-                    'Request ' . ($resultType === 'pdf_base64' ? 'Completed' : 'Submitted'),
-                    $notifMsg
+                    ['provider_financial_status' => 'charged'],
+                    "API request {$gvReference} accepted by provider ({$serviceSlug}) ticket={$ticketId}"
                 );
-            }
 
-            $this->auditService->log(
-                'API_REQUEST_' . strtoupper($providerResult['success'] ? ($resultType === 'pdf_base64' ? 'COMPLETED' : 'PROCESSING') : 'FAILED'),
-                $apiTxId,
-                'user',
-                $this->userId,
-                null,
-                null,
-                "API request {$gvReference} for {$serviceSlug}/{$variantKey} — " . ($providerResult['success'] ? 'OK' : $providerResult['error_message'])
-            );
+                $balanceAfter = $this->walletService->getBalance($this->userId);
 
-            // ── 20. Return response ────────────────────────────────────────
-            $balanceAfter = $this->walletService->getBalance($this->userId);
-
-            if ($providerResult['success']) {
                 if ($resultType === 'pdf_base64') {
                     $ts = time();
                     $ident = preg_replace('/\D/', '', (string)($formData['nin'] ?? $formData['bvn'] ?? $formData['phone'] ?? $formData['number'] ?? ''));
-                    if (empty($ident)) {
-                        $ident = substr($gvReference, -8);
-                    }
+                    if (empty($ident)) $ident = substr($gvReference, -8);
                     
-                    $computedFileName = null;
-                    if (!empty($providerResult['filename'])) {
-                        $computedFileName = $providerResult['filename'];
-                    } elseif ($variantKey === 'regular') {
-                        $computedFileName = "regular_{$ident}_{$ts}.pdf";
-                    } elseif ($variantKey === 'premium') {
-                        $computedFileName = "premium_{$ident}_{$ts}.pdf";
-                    } elseif ($variantKey === 'standard') {
-                        $computedFileName = "standard_{$ident}_{$ts}.pdf";
-                    } elseif ($serviceSlug === 'bvn-verification') {
-                        $computedFileName = "bvn_{$ident}_{$ts}.pdf";
-                    } else {
-                        $prefix = $variantKey ?: $serviceSlug;
-                        $computedFileName = "{$prefix}_{$ident}_{$ts}.pdf";
-                    }
+                    $computedFileName = !empty($providerResult['filename'])
+                        ? $providerResult['filename']
+                        : "{$serviceSlug}_{$ident}_{$ts}.pdf";
 
                     Response::success([
                         'gv_reference'        => $gvReference,
@@ -449,65 +377,110 @@ class ApiRequestController
                         'variant'             => $variantKey,
                         'price_paid'          => $price,
                         'wallet_balance_after'=> $balanceAfter,
-                        'ticket_id'           => $providerResult['ticket_id'],
-                        'message'             => 'Request submitted. Use the status endpoint to check progress.',
+                        'ticket_id'           => $ticketId,
+                        'message'             => 'Request submitted successfully and is being processed.',
                     ]);
                 }
+                return;
+
             } else {
-                // Soft failure — provider returned error immediately after charge.
-                // Auto-refund the user so they are not stuck waiting for manual admin action.
-                $autoRefunded = false;
-                if ($price > 0) {
-                    try {
-                        $this->walletService->creditAtomically(
-                            $this->userId,
-                            $price,
-                            'Auto-refund: API job failed — ' . $gvReference,
-                            null
-                        );
-                        // Mark transaction as refunded
-                        $this->db->prepare("
-                            UPDATE api_transactions
-                            SET gv_status = 'refunded', refund_issued = 1, completed_at = NOW()
-                            WHERE id = ?
-                        ")->execute([$apiTxId]);
-                        $autoRefunded = true;
-                    } catch (\Throwable $refundErr) {
-                        error_log('[ApiRequestController] Auto-refund on submit-fail failed for ' . $gvReference . ': ' . $refundErr->getMessage());
-                    }
-                }
+                // ── CASE B: PROVIDER DID NOT RETURN IMMEDIATE SUCCESS ──────────────
+                // RULE: Automatic refund is ONLY allowed if safe_to_refund is strictly TRUE
+                // (e.g. transport failed before reaching server OR provider explicitly rejected before debit).
+                if ($safeToRefund && $price > 0) {
+                    $this->walletService->creditAtomically(
+                        $this->userId,
+                        $price,
+                        "Refund: Provider uncharged for {$serviceName} ({$gvReference})",
+                        $apiTxId
+                    );
 
-                $balanceAfter = $this->walletService->getBalance($this->userId);
+                    $this->db->prepare("
+                        UPDATE api_transactions
+                        SET gv_status = 'refunded',
+                            provider_status = 'rejected',
+                            provider_financial_status = 'not_charged',
+                            refund_issued = 1,
+                            error_code = ?,
+                            error_message = ?,
+                            provider_responded_at = NOW(),
+                            completed_at = NOW()
+                        WHERE id = ?
+                    ")->execute([
+                        $errorCode ?: 'PROVIDER_REJECT',
+                        $rawMsg ?: 'Request rejected before charge',
+                        $apiTxId
+                    ]);
 
-                // Translate provider-side balance errors so users aren't confused.
-                // TechHub returns HTTP 400 "Insufficient balance." when our API
-                // account credits are exhausted — this has NOTHING to do with the
-                // user's GemVerify wallet. Show a clear, honest message instead.
-                $rawMsg    = $providerResult['error_message'] ?? 'Request failed.';
-                $errorCode = $providerResult['error_code'] ?? null;
-                if ($errorCode === 'HTTP_400' && stripos($rawMsg, 'insufficient balance') !== false) {
-                    $displayMsg = 'This service is temporarily unavailable due to a provider issue on our end. '
-                        . ($autoRefunded
-                            ? 'You have NOT been charged — your payment has been automatically refunded.'
-                            : 'A refund review has been flagged for your transaction.');
+                    $this->auditService->log(
+                        'API_REQUEST_SAFE_REFUND',
+                        $apiTxId,
+                        'system',
+                        null,
+                        null,
+                        ['refund_issued' => 1, 'amount' => $price, 'provider_financial_status' => 'not_charged'],
+                        "Safe automatic refund issued for {$gvReference}: " . $rawMsg
+                    );
+
+                    $balanceAfter = $this->walletService->getBalance($this->userId);
+
+                    Response::error(
+                        $rawMsg ?: 'Service request could not be processed — you have not been charged.',
+                        [
+                            'gv_reference'        => $gvReference,
+                            'error_code'          => $errorCode,
+                            'refunded'            => true,
+                            'wallet_balance_after'=> $balanceAfter,
+                            'note'                => 'Your ₦' . number_format($price, 2) . ' has been automatically returned to your wallet.'
+                        ],
+                        422
+                    );
+                    return;
+
                 } else {
-                    $displayMsg = $rawMsg;
-                }
+                    // ── CASE C: PROVIDER STATE AMBIGUOUS OR CHARGED WITHOUT REVERSAL ─
+                    // FINANCIAL SAFETY RULE: DO NOT AUTO-REFUND! Enter reconciliation_required
+                    $this->db->prepare("
+                        UPDATE api_transactions
+                        SET gv_status = 'reconciliation_required',
+                            provider_status = 'unknown',
+                            provider_financial_status = ?,
+                            error_code = ?,
+                            error_message = ?,
+                            reconciliation_notes = ?,
+                            provider_responded_at = NOW()
+                        WHERE id = ?
+                    ")->execute([
+                        $providerChargeState,
+                        $errorCode ?: 'AMBIGUOUS_STATE',
+                        $rawMsg ?: 'Provider state uncertain or timeout',
+                        'Provider transaction state uncertain after request. Automatic refund blocked for financial safety.',
+                        $apiTxId
+                    ]);
 
-                Response::error(
-                    $displayMsg,
-                    [
+                    $this->auditService->log(
+                        'API_FINANCIAL_ANOMALY_FLAGGED',
+                        $apiTxId,
+                        'system',
+                        null,
+                        null,
+                        ['provider_financial_status' => $providerChargeState, 'gv_status' => 'reconciliation_required'],
+                        "Auto-refund blocked for {$gvReference}: Provider state uncertain ([{$errorCode}] {$rawMsg})"
+                    );
+
+                    $balanceAfter = $this->walletService->getBalance($this->userId);
+
+                    Response::success([
                         'gv_reference'        => $gvReference,
-                        'error_code'          => $errorCode,
+                        'status'              => 'processing',
+                        'service_name'        => $serviceName,
+                        'variant'             => $variantKey,
                         'price_paid'          => $price,
-                        'wallet_balance_after' => $balanceAfter,
-                        'refunded'            => $autoRefunded,
-                        'note'                => $autoRefunded
-                            ? 'Your ₦' . number_format($price, 2) . ' has been automatically refunded to your wallet.'
-                            : 'A refund review has been flagged for this transaction.',
-                    ],
-                    422
-                );
+                        'wallet_balance_after'=> $balanceAfter,
+                        'message'             => 'Your request has been submitted and is currently being verified. You can check status on your dashboard.',
+                    ]);
+                    return;
+                }
             }
 
         } catch (InsufficientBalanceException | LegacyInsufficientBalanceException $e) {
@@ -782,7 +755,9 @@ class ApiRequestController
                         $upd->execute([json_encode($statusResult['result_data'] ?? []), $tx['id']]);
                         $tx['gv_status'] = 'completed';
                     } elseif ($pStatus === 'failed') {
-                        // Fetch price paid so we can refund the user
+                        // Check if provider explicitly confirmed reversal/refund
+                        $isReversed = !empty($statusResult['is_reversed']) || !empty($statusResult['result_data']['reversed']);
+                        
                         $priceStmt = $this->db->prepare("
                             SELECT COALESCE(sp.price, t.amount, 0) as price_paid
                             FROM api_transactions at
@@ -794,38 +769,40 @@ class ApiRequestController
                         $priceStmt->execute([$tx['id']]);
                         $pricePaid = (float)($priceStmt->fetchColumn() ?: 0);
 
-                        // Issue automatic wallet refund if user was charged
-                        $refundIssued = false;
-                        if ($pricePaid > 0 && empty($tx['refund_issued'])) {
-                            try {
-                                $this->walletService->creditAtomically(
-                                    (int)$tx['user_id'],
-                                    $pricePaid,
-                                    'Auto-refund: API job failed — ' . $tx['gv_reference'],
-                                    null
-                                );
-                                $refundIssued = true;
-                            } catch (\Throwable $refundErr) {
-                                error_log('[ApiRequestController] Auto-refund failed for ' . $tx['gv_reference'] . ': ' . $refundErr->getMessage());
-                            }
+                        if ($isReversed && $pricePaid > 0 && empty($tx['refund_issued'])) {
+                            // Safe to refund because provider confirmed reversal
+                            $this->walletService->creditAtomically(
+                                (int)$tx['user_id'],
+                                $pricePaid,
+                                'Refund: Provider job failed and reversed — ' . $tx['gv_reference'],
+                                null
+                            );
+                            $upd = $this->db->prepare("
+                                UPDATE api_transactions
+                                SET gv_status = 'refunded',
+                                    provider_status = 'failed',
+                                    provider_financial_status = 'reversed',
+                                    error_message = ?,
+                                    refund_issued = 1,
+                                    completed_at  = NOW()
+                                WHERE id = ?
+                            ");
+                            $upd->execute([$statusResult['error_message'] ?? 'Provider failed request (reversed)', $tx['id']]);
+                            $tx['gv_status'] = 'refunded';
+                        } else {
+                            // Provider failed but did NOT confirm reversal: DO NOT BLINDLY REFUND!
+                            $upd = $this->db->prepare("
+                                UPDATE api_transactions
+                                SET gv_status = 'reconciliation_required',
+                                    provider_status = 'failed',
+                                    provider_financial_status = 'charged',
+                                    error_message = ?,
+                                    reconciliation_notes = 'Provider reported failure but charge not confirmed reversed.'
+                                WHERE id = ?
+                            ");
+                            $upd->execute([$statusResult['error_message'] ?? 'Provider failed request', $tx['id']]);
+                            $tx['gv_status'] = 'reconciliation_required';
                         }
-
-                        $newStatus = $refundIssued ? 'refunded' : 'failed';
-                        $upd = $this->db->prepare("
-                            UPDATE api_transactions
-                            SET gv_status = ?, provider_status = 'failed',
-                                error_message = ?,
-                                refund_issued = ?,
-                                completed_at  = NOW()
-                            WHERE id = ?
-                        ");
-                        $upd->execute([
-                            $newStatus,
-                            $statusResult['error_message'] ?? 'Provider failed request',
-                            $refundIssued ? 1 : 0,
-                            $tx['id']
-                        ]);
-                        $tx['gv_status'] = $newStatus;
                     }
                 }
             }

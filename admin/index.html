@@ -1228,27 +1228,28 @@ function renderAtxnTable(items) {
     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">No API transactions found.</td></tr>';
     return;
   }
-  var statusColors = { pending:'#f59e0b', processing:'#3b82f6', completed:'#22c55e', failed:'#ef4444', refunded:'#8b5cf6' };
+  var statusColors = { pending:'#f59e0b', processing:'#3b82f6', completed:'#22c55e', failed:'#ef4444', refunded:'#8b5cf6', reconciliation_required:'#d97706' };
   tbody.innerHTML = items.map(function(tx) {
     var sc = statusColors[tx.gv_status] || 'var(--muted)';
     var method = tx.input_method ? tx.input_method.replace('by_','') : '\u2014';
     var ticket = tx.provider_ticket_id
       ? '<span title="' + tx.provider_ticket_id + '" style="font-family:monospace">' + tx.provider_ticket_id.substring(0,12) + '\u2026</span>'
       : (tx.result_type === 'pdf_base64' ? '<span style="color:#22c55e">PDF Sync</span>' : '\u2014');
-    var refundBtn = (tx.gv_status==='failed'||tx.gv_status==='pending') && !tx.refund_issued
+    var syncBtn = '<button onclick="syncAtxnWithProvider(\'' + tx.gv_reference + '\')" style="padding:4px 8px;border-radius:6px;font-size:11px;border:1px solid var(--blue);color:var(--blue);background:none;cursor:pointer;margin-left:4px" title="Sync live status and result from TechHub">🔄 Sync</button>';
+    var refundBtn = (tx.gv_status==='failed'||tx.gv_status==='pending'||tx.gv_status==='reconciliation_required') && !tx.refund_issued
       ? '<button onclick="openAtxnRefundModal(\'' + tx.gv_reference + '\',\'' + ((tx.user && tx.user.business_name)||'').replace(/'/g,"\\'") + '\',' + (tx.price_paid||0) + ')" style="padding:4px 10px;border-radius:6px;font-size:11px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;margin-left:4px">Refund</button>'
       : '';
     return '<tr>'
-      + '<td style="font-family:monospace;font-size:12px">' + tx.gv_reference + '</td>'
+      + '<td style="font-family:monospace;font-size:12px"><b>' + tx.gv_reference + '</b></td>'
       + '<td><div style="font-size:13px">' + ((tx.user && tx.user.business_name)||'\u2014') + '</div><div style="font-size:11px;opacity:.6">' + ((tx.user && tx.user.email)||'') + '</div></td>'
       + '<td style="font-size:13px">' + ((tx.service && tx.service.name)||'\u2014') + '</td>'
       + '<td style="font-size:12px;opacity:.8">' + (tx.variant_key||'\u2014') + '</td>'
       + '<td style="font-size:12px;text-transform:capitalize">' + method + '</td>'
-      + '<td><span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:' + sc + '22;color:' + sc + '">' + tx.gv_status + '</span></td>'
+      + '<td><span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:' + sc + '22;color:' + sc + '">' + (tx.gv_status === 'reconciliation_required' ? '⚠️ Reconcile' : tx.gv_status) + '</span></td>'
       + '<td style="font-size:12px">' + ticket + '</td>'
       + '<td style="font-weight:600">\u20a6' + Number(tx.price_paid||0).toLocaleString() + '</td>'
       + '<td style="font-size:11px;opacity:.7">' + ((tx.submitted_at||'').substring(0,16)||'\u2014') + '</td>'
-      + '<td style="white-space:nowrap"><button onclick="viewAtxnDetail(\'' + tx.gv_reference + '\')" style="padding:4px 10px;border-radius:6px;font-size:11px;border:1px solid var(--border);cursor:pointer;background:none;color:var(--text)">Detail</button>' + refundBtn + '</td>'
+      + '<td style="white-space:nowrap"><button onclick="viewAtxnDetail(\'' + tx.gv_reference + '\')" style="padding:4px 10px;border-radius:6px;font-size:11px;border:1px solid var(--border);cursor:pointer;background:none;color:var(--text)">Detail</button>' + syncBtn + refundBtn + '</td>'
       + '</tr>';
   }).join('');
 }
@@ -1374,6 +1375,27 @@ function confirmAtxnRefund(ref) {
   }).finally(function(){
     if (btn) { btn.disabled = false; btn.textContent = 'Confirm & Credit Wallet'; }
   });
+}
+
+
+function syncAtxnWithProvider(ref) {
+  var token = localStorage.getItem('gv_admin_token');
+  if (!token) return;
+  if (typeof gvShowToast === 'function') gvShowToast('Syncing with TechHub live...', 'info');
+  gvAdminFetch('../api/admin/api-transactions/' + ref + '/sync', { method: 'POST' })
+    .then(function(r){ return r.json(); })
+    .then(function(json){
+      if (json.success) {
+        var msg = (json.data && json.data.message) || json.message || 'Synced with TechHub successfully.';
+        if (typeof gvShowToast === 'function') gvShowToast('✓ ' + msg, 'success');
+        else alert('✓ ' + msg);
+        fetchApiTransactions(atxnCurrentPage);
+      } else {
+        alert('Sync Error: ' + (json.message || 'Unknown provider response'));
+      }
+    }).catch(function(e){
+      alert('Network error during sync: ' + e.message);
+    });
 }
 
 function batchRefundFailed() {

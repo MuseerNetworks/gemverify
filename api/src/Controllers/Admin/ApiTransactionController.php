@@ -40,7 +40,7 @@ class ApiTransactionController
     private const PAGE_SIZE = 25;
 
     // Valid gv_status values that admin can manually override to
-    private const OVERRIDE_STATUSES = ['pending', 'processing', 'completed', 'failed', 'refunded'];
+    private const OVERRIDE_STATUSES = ['pending', 'processing', 'completed', 'failed', 'refunded', 'reconciliation_required'];
 
     public function __construct()
     {
@@ -565,6 +565,232 @@ class ApiTransactionController
     /**
      * Find a single api_transaction by GV reference (no user restriction — admin view).
      */
+    /**
+     * POST /admin/api-transactions/{ref}/sync
+     *
+     * Live polls TechHub for the latest status and result of this transaction.
+     * Updates gv_status, provider_status, provider_financial_status, result_data,
+     * synced_at, and synced_by.
+     */
+    public function syncWithProvider(string $ref): void
+    {
+        try {
+            $tx = $this->findByRef($ref);
+            if (!$tx) {
+                Response::error('API transaction not found.', [], 404);
+                return;
+            }
+
+            $techHubService = new \ServicesTechHubService();
+            $ticketId = !empty($tx['provider_ticket_id']) ? $tx['provider_ticket_id'] : null;
+
+            // If no ticket_id, attempt to extract tracking ID from input_summary
+            if (!$ticketId && !empty($tx['input_summary'])) {
+                if (preg_match('/tracking[:=]\s*([a-zA-Z0-9_-]+)/i', $tx['input_summary'], $m)) {
+                    $ticketId = $m[1];
+                }
+            }
+
+            if (!$ticketId) {
+                Response::error('Cannot sync: No provider ticket or tracking reference associated with this transaction.', [], 422);
+                return;
+            }
+
+            $serviceSlug = $tx['service_slug'] ?? 'ipe-clearance-single';
+            $variantKey  = $tx['variant_key'] ?? null;
+
+            $statusResult = $techHubService->checkAsyncStatus($serviceSlug, $variantKey, $ticketId);
+
+            if (!$statusResult['success']) {
+                Response::error('Provider sync query failed: ' . ($statusResult['error_message'] ?? 'Unknown provider error'), [
+                    'provider_response' => $statusResult
+                ], 502);
+                return;
+            }
+
+            $pStatus = strtolower($statusResult['provider_status'] ?? 'pending');
+            $newGvStatus = $tx['gv_status'];
+            $resultData = $tx['result_data'] ?? null;
+
+            if ($pStatus === 'success' || !empty($statusResult['result_data']['pdf_base64']) || !empty($statusResult['result_data']['slip'])) {
+                $newGvStatus = 'completed';
+                $resultData  = json_encode($statusResult['result_data'] ?? []);
+                $this->db->prepare("
+                    UPDATE api_transactions
+                    SET gv_status = 'completed',
+                        provider_status = 'success',
+                        provider_financial_status = 'charged',
+                        result_data = ?,
+                        synced_at = NOW(),
+                        synced_by = ?,
+                        completed_at = COALESCE(completed_at, NOW())
+                    WHERE id = ?
+                ")->execute([$resultData, 'admin_' . $this->adminId, $tx['id']]);
+
+            } elseif ($pStatus === 'failed') {
+                $isReversed = !empty($statusResult['is_reversed']) || !empty($statusResult['result_data']['reversed']);
+                $newGvStatus = $isReversed ? 'refunded' : 'reconciliation_required';
+                $finStatus   = $isReversed ? 'reversed' : 'charged';
+
+                $this->db->prepare("
+                    UPDATE api_transactions
+                    SET gv_status = ?,
+                        provider_status = 'failed',
+                        provider_financial_status = ?,
+                        synced_at = NOW(),
+                        synced_by = ?,
+                        reconciliation_notes = ?
+                    WHERE id = ?
+                ")->execute([
+                    $newGvStatus,
+                    $finStatus,
+                    'admin_' . $this->adminId,
+                    'Provider sync reported failure (' . ($statusResult['error_message'] ?? 'Provider failed') . '). Charge status: ' . $finStatus,
+                    $tx['id']
+                ]);
+
+            } else {
+                // Still pending / processing
+                $this->db->prepare("
+                    UPDATE api_transactions
+                    SET provider_status = 'processing',
+                        synced_at = NOW(),
+                        synced_by = ?
+                    WHERE id = ?
+                ")->execute(['admin_' . $this->adminId, $tx['id']]);
+            }
+
+            $this->auditService->log(
+                'ADMIN_API_TXN_SYNCED',
+                $tx['id'],
+                'admin',
+                $this->adminId,
+                ['old_status' => $tx['gv_status']],
+                ['new_status' => $newGvStatus, 'provider_status' => $pStatus],
+                "Live provider sync for {$ref}: provider_status={$pStatus}"
+            );
+
+            Response::success([
+                'gv_reference'     => $ref,
+                'provider_status'  => $pStatus,
+                'gv_status'        => $newGvStatus,
+                'synced_at'        => date('Y-m-d H:i:s'),
+                'provider_data'    => $statusResult['result_data'] ?? [],
+                'message'          => "Synced with TechHub successfully. Status is now '{$newGvStatus}'.",
+            ]);
+
+        } catch (Exception $e) {
+            Response::error('Failed to sync transaction with provider: ' . $e->getMessage(), [], 500);
+        }
+    }
+
+    /**
+     * POST /admin/api-transactions/{ref}/reconcile
+     *
+     * Allows authorized Admin to resolve an ambiguous or reconciliation-flagged transaction.
+     * Actions:
+     *   - 'manual_complete': mark completed with admin note
+     *   - 'authorized_refund': issue atomic refund with mandatory reason
+     *   - 'dismiss_anomaly': clear reconciliation flag
+     */
+    public function reconcileTransaction(string $ref): void
+    {
+        $input  = json_decode(file_get_contents('php://input'), true) ?? [];
+        $action = trim($input['action'] ?? '');
+        $note   = trim($input['note']   ?? '');
+
+        if (!in_array($action, ['manual_complete', 'authorized_refund', 'dismiss_anomaly'], true)) {
+            Response::error('Invalid reconciliation action. Allowed: manual_complete, authorized_refund, dismiss_anomaly', [], 400);
+            return;
+        }
+        if ($note === '') {
+            Response::error('A detailed reconciliation note is mandatory.', [], 400);
+            return;
+        }
+
+        try {
+            $tx = $this->findByRef($ref);
+            if (!$tx) {
+                Response::error('API transaction not found.', [], 404);
+                return;
+            }
+
+            $pricePaid = (float)($tx['price_paid'] ?? 0);
+            $userId    = (int)$tx['user_id'];
+
+            $this->db->beginTransaction();
+
+            if ($action === 'manual_complete') {
+                $this->db->prepare("
+                    UPDATE api_transactions
+                    SET gv_status = 'completed',
+                        provider_financial_status = 'charged',
+                        reconciliation_notes = ?,
+                        completed_at = COALESCE(completed_at, NOW())
+                    WHERE id = ?
+                ")->execute(['Reconciliation: Manually completed by admin — ' . $note, $tx['id']]);
+
+            } elseif ($action === 'authorized_refund') {
+                if ($tx['refund_issued']) {
+                    $this->db->rollBack();
+                    Response::error('This transaction has already been refunded.', [], 409);
+                    return;
+                }
+                if ($pricePaid <= 0) {
+                    $this->db->rollBack();
+                    Response::error('No price paid to refund.', [], 422);
+                    return;
+                }
+
+                $this->walletService->creditAtomically(
+                    $userId,
+                    $pricePaid,
+                    'Admin reconciliation refund: ' . $ref . ' — ' . $note,
+                    null
+                );
+
+                $this->db->prepare("
+                    UPDATE api_transactions
+                    SET gv_status = 'refunded',
+                        refund_issued = 1,
+                        reconciliation_notes = ?,
+                        completed_at = COALESCE(completed_at, NOW())
+                    WHERE id = ?
+                ")->execute(['Reconciliation: Authorized refund by admin — ' . $note, $tx['id']]);
+
+            } elseif ($action === 'dismiss_anomaly') {
+                $this->db->prepare("
+                    UPDATE api_transactions
+                    SET gv_status = 'failed',
+                        reconciliation_notes = ?
+                    WHERE id = ?
+                ")->execute(['Reconciliation: Anomaly dismissed by admin — ' . $note, $tx['id']]);
+            }
+
+            $this->auditService->log(
+                'ADMIN_API_TXN_RECONCILED',
+                $tx['id'],
+                'admin',
+                $this->adminId,
+                ['old_status' => $tx['gv_status']],
+                ['action' => $action, 'note' => $note],
+                "Reconciliation action '{$action}' executed for {$ref}: {$note}"
+            );
+
+            $this->db->commit();
+
+            Response::success([
+                'gv_reference' => $ref,
+                'action'       => $action,
+                'message'      => 'Transaction reconciled successfully.',
+            ]);
+
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            Response::error('Failed to reconcile transaction: ' . $e->getMessage(), [], 500);
+        }
+    }
+
     private function findByRef(string $ref): ?array
     {
         $stmt = $this->db->prepare("

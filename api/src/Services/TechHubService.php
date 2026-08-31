@@ -440,38 +440,137 @@ class TechHubService
      *   'amount_charged'  => float,   // provider's reported charge (for logging only)
      * ]
      */
+    /**
+     * Resiliently extract a ticket, tracking ID, or transaction reference
+     * from any possible key or nested data object in the provider response.
+     */
+    public function extractTicketId(mixed $data): ?string
+    {
+        if (!is_array($data)) return null;
+
+        $candidateKeys = [
+            'ticket_id', 'tracking_id', 'ticket', 'id', 'transaction_id',
+            'reference', 'ref', 'job_id', 'request_id', 'trans_id', 'order_id'
+        ];
+
+        foreach ($candidateKeys as $k) {
+            if (!empty($data[$k]) && (is_string($data[$k]) || is_numeric($data[$k]))) {
+                $val = trim((string)$data[$k]);
+                if ($val !== '' && strtolower($val) !== 'null') {
+                    return $val;
+                }
+            }
+        }
+
+        // Check sub-arrays (data, payload, response)
+        foreach (['data', 'payload', 'response', 'result'] as $sub) {
+            if (!empty($data[$sub]) && is_array($data[$sub])) {
+                $found = $this->extractTicketId($data[$sub]);
+                if ($found !== null) return $found;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalise an async submission response into the 7-Layer Contract.
+     */
     private function normaliseAsyncSubmitResult(array $clientResult): array
     {
-        if (!$clientResult['success']) {
+        $httpCode = $clientResult['http_code'] ?? 0;
+        $data     = $clientResult['data'] ?? [];
+        $raw      = $clientResult['raw'] ?? '';
+        $errCode  = $clientResult['error_code'] ?? null;
+        $errMsg   = $clientResult['error_message'] ?? null;
+
+        // 1. Check for transport-level failure (cURL errors before server response)
+        if ($httpCode === 0 || str_starts_with((string)$errCode, 'CURL_ERROR_')) {
+            $isTimeout = in_array($errCode, ['CURL_ERROR_28'], true);
             return [
-                'success'       => false,
-                'error_message' => $clientResult['error_message'] ?? 'Provider request failed',
-                'error_code'    => $clientResult['error_code']    ?? null,
-                'http_code'     => $clientResult['http_code'],
+                'success'                 => false,
+                'transport_state'         => $isTimeout ? 'unknown' : 'not_sent',
+                'provider_accepted'        => $isTimeout ? null : false,
+                'provider_charge_state'    => $isTimeout ? 'unknown' : 'not_charged',
+                'provider_processing_state'=> $isTimeout ? 'unknown' : 'failed',
+                'ticket_id'               => null,
+                'provider_txn_id'         => null,
+                'provider_status'         => 'failed',
+                'result_available'        => false,
+                'safe_to_refund'          => !$isTimeout, // Timeout is NOT safe to auto-refund
+                'requires_reconciliation' => $isTimeout,  // Timeout requires reconciliation
+                'error_message'           => $errMsg ?: 'Connection to provider failed',
+                'error_code'              => $errCode ?: 'TRANSPORT_ERROR',
+                'http_code'               => $httpCode,
             ];
         }
 
-        $data = $clientResult['data'];
+        // 2. Extract ticket / tracking reference resiliently
+        $ticketId = $this->extractTicketId($data);
+        $txnId    = $data['transaction_id'] ?? $data['reference'] ?? null;
+        $msg      = $data['message'] ?? $errMsg ?? '';
+        $rawStatus= strtolower((string)($data['status'] ?? $clientResult['provider_status'] ?? ''));
 
-        // ticket_id is required — without it we cannot poll status
-        if (empty($data['ticket_id'])) {
+        // Check if provider accepted the request
+        $isAccepted = (
+            $clientResult['success'] === true ||
+            $rawStatus === 'success' ||
+            $rawStatus === 'pending' ||
+            $rawStatus === 'processing' ||
+            $rawStatus === 'true' ||
+            (!empty($data['success']) && $data['success'] === true) ||
+            stripos($msg, 'submitted successfully') !== false ||
+            stripos($msg, 'request received') !== false ||
+            stripos($msg, 'processing') !== false ||
+            !empty($ticketId)
+        );
+
+        if ($isAccepted) {
             return [
-                'success'       => false,
-                'error_message' => 'Provider did not return a ticket_id',
-                'error_code'    => 'NO_TICKET_ID',
-                'http_code'     => $clientResult['http_code'],
+                'success'                 => true,
+                'transport_state'         => 'sent',
+                'provider_accepted'        => true,
+                'provider_charge_state'    => 'charged',
+                'provider_processing_state'=> 'processing',
+                'ticket_id'               => $ticketId,
+                'provider_txn_id'         => $txnId,
+                'provider_status'         => 'pending',
+                'amount_charged'          => (float)($data['amount_charged'] ?? 0),
+                'message'                 => $msg ?: 'Request submitted successfully',
+                'result_available'        => false,
+                'safe_to_refund'          => false, // NEVER refund when provider accepted
+                'requires_reconciliation' => empty($ticketId), // If accepted but ticket unparsed, flag for reconcile
+                'error_message'           => null,
+                'error_code'              => null,
+                'http_code'               => $httpCode,
             ];
         }
+
+        // 3. Provider explicitly rejected the request before transaction creation (e.g. Insufficient Balance, Invalid Input)
+        $isPreChargeReject = (
+            $httpCode === 400 ||
+            $httpCode === 422 ||
+            stripos($msg, 'insufficient balance') !== false ||
+            stripos($msg, 'invalid') !== false ||
+            stripos($msg, 'not found') !== false ||
+            stripos($msg, 'unauthorized') !== false
+        );
 
         return [
-            'success'         => true,
-            'ticket_id'       => $data['ticket_id']       ?? null,
-            'provider_txn_id' => $data['transaction_id']  ?? null,
-            'provider_status' => $data['status']          ?? 'pending',
-            'amount_charged'  => (float)($data['amount_charged'] ?? 0),
-            'message'         => $data['message']         ?? 'Request submitted successfully',
-            'error_message'   => null,
-            'error_code'      => null,
+            'success'                 => false,
+            'transport_state'         => 'sent',
+            'provider_accepted'        => false,
+            'provider_charge_state'    => $isPreChargeReject ? 'not_charged' : 'unknown',
+            'provider_processing_state'=> 'failed',
+            'ticket_id'               => null,
+            'provider_txn_id'         => null,
+            'provider_status'         => 'failed',
+            'result_available'        => false,
+            'safe_to_refund'          => $isPreChargeReject,
+            'requires_reconciliation' => !$isPreChargeReject,
+            'error_message'           => $msg ?: 'Provider rejected request',
+            'error_code'              => $errCode ?: ($data['error_code'] ?? 'PROVIDER_REJECT'),
+            'http_code'               => $httpCode,
         ];
     }
 
