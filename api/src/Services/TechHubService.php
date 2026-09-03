@@ -607,8 +607,8 @@ class TechHubService
 
         $data           = $clientResult['data'];
         $providerStatus = strtolower((string)($data['status'] ?? 'pending'));
-        $isSuccess      = $providerStatus === 'success';
-        $isFailed       = $providerStatus === 'failed';
+        $isSuccess      = in_array($providerStatus, ['success', 'completed'], true);
+        $isFailed       = in_array($providerStatus, ['failed', 'rejected'], true);
 
         return [
             'success'         => true,

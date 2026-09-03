@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head><script>if(localStorage.getItem("gv_theme")==="dark")document.documentElement.classList.add("dark");</script>
   <link rel="icon" type="image/png" href="../assets/img/auth-shield.png">
@@ -3604,10 +3604,16 @@ async function gvDownloadResult(reference) {
       if (rd.date_of_birth || rd.dob)   fields.push({label:'Date of Birth', value: rd.date_of_birth || rd.dob});
       if (rd.phone_number  || rd.phone) fields.push({label:'Phone',         value: rd.phone_number  || rd.phone});
     } else if (slug === 'ipe-clearance-single' || slug === 'ipe-clearance') {
-      primary = {label:'Clearance Status', value:(rd.status || 'CLEARED').toUpperCase(), mono:false};
+      if (rd.new_nin) {
+        primary = {label:'New NIN', value: rd.new_nin, mono:true};
+        fields.push({label:'Clearance Status', value:(rd.status || 'CLEARED').toUpperCase()});
+      } else {
+        primary = {label:'Clearance Status', value:(rd.status || 'CLEARED').toUpperCase(), mono:false};
+      }
+      if (rd.new_tracking_id) fields.push({label:'New Tracking ID', value: rd.new_tracking_id});
       if (tx && tx.provider_ticket_id) fields.push({label:'Provider Ticket', value: tx.provider_ticket_id});
       var m = req && req.input_summary && req.input_summary.match(/Tracking:([^\s|]+)/);
-      if (m) fields.push({label:'Tracking ID', value: m[1]});
+      if (m) fields.push({label:'Original Tracking ID', value: m[1]});
     } else if (slug === 'self-service') {
       primary = {label:'Delinking Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
       if (tx && tx.provider_ticket_id) fields.push({label:'Provider Ticket', value: tx.provider_ticket_id});

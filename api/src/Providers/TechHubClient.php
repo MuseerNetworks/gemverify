@@ -209,14 +209,32 @@ class TechHubClient
      */
     private function parseSuccess(array $parsed, int $httpCode, string $raw): array
     {
-        // Convention 1: slip endpoints
-        if (isset($parsed['status'])) {
-            $status = strtolower((string)$parsed['status']);
-            if ($status === 'success') {
+        // Convention 1: Async endpoints returning boolean "success": true | false
+        if (isset($parsed['success'])) {
+            if ($parsed['success'] === true) {
                 return [
                     'success'         => true,
                     'http_code'       => $httpCode,
-                    'provider_status' => 'success',
+                    'provider_status' => strtolower((string)($parsed['status'] ?? 'pending')),
+                    'data'            => $parsed,
+                    'error_message'   => null,
+                    'error_code'      => null,
+                    'raw'             => $raw,
+                ];
+            }
+            $msg  = $parsed['message'] ?? 'Provider returned success=false';
+            $code = $parsed['error_code'] ?? null;
+            return $this->errorResult($httpCode, $msg, $code, $raw);
+        }
+
+        // Convention 2: Slip endpoints returning string "status": "success" | "error"
+        if (isset($parsed['status'])) {
+            $status = strtolower((string)$parsed['status']);
+            if (in_array($status, ['success', 'completed'], true)) {
+                return [
+                    'success'         => true,
+                    'http_code'       => $httpCode,
+                    'provider_status' => $status,
                     'data'            => $parsed,
                     'error_message'   => null,
                     'error_code'      => null,
@@ -226,24 +244,6 @@ class TechHubClient
             // "status": "error"
             $msg  = $parsed['message'] ?? 'Provider returned an error';
             $code = $parsed['error_code'] ?? $parsed['response_code'] ?? null;
-            return $this->errorResult($httpCode, $msg, $code, $raw);
-        }
-
-        // Convention 2: async endpoints
-        if (isset($parsed['success'])) {
-            if ($parsed['success'] === true) {
-                return [
-                    'success'         => true,
-                    'http_code'       => $httpCode,
-                    'provider_status' => $parsed['status'] ?? 'pending',
-                    'data'            => $parsed,
-                    'error_message'   => null,
-                    'error_code'      => null,
-                    'raw'             => $raw,
-                ];
-            }
-            $msg  = $parsed['message'] ?? 'Provider returned success=false';
-            $code = $parsed['error_code'] ?? null;
             return $this->errorResult($httpCode, $msg, $code, $raw);
         }
 

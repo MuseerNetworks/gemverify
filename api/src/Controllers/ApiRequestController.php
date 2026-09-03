@@ -746,14 +746,16 @@ class ApiRequestController
             if ($statusResult['success']) {
                 $pStatus = $statusResult['provider_status'] ?? 'pending';
                 if ($statusResult['is_complete']) {
-                    if ($pStatus === 'success') {
+                    if (in_array($pStatus, ['success', 'completed'], true)) {
+                        $resultJson = json_encode($statusResult['result_data'] ?? []);
                         $upd = $this->db->prepare("
                             UPDATE api_transactions
-                            SET gv_status = 'completed', provider_status = 'success', result_data = ?, completed_at = NOW()
+                            SET gv_status = 'completed', provider_status = 'completed', result_data = ?, completed_at = NOW()
                             WHERE id = ?
                         ");
-                        $upd->execute([json_encode($statusResult['result_data'] ?? []), $tx['id']]);
-                        $tx['gv_status'] = 'completed';
+                        $upd->execute([$resultJson, $tx['id']]);
+                        $tx['gv_status']   = 'completed';
+                        $tx['result_data'] = $resultJson;
                     } elseif ($pStatus === 'failed') {
                         // Check if provider explicitly confirmed reversal/refund
                         $isReversed = !empty($statusResult['is_reversed']) || !empty($statusResult['result_data']['reversed']);
