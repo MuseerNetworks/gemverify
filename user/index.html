@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head><script>if(localStorage.getItem("gv_theme")==="dark")document.documentElement.classList.add("dark");</script>
   <link rel="icon" type="image/png" href="../assets/img/auth-shield.png">
@@ -2005,9 +2005,9 @@ function isAsyncCheckable(r) {
   if (r.request_type === "manual" || (r.reference && String(r.reference).startsWith("REQ-"))) {
     return false;
   }
-  // 2. Exclude final closed states
+  // 2. Exclude final closed states (except completed)
   let status = String(r.status || "").toLowerCase();
-  if (status === "completed" || status === "failed" || status === "rejected" || status === "refunded") {
+  if (status === "failed" || status === "rejected" || status === "refunded") {
     return false;
   }
   // 3. Exclude sync verification services
@@ -2097,64 +2097,62 @@ function ServiceHistoryTable({ serviceSlug, requests = [], onRefresh }) {
                 let isCompleted = r.has_result || r.status === "completed" || String(r.status).toLowerCase() === "completed";
                 let isFailedOrRefunded = r.status === "failed" || r.status === "rejected" || r.status === "refunded";
                 let isApiCheckable = isAsyncCheckable(r);
-                
-                let actionBtn = isCompleted
-                  ? i("button", {
-                      disabled: downloadingRef === r.reference,
-                      onClick: async () => {
-                        if (downloadingRef === r.reference) return;
-                        setDownloadingRef(r.reference);
-                        try {
-                          await window.gvDownloadResult(r.reference);
-                        } finally {
-                          setTimeout(() => setDownloadingRef(null), 1500);
+
+                let checkStatusBtn = i("button", {
+                  disabled: checkingRef === r.reference,
+                  onClick: async () => {
+                    if (checkingRef === r.reference) return;
+                    setCheckingRef(r.reference);
+                    let token = localStorage.getItem("gv_token");
+                    try {
+                      let res = await fetch("../api/api-services/" + r.reference + "/status", {
+                        headers: { "Authorization": "Bearer " + token }
+                      });
+                      let json = await res.json();
+                      if (json.success) {
+                        let status = (json.data?.status || "processing").toLowerCase();
+                        if (status === "completed") {
+                          try { window.gvShowResultModal(json.data?.tx, r); } catch(me) { alert("Result ready! Ref: " + r.reference); }
+                        } else {
+                          let msg = json.message || ("Status: " + status.toUpperCase());
+                          try { window.gvShowToast(msg, "info"); } catch(_) { alert(msg); }
                         }
-                      },
-                      className: "px-3 py-1.5 bg-[#0050FF] text-white text-[11px] font-semibold rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-1.5" + (downloadingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
-                      children: downloadingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Downloading..."] : "Download Result"
-                    })
-                  : isFailedOrRefunded
-                    ? i("span", { className: "opacity-40 text-[11px]", children: "—" })
-                    : u("div", {
-                      className: "flex items-center gap-1.5",
-                      children: [
-                        i("span", { className: "opacity-50 text-[11px]", children: "In Progress" }),
-                        isApiCheckable && i("button", {
-                          disabled: checkingRef === r.reference,
-                          onClick: async () => {
-                            if (checkingRef === r.reference) return;
-                            setCheckingRef(r.reference);
-                            let token = localStorage.getItem("gv_token");
-                            try {
-                              let res = await fetch("../api/api-services/" + r.reference + "/status", {
-                                headers: { "Authorization": "Bearer " + token }
-                              });
-                              let json = await res.json();
-                              if (json.success) {
-                                let status = (json.data?.status || "processing").toLowerCase();
-                                if (status === "completed") {
-                                  try { window.gvShowResultModal(json.data?.tx, r); } catch(me) { alert("Result ready! Ref: " + r.reference); }
-                                } else {
-                                  let msg = json.message || ("Status: " + status.toUpperCase());
-                                  try { window.gvShowToast(msg, "info"); } catch(_) { alert(msg); }
-                                }
-                                if (typeof onRefresh === "function") onRefresh();
-                              } else {
-                                let msg = json.message || "Failed to check status";
-                                try { window.gvShowToast(msg, "error"); } catch(_) { alert(msg); }
-                              }
-                            } catch(e) {
-                              let msg = "Error checking status: " + e.message;
-                              try { window.gvShowToast(msg, "error"); } catch(_) { alert(msg); }
-                            } finally {
-                              setCheckingRef(null);
-                            }
-                          },
-                          style: { backgroundColor: '#f59e0b', color: '#ffffff' }, className: "px-2 py-1 text-white text-[10px] font-semibold rounded-lg transition cursor-pointer flex items-center gap-1" + (checkingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
-                          children: checkingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Checking..."] : "Check Status 🔄"
-                        })
-                      ]
-                    });
+                        if (typeof onRefresh === "function") onRefresh();
+                      } else {
+                        let msg = json.message || "Failed to check status";
+                        try { window.gvShowToast(msg, "error"); } catch(_) { alert(msg); }
+                      }
+                    } catch(e) {
+                      let msg = "Error checking status: " + e.message;
+                      try { window.gvShowToast(msg, "error"); } catch(_) { alert(msg); }
+                    } finally {
+                      setCheckingRef(null);
+                    }
+                  },
+                  style: { backgroundColor: '#f59e0b', color: '#ffffff' }, className: "px-2 py-1 text-white text-[10px] font-semibold rounded-lg transition cursor-pointer flex items-center gap-1" + (checkingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
+                  children: checkingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Checking..."] : "Check Status 🔄"
+                });
+
+                let actionBtn = isApiCheckable
+                  ? checkStatusBtn
+                  : isCompleted
+                    ? i("button", {
+                        disabled: downloadingRef === r.reference,
+                        onClick: async () => {
+                          if (downloadingRef === r.reference) return;
+                          setDownloadingRef(r.reference);
+                          try {
+                            await window.gvDownloadResult(r.reference);
+                          } finally {
+                            setTimeout(() => setDownloadingRef(null), 1500);
+                          }
+                        },
+                        className: "px-3 py-1.5 bg-[#0050FF] text-white text-[11px] font-semibold rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-1.5" + (downloadingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
+                        children: downloadingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Downloading..."] : "Download Result"
+                      })
+                    : isFailedOrRefunded
+                      ? i("span", { className: "opacity-40 text-[11px]", children: "—" })
+                      : i("span", { className: "opacity-50 text-[11px]", children: "In Progress" });
 
                 let dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString("en-NG", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "—";
                 
@@ -2197,60 +2195,61 @@ function ServiceHistoryTable({ serviceSlug, requests = [], onRefresh }) {
           let isFailedOrRefunded = r.status === "failed" || r.status === "rejected" || r.status === "refunded";
           let isApiCheckable = isAsyncCheckable(r);
 
-          let actionBtn = isCompleted
-            ? i("button", {
-                disabled: downloadingRef === r.reference,
-                onClick: async () => {
-                  if (downloadingRef === r.reference) return;
-                  setDownloadingRef(r.reference);
-                  try {
-                    await window.gvDownloadResult(r.reference);
-                  } finally {
-                    setTimeout(() => setDownloadingRef(null), 1500);
+          let checkStatusBtnMob = i("button", {
+            disabled: checkingRef === r.reference,
+            onClick: async () => {
+              if (checkingRef === r.reference) return;
+              setCheckingRef(r.reference);
+              let token = localStorage.getItem("gv_token");
+              try {
+                let res = await fetch("../api/api-services/" + r.reference + "/status", {
+                  headers: { "Authorization": "Bearer " + token }
+                });
+                let json = await res.json();
+                if (json.success) {
+                  let status = (json.data?.status || "processing").toLowerCase();
+                  if (status === "completed") {
+                    try { window.gvShowResultModal(json.data?.tx, r); } catch(me) { alert("Result ready! Ref: " + r.reference); }
+                  } else {
+                    let msg = json.message || ("Status: " + status.toUpperCase());
+                    try { window.gvShowToast(msg, "info"); } catch(_) { alert(msg); }
                   }
-                },
-                className: "px-3 py-1.5 bg-[#0050FF] text-white text-[11px] font-semibold rounded-lg hover:bg-blue-700 transition w-full text-center flex items-center justify-center gap-1.5" + (downloadingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
-                children: downloadingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Downloading..."] : "Download Result"
-              })
-            : isFailedOrRefunded
-              ? null
-              : u("div", { className: "flex items-center justify-end gap-2 w-full", children: [
-                i("span", { className: "opacity-50 text-[11px]", children: "In Progress" }),
-                isApiCheckable && i("button", {
-                  disabled: checkingRef === r.reference,
+                  if (typeof onRefresh === "function") onRefresh();
+                } else {
+                  let msg = json.message || "Failed to check status";
+                  try { window.gvShowToast(msg, "error"); } catch(_) { alert(msg); }
+                }
+              } catch(e) {
+                let msg = "Error checking status: " + e.message;
+                try { window.gvShowToast(msg, "error"); } catch(_) { alert(msg); }
+              } finally {
+                setCheckingRef(null);
+              }
+            },
+            style: { backgroundColor: '#f59e0b', color: '#ffffff' }, className: "px-2 py-1 text-white text-[10px] font-semibold rounded-lg transition cursor-pointer flex items-center gap-1" + (checkingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
+            children: checkingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Checking..."] : "Check Status 🔄"
+          });
+
+          let actionBtn = isApiCheckable
+            ? checkStatusBtnMob
+            : isCompleted
+              ? i("button", {
+                  disabled: downloadingRef === r.reference,
                   onClick: async () => {
-                    if (checkingRef === r.reference) return;
-                    setCheckingRef(r.reference);
-                    let token = localStorage.getItem("gv_token");
+                    if (downloadingRef === r.reference) return;
+                    setDownloadingRef(r.reference);
                     try {
-                      let res = await fetch("../api/api-services/" + r.reference + "/status", {
-                        headers: { "Authorization": "Bearer " + token }
-                      });
-                      let json = await res.json();
-                      if (json.success) {
-                        let status = (json.data?.status || "processing").toLowerCase();
-                        if (status === "completed") {
-                          try { window.gvShowResultModal(json.data?.tx, r); } catch(me) { alert("Result ready! Ref: " + r.reference); }
-                        } else {
-                          let msg = json.message || ("Status: " + status.toUpperCase());
-                          try { window.gvShowToast(msg, "info"); } catch(_) { alert(msg); }
-                        }
-                        if (typeof onRefresh === "function") onRefresh();
-                      } else {
-                        let msg = json.message || "Failed to check status";
-                        try { window.gvShowToast(msg, "error"); } catch(_) { alert(msg); }
-                      }
-                    } catch(e) {
-                      let msg = "Error checking status: " + e.message;
-                      try { window.gvShowToast(msg, "error"); } catch(_) { alert(msg); }
+                      await window.gvDownloadResult(r.reference);
                     } finally {
-                      setCheckingRef(null);
+                      setTimeout(() => setDownloadingRef(null), 1500);
                     }
                   },
-                  style: { backgroundColor: '#f59e0b', color: '#ffffff' }, className: "px-2 py-1 text-white text-[10px] font-semibold rounded-lg transition cursor-pointer flex items-center gap-1" + (checkingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
-                  children: checkingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Checking..."] : "Check Status 🔄"
+                  className: "px-3 py-1.5 bg-[#0050FF] text-white text-[11px] font-semibold rounded-lg hover:bg-blue-700 transition w-full text-center flex items-center justify-center gap-1.5" + (downloadingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
+                  children: downloadingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Downloading..."] : "Download Result"
                 })
-              ]});
+              : isFailedOrRefunded
+                ? null
+                : i("span", { className: "opacity-50 text-[11px]", children: "In Progress" });
 
           let dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString("en-NG", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "—";
           
