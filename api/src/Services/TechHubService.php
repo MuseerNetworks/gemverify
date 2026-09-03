@@ -449,8 +449,11 @@ class TechHubService
         if (!is_array($data)) return null;
 
         $candidateKeys = [
-            'ticket_id', 'tracking_id', 'ticket', 'id', 'transaction_id',
+            'ticket_id', 'ticket', 'transaction_id',
             'reference', 'ref', 'job_id', 'request_id', 'trans_id', 'order_id'
+            // NOTE: 'tracking_id' and 'id' intentionally excluded:
+            // - 'tracking_id' in a poll response is the user's original NIMC input, NOT TechHub's ticket ref
+            // - 'id' is too generic and risks matching unrelated fields
         ];
 
         foreach ($candidateKeys as $k) {
