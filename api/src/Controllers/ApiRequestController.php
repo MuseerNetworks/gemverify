@@ -810,10 +810,19 @@ class ApiRequestController
             error_log('[ApiRequestController] Live checkStatus error: ' . $e->getMessage());
         }
 
+        $statusLabel = match($tx['gv_status']) {
+            'completed'               => 'Your request has been completed! You can now download your result.',
+            'processing'              => 'Your request is still being processed by the provider. Please check back soon.',
+            'failed'                  => 'Your request was not successful. Please contact support.',
+            'refunded'                => 'Your request failed and your wallet has been refunded.',
+            'reconciliation_required' => 'Your request requires admin review. Please contact support.',
+            default                   => 'Current status: ' . $tx['gv_status'],
+        };
+
         Response::success([
             'gv_reference' => $tx['gv_reference'],
             'status'       => $tx['gv_status'],
-            'message'      => 'Status updated live from provider.',
+            'message'      => $statusLabel,
             'tx'           => $tx
         ]);
     }
