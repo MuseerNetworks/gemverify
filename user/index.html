@@ -3497,18 +3497,6 @@ async function gvDownloadResult(reference) {
       }
     })
     .catch(function() {});
-  }
-
-  // ── PATCH 5: Download Loading State ─────────────────────────────────────
-  // Override gvDownloadResult to show a toast while downloading.
-  var _origDownload = window.gvDownloadResult;
-  window.gvDownloadResult = async function(reference) {
-    if (typeof window.gvShowToast === 'function')
-      window.gvShowToast('Preparing download...', 'success');
-    if (typeof _origDownload === 'function') {
-      return _origDownload(reference);
-    }
-  };
 
   // ── PATCH 6: Wallet Refresh Event Listener ──────────────────────────────
   // Listen for gv:wallet:refresh fired by top-up poller and reload wallet.
@@ -3524,6 +3512,10 @@ async function gvDownloadResult(reference) {
         .then(function(r) { return r.json(); })
         .then(function(json) {
           if (json.success && json.data) {
+            var bal = Number(json.data.balance || 0);
+            window.gvCachedWalletBalance = bal;
+            window.dispatchEvent(new CustomEvent('gv:balance:updated', { detail: { balance: bal } }));
+          }
         }).catch(function() {});
     }
   });
@@ -3588,11 +3580,9 @@ async function gvDownloadResult(reference) {
     var d=isDark();
     return {
       card:   d?'#102044':'#ffffff',
-      bg:     d?'#0b1b3d':'#f8fafc',
       border: d?'rgba(255,255,255,.09)':'#e2e8f0',
       text:   d?'#f1f5f9':'#0f172a',
       muted:  d?'#94a3b8':'#64748b',
-      hdrBg:  'rgba(16,185,129,.07)',
       hdrBdr: d?'rgba(16,185,129,.15)':'rgba(16,185,129,.18)',
       rowBg:  d?'rgba(255,255,255,.03)':'#f8fafc',
       noteBg: d?'rgba(59,130,246,.07)':'rgba(59,130,246,.06)',
@@ -3600,134 +3590,143 @@ async function gvDownloadResult(reference) {
     };
   }
 
-  function parseResult(tx,req){
-    var slug=(tx&&tx.service_slug)||(req&&req.service_slug)||'';
-    var rd={};
-    try{ rd=JSON.parse((tx&&tx.result_data)?tx.result_data:'{}'); }catch(e){}
-    var primary={label:'Result',value:'COMPLETED',mono:false};
-    var fields=[];
-    var note=rd.response||rd.note||null;
+  function parseResult(tx, req){
+    var slug = (tx && tx.service_slug) || (req && req.service_slug) || '';
+    var rd = {};
+    try { rd = JSON.parse((tx && tx.result_data) ? tx.result_data : '{}'); } catch(e){}
+    var primary = {label:'Status', value:'COMPLETED', mono:false};
+    var fields  = [];
+    var note    = rd.response || rd.note || null;
 
-    if(slug==='bvn-retrieval'){
-      primary={label:'Bank Verification Number',value:rd.bvn||rd.BVN||'—',mono:true};
-      if(rd.first_name||rd.last_name)  fields.push({label:'Full Name',    value:[rd.first_name,rd.last_name].filter(Boolean).join(' ')});
-      if(rd.date_of_birth||rd.dob)     fields.push({label:'Date of Birth',value:rd.date_of_birth||rd.dob});
-      if(rd.phone_number||rd.phone)    fields.push({label:'Phone',         value:rd.phone_number||rd.phone});
-    } else if(slug==='ipe-clearance-single'||slug==='ipe-clearance'){
-      primary={label:'Clearance Status',value:(rd.status||'CLEARED').toUpperCase(),mono:false};
-      if(tx&&tx.provider_ticket_id) fields.push({label:'Provider Ticket',value:tx.provider_ticket_id});
-      var m=req&&req.input_summary&&req.input_summary.match(/Tracking:([^\s|]+)/);
-      if(m) fields.push({label:'Tracking ID',value:m[1]});
-    } else if(slug==='self-service'){
-      primary={label:'Delinking Status',value:(rd.status||'COMPLETED').toUpperCase(),mono:false};
-      if(tx&&tx.provider_ticket_id) fields.push({label:'Provider Ticket',value:tx.provider_ticket_id});
-    } else if(slug==='personalization'){
-      primary={label:'Personalization Status',value:(rd.status||'COMPLETED').toUpperCase(),mono:false};
-      if(tx&&tx.provider_ticket_id) fields.push({label:'Provider Ticket',value:tx.provider_ticket_id});
+    if (slug === 'bvn-retrieval') {
+      primary = {label:'Bank Verification Number', value: rd.bvn || rd.BVN || 'See details below', mono:true};
+      if (rd.first_name || rd.last_name) fields.push({label:'Full Name',     value:[rd.first_name, rd.last_name].filter(Boolean).join(' ')});
+      if (rd.date_of_birth || rd.dob)   fields.push({label:'Date of Birth', value: rd.date_of_birth || rd.dob});
+      if (rd.phone_number  || rd.phone) fields.push({label:'Phone',         value: rd.phone_number  || rd.phone});
+    } else if (slug === 'ipe-clearance-single' || slug === 'ipe-clearance') {
+      primary = {label:'Clearance Status', value:(rd.status || 'CLEARED').toUpperCase(), mono:false};
+      if (tx && tx.provider_ticket_id) fields.push({label:'Provider Ticket', value: tx.provider_ticket_id});
+      var m = req && req.input_summary && req.input_summary.match(/Tracking:([^\s|]+)/);
+      if (m) fields.push({label:'Tracking ID', value: m[1]});
+    } else if (slug === 'self-service') {
+      primary = {label:'Delinking Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
+      if (tx && tx.provider_ticket_id) fields.push({label:'Provider Ticket', value: tx.provider_ticket_id});
+    } else if (slug === 'personalization') {
+      primary = {label:'Personalization Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
+      if (tx && tx.provider_ticket_id) fields.push({label:'Provider Ticket', value: tx.provider_ticket_id});
     } else {
-      primary={label:'Status',value:(rd.status||'COMPLETED').toUpperCase(),mono:false};
+      primary = {label:'Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
     }
 
-    if(tx&&tx.gv_reference)  fields.push({label:'Reference',   value:tx.gv_reference});
-    if(tx&&tx.completed_at)  fields.push({label:'Completed At',value:new Date(tx.completed_at).toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})});
+    if (tx && tx.gv_reference) fields.push({label:'Reference',    value: tx.gv_reference});
+    if (tx && tx.completed_at) fields.push({label:'Completed At', value: new Date(tx.completed_at).toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})});
 
-    var svcName=(req&&req.service_name)||(tx&&tx.service_name)||slug||'Service';
-    return {primary:primary,fields:fields,note:note,serviceName:svcName};
-  }
-
-  function gvCopy(text,btnId){
-    navigator.clipboard.writeText(text).catch(function(){});
-    var btn=document.getElementById(btnId);
-    if(!btn) return;
-    var orig=btn.innerHTML;
-    btn.innerHTML='&#x2713; Copied!';
-    btn.style.background='#10b981'; btn.style.color='#fff'; btn.style.border='none';
-    setTimeout(function(){ btn.innerHTML=orig; btn.style.background=''; btn.style.color=''; btn.style.border=''; },1800);
+    var svcName = (req && req.service_name) || (tx && tx.service_name) || slug || 'Service';
+    return {primary:primary, fields:fields, note:note, serviceName:svcName};
   }
 
   function closeModal(){
-    var el=document.getElementById('gv-result-overlay');
-    if(el) el.remove();
+    var el = document.getElementById('gv-result-overlay');
+    if (el) el.remove();
   }
 
   function buildModal(result){
-    var c=tok(); var p=result.primary;
-    var esc=function(s){ return String(s).replace(/'/g,"&#39;").replace(/"/g,"&quot;"); };
+    var c = tok();
+    var p = result.primary;
 
-    var fieldRows=result.fields.map(function(f,i){
-      var bid='gv-rm-f'+i;
-      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid '+c.border+';gap:8px;min-width:0;last-child-border:none">'
-        +'<span style="font-size:11px;color:'+c.muted+';white-space:nowrap;flex-shrink:0">'+f.label+'</span>'
-        +'<div style="display:flex;align-items:center;gap:6px;min-width:0">'
-        +'<span style="font-size:11.5px;font-weight:600;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px">'+f.value+'</span>'
-        +'<button id="'+bid+'" onclick="window._gvRMCopy(\''+esc(f.value)+"','"+bid+'\')" style="flex-shrink:0;height:22px;padding:0 7px;border-radius:6px;border:1px solid '+c.border+';background:transparent;color:'+c.muted+';font-size:10px;font-weight:600;cursor:pointer">&#x2398; Copy</button>'
-        +'</div></div>';
+    var fieldRowsHtml = result.fields.map(function(f, i){
+      return '<div class="gv-rm-row" data-label="' + f.label + '" data-val="' + f.value.replace(/"/g,'&quot;') + '">'
+        + '<span class="gv-rm-flabel">' + f.label + '</span>'
+        + '<div class="gv-rm-fright">'
+        + '<span class="gv-rm-fval">' + f.value + '</span>'
+        + '<button class="gv-rm-copybtn" data-copy="' + f.value.replace(/"/g,'&quot;') + '">&#x2398; Copy</button>'
+        + '</div></div>';
     }).join('');
 
-    var noteHtml=result.note
-      ?'<div style="margin-top:12px;border-radius:12px;background:'+c.noteBg+';border:1px solid '+c.noteBdr+';padding:12px">'
-        +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#3b82f6;margin-bottom:4px">Provider Note</div>'
-        +'<p style="font-size:12px;line-height:1.55;margin:0;color:'+c.text+'">'+result.note+'</p>'
-        +'</div>' : '';
+    var noteHtml = result.note
+      ? '<div class="gv-rm-note"><div class="gv-rm-note-label">Provider Note</div><p class="gv-rm-note-text">' + result.note + '</p></div>'
+      : '';
 
-    var svg='<svg width="26" height="26" viewBox="0 0 26 26" fill="none"><polyline class="gv-rm-check" points="5,13 11,19 21,7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var fsize = p.value.length > 12 ? '26px' : '32px';
+    var fmono = p.mono ? 'font-family:monospace;' : '';
 
-    return '<div id="gv-result-overlay" onclick="if(event.target.id===\'gv-result-overlay\')window._gvRMClose()">'
-      +'<div id="gv-result-card" class="gv-rm-pop" style="background:'+c.card+';border-radius:24px;border:1px solid '+c.border+';box-shadow:0 25px 60px rgba(0,0,0,.35);width:100%;max-width:480px;overflow:hidden;color:'+c.text+';font-family:\'Inter\',ui-sans-serif,system-ui,sans-serif">'
+    return '<div id="gv-result-overlay">'
+      + '<div id="gv-result-card" class="gv-rm-pop" style="background:' + tok().card + ';border-radius:24px;border:1px solid ' + tok().border + ';box-shadow:0 25px 60px rgba(0,0,0,.35);width:100%;max-width:480px;overflow:hidden;color:' + tok().text + ';font-family:\'Inter\',ui-sans-serif,system-ui,sans-serif;">'
 
-      /* header */
-      +'<div style="background:'+c.hdrBg+';border-bottom:1px solid '+c.hdrBdr+';padding:28px 24px 20px;text-align:center">'
-        +'<div style="position:relative;width:56px;height:56px;margin:0 auto 12px">'
-          +'<div class="gv-rm-ring" style="position:absolute;inset:0;border-radius:50%;background:rgba(16,185,129,.25)"></div>'
-          +'<div style="width:56px;height:56px;border-radius:50%;background:#10b981;box-shadow:0 8px 24px rgba(16,185,129,.35);display:flex;align-items:center;justify-content:center">'+svg+'</div>'
-        +'</div>'
-        +'<div style="font-size:17px;font-weight:900;margin-bottom:3px">Result Ready</div>'
-        +'<div style="font-size:12px;color:'+c.muted+'">Provider has processed your request</div>'
-        +'<div style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:'+c.card+';border:1px solid '+c.border+';border-radius:99px;padding:4px 12px;font-size:11px;font-weight:700">'+result.serviceName+'</div>'
-      +'</div>'
+      + '<div style="background:rgba(16,185,129,.07);border-bottom:1px solid ' + tok().hdrBdr + ';padding:28px 24px 20px;text-align:center;">'
+        + '<div style="position:relative;width:56px;height:56px;margin:0 auto 12px;">'
+          + '<div class="gv-rm-ring" style="position:absolute;inset:0;border-radius:50%;background:rgba(16,185,129,.25);"></div>'
+          + '<div style="width:56px;height:56px;border-radius:50%;background:#10b981;box-shadow:0 8px 24px rgba(16,185,129,.35);display:flex;align-items:center;justify-content:center;">'
+            + '<svg width="26" height="26" viewBox="0 0 26 26" fill="none"><polyline class="gv-rm-check" points="5,13 11,19 21,7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          + '</div>'
+        + '</div>'
+        + '<div style="font-size:17px;font-weight:900;margin-bottom:3px;">Result Ready</div>'
+        + '<div style="font-size:12px;color:' + tok().muted + ';">Provider has processed your request</div>'
+        + '<div style="margin-top:10px;display:inline-flex;align-items:center;background:' + tok().card + ';border:1px solid ' + tok().border + ';border-radius:99px;padding:4px 12px;font-size:11px;font-weight:700;">' + result.serviceName + '</div>'
+      + '</div>'
 
-      /* body */
-      +'<div class="gv-rm-slide" style="padding:20px">'
+      + '<div class="gv-rm-slide" style="padding:20px;">'
+        + '<div style="border-radius:16px;border:2px solid rgba(16,185,129,.28);background:linear-gradient(135deg,rgba(16,185,129,.06),rgba(16,185,129,.12));padding:16px;margin-bottom:14px;">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+            + '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#059669;">' + p.label + '</span>'
+            + '<button id="gv-rm-pcopy" class="gv-rm-copybtn gv-rm-pcopy-btn" data-copy="' + p.value.replace(/"/g,'&quot;') + '" style="background:rgba(16,185,129,.15);color:#059669;border:none;">&#x2398; Copy</button>'
+          + '</div>'
+          + '<div style="font-size:' + fsize + ';font-weight:900;color:#059669;letter-spacing:' + (p.mono?'.08em':'0') + ';' + fmono + '">' + p.value + '</div>'
+        + '</div>'
 
-        /* primary hero */
-        +'<div style="border-radius:16px;border:2px solid rgba(16,185,129,.28);background:linear-gradient(135deg,rgba(16,185,129,.06),rgba(16,185,129,.12));padding:16px;margin-bottom:14px">'
-          +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
-            +'<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#059669">'+p.label+'</span>'
-            +'<button id="gv-rm-pcopy" onclick="window._gvRMCopy(\''+esc(p.value)+"','gv-rm-pcopy')" style="height:26px;padding:0 10px;border-radius:8px;border:none;background:rgba(16,185,129,.15);color:#059669;font-size:10px;font-weight:700;cursor:pointer">&#x2398; Copy</button>'
-          +'</div>'
-          +'<div style="font-size:'+(p.value.length>12?'26px':'32px')+';font-weight:900;color:#059669;letter-spacing:'+(p.mono?'.08em':'0')+';'+(p.mono?'font-family:monospace;':'')+'">'
-            +p.value
-          +'</div>'
-        +'</div>'
+        + (result.fields.length ? '<div style="background:' + tok().rowBg + ';border:1px solid ' + tok().border + ';border-radius:12px;padding:0 12px;margin-bottom:4px;">' + fieldRowsHtml + '</div>' : '')
+        + noteHtml
 
-        /* field rows */
-        +(result.fields.length?'<div style="background:'+c.rowBg+';border:1px solid '+c.border+';border-radius:12px;padding:0 12px;margin-bottom:4px">'+fieldRows+'</div>':'')
-
-        +noteHtml
-
-        /* actions */
-        +'<div style="display:flex;gap:10px;margin-top:16px">'
-          +'<button onclick="window._gvRMClose()" style="flex:1;height:44px;border-radius:16px;border:1px solid '+c.border+';background:transparent;color:'+c.muted+';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Close</button>'
-          +'<button id="gv-rm-ctacopy" onclick="window._gvRMCopy(\''+esc(p.value)+"','gv-rm-ctacopy')" style="flex:2;height:44px;border-radius:16px;border:none;background:#0050FF;color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,80,255,.25);font-family:inherit">&#x2398; Copy '+p.label+'</button>'
-        +'</div>'
-      +'</div>'
-    +'</div>'
-    +'</div>';
+        + '<div style="display:flex;gap:10px;margin-top:16px;">'
+          + '<button id="gv-rm-close" style="flex:1;height:44px;border-radius:16px;border:1px solid ' + tok().border + ';background:transparent;color:' + tok().muted + ';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>'
+          + '<button id="gv-rm-ctacopy" class="gv-rm-copybtn" data-copy="' + p.value.replace(/"/g,'&quot;') + '" style="flex:2;height:44px;border-radius:16px;border:none;background:#0050FF;color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,80,255,.25);font-family:inherit;">&#x2398; Copy ' + p.label + '</button>'
+        + '</div>'
+      + '</div>'
+    + '</div>'
+    + '</div>';
   }
 
-  window._gvRMCopy  = gvCopy;
-  window._gvRMClose = closeModal;
+  /* shared copy feedback */
+  function doCopy(btn) {
+    var val = btn.getAttribute('data-copy');
+    if (!val) return;
+    navigator.clipboard.writeText(val).catch(function(){});
+    var orig = btn.innerHTML;
+    btn.innerHTML = '&#x2713; Copied!';
+    btn.style.background = '#10b981';
+    btn.style.color = '#fff';
+    btn.style.border = 'none';
+    setTimeout(function(){ btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; btn.style.border = ''; }, 1800);
+  }
 
   window.gvShowResultModal = function(tx, req){
     closeModal();
-    var result=parseResult(tx,req);
-    var d=document.createElement('div');
-    d.innerHTML=buildModal(result);
-    document.body.appendChild(d.firstElementChild);
-    document.addEventListener('keydown',function onEsc(e){
-      if(e.key==='Escape'){ closeModal(); document.removeEventListener('keydown',onEsc); }
+    var result = parseResult(tx, req);
+    var d = document.createElement('div');
+    d.innerHTML = buildModal(result);
+    var overlay = d.firstElementChild;
+
+    /* attach all event listeners AFTER inserting HTML — no inline onclick needed */
+    overlay.querySelectorAll('.gv-rm-copybtn').forEach(function(btn){
+      btn.style.cssText += ';height:26px;padding:0 10px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;';
+      btn.addEventListener('click', function(){ doCopy(this); });
+    });
+    overlay.querySelector('#gv-rm-close').addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
+
+    document.body.appendChild(overlay);
+
+    document.addEventListener('keydown', function onEsc(e){
+      if (e.key === 'Escape'){ closeModal(); document.removeEventListener('keydown', onEsc); }
     });
   };
+
+  /* field row inline styles */
+  var rmStyle = document.createElement('style');
+  rmStyle.textContent = '.gv-rm-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(148,163,184,.15);gap:8px;min-width:0}.gv-rm-row:last-child{border-bottom:none}.gv-rm-flabel{font-size:11px;color:#94a3b8;white-space:nowrap;flex-shrink:0}.gv-rm-fright{display:flex;align-items:center;gap:6px;min-width:0}.gv-rm-fval{font-size:11.5px;font-weight:600;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px}.gv-rm-copybtn{flex-shrink:0;border:1px solid rgba(148,163,184,.25);background:transparent;color:#94a3b8;transition:all .15s}.gv-rm-note{margin-top:12px;border-radius:12px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.18);padding:12px}.gv-rm-note-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#3b82f6;margin-bottom:4px}.gv-rm-note-text{font-size:12px;line-height:1.55;margin:0}';
+  document.head.appendChild(rmStyle);
 })();
 </script>
 <!-- END GV PATCH v3 -->
+</body>
+</html>
