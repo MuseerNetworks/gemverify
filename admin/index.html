@@ -529,11 +529,22 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 
 <section id="page-users" class="page">
   <div class="heading"><div><h1>Users</h1><p>Customer accounts and activity.</p></div><button class="secondary" onclick="fetchAdminUsers(1,'all')">⟳ Refresh</button></div>
-  <div class="card"><div class="card-head"><h3>All Registered Users</h3><span id="usersCountLabel">Loading...</span></div>
+  <div class="card">
+    <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <h3 style="margin:0">All Registered Users</h3>
+        <span id="usersCountLabel">Loading...</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input id="userSearchInput" type="text" placeholder="Search by ID, Name, Email, Phone..." 
+               style="padding:6px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);width:260px"
+               oninput="onUserSearchInput(this.value, 'all')">
+      </div>
+    </div>
     <div style="overflow-x:auto"><table style="table-layout:fixed;width:100%">
-      <colgroup><col style="min-width:140px"><col style="width:200px"><col style="width:110px"><col style="width:90px"><col style="width:80px"><col style="width:70px"></colgroup>
-      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th></tr></thead>
-      <tbody id="usersTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading users...</td></tr></tbody>
+      <colgroup><col style="width:55px"><col style="min-width:140px"><col style="width:180px"><col style="width:110px"><col style="width:90px"><col style="width:75px"><col style="width:85px"><col style="width:130px"></colgroup>
+      <thead><tr><th>ID</th><th>Business / Name</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th><th style="text-align:center">Action</th></tr></thead>
+      <tbody id="usersTbody"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loading users...</td></tr></tbody>
     </table></div>
     <div id="usersPagination" style="display:flex;justify-content:center;gap:8px;margin-top:14px"></div>
   </div>
@@ -541,23 +552,46 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 
 <section id="page-active-users" class="page">
   <div class="heading"><div><h1>Active Users</h1><p>Users active in the last 24 hours.</p></div><button class="secondary" onclick="go('users')">← All Users</button></div>
-  <div class="card"><div class="card-head"><h3>Active Users</h3><span id="activeUsersCountLabel">Loading...</span></div>
+  <div class="card">
+    <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <h3 style="margin:0">Active Users</h3>
+        <span id="activeUsersCountLabel">Loading...</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input id="activeUserSearchInput" type="text" placeholder="Search active users..." 
+               style="padding:6px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);width:240px"
+               oninput="onUserSearchInput(this.value, 'active')">
+      </div>
+    </div>
     <div style="overflow-x:auto"><table style="table-layout:fixed;width:100%">
-      <colgroup><col style="min-width:140px"><col style="width:200px"><col style="width:110px"><col style="width:90px"><col style="width:80px"><col style="width:70px"></colgroup>
-      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th></tr></thead>
-      <tbody id="activeUsersTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr></tbody>
+      <colgroup><col style="width:55px"><col style="min-width:140px"><col style="width:180px"><col style="width:110px"><col style="width:90px"><col style="width:75px"><col style="width:85px"><col style="width:130px"></colgroup>
+      <thead><tr><th>ID</th><th>Business / Name</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th><th style="text-align:center">Action</th></tr></thead>
+      <tbody id="activeUsersTbody"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr></tbody>
     </table></div>
   </div>
 </section>
 
 <section id="page-suspended-users" class="page">
   <div class="heading"><div><h1>Suspended Users</h1><p>Inactive customer accounts.</p></div><button class="secondary" onclick="go('users')">← All Users</button></div>
-  <div class="card"><div class="card-head"><h3>Suspended Users</h3><span id="suspendedUsersCountLabel">Loading...</span></div>
+  <div class="card">
+    <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <h3 style="margin:0">Suspended Users</h3>
+        <span id="suspendedUsersCountLabel">Loading...</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input id="suspendedUserSearchInput" type="text" placeholder="Search suspended users..." 
+               style="padding:6px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);width:240px"
+               oninput="onUserSearchInput(this.value, 'suspended')">
+      </div>
+    </div>
     <div style="overflow-x:auto"><table style="table-layout:fixed;width:100%">
-      <colgroup><col style="min-width:140px"><col style="width:200px"><col style="width:110px"><col style="width:90px"><col style="width:80px"><col style="width:70px"></colgroup>
-      <thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th></tr></thead>
-      <tbody id="suspendedUsersTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr></tbody>
+      <colgroup><col style="width:55px"><col style="min-width:140px"><col style="width:180px"><col style="width:110px"><col style="width:90px"><col style="width:75px"><col style="width:85px"><col style="width:130px"></colgroup>
+      <thead><tr><th>ID</th><th>Business / Name</th><th>Email</th><th>Phone</th><th>Wallet (₦)</th><th>Requests</th><th>Status</th><th style="text-align:center">Action</th></tr></thead>
+      <tbody id="suspendedUsersTbody"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr></tbody>
     </table></div>
+    <div id="suspendedUsersPagination" style="display:flex;justify-content:center;gap:8px;margin-top:14px"></div>
   </div>
 </section>
 
@@ -1929,57 +1963,120 @@ function initTheme(){
 }
 initTheme();
 
+function gvEscapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+var _userSearchTimers = {};
+function onUserSearchInput(val, filter) {
+  clearTimeout(_userSearchTimers[filter]);
+  _userSearchTimers[filter] = setTimeout(function () {
+    fetchAdminUsers(1, filter, val);
+  }, 350);
+}
+
 // ── Users & Transactions Admin Fetch Functions ──────────────────────────────
-async function fetchAdminUsers(page, filter) {
-  filter = filter || 'all';
+window._currentUserPage   = 1;
+window._currentUserFilter = 'all';
+window._currentUserSearch = '';
+
+async function fetchAdminUsers(page, filter, search) {
+  filter = filter || window._currentUserFilter || 'all';
   page   = page || 1;
+
+  if (typeof search === 'undefined') {
+    const sId = (filter === 'suspended') ? 'suspendedUserSearchInput' : (filter === 'active' ? 'activeUserSearchInput' : 'userSearchInput');
+    const sEl = document.getElementById(sId);
+    search = sEl ? sEl.value.trim() : '';
+  }
+
+  window._currentUserPage   = page;
+  window._currentUserFilter = filter;
+  window._currentUserSearch = search || '';
+
   const token = localStorage.getItem('gv_admin_token');
   if (!token) return;
 
   const tbodyId = (filter === 'active' || filter === 'today') ? 'activeUsersTbody'
                 : filter === 'suspended'                      ? 'suspendedUsersTbody'
-                                                              : 'usersTbody';
+                : 'usersTbody';
   const labelId = (filter === 'active' || filter === 'today') ? 'activeUsersCountLabel'
                 : filter === 'suspended'                      ? 'suspendedUsersCountLabel'
-                                                              : 'usersCountLabel';
-  const paginId = filter === 'all' ? 'usersPagination' : null;
+                : 'usersCountLabel';
+  const paginId = filter === 'suspended' ? 'suspendedUsersPagination' : (filter === 'all' ? 'usersPagination' : null);
 
   const tbody = document.getElementById(tbodyId);
   const label = document.getElementById(labelId);
-  if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr>';
   if (label) label.textContent = 'Loading...';
 
   try {
-    const res  = await fetch('../api/admin/users?filter=' + filter + '&page=' + page, {
+    let url = '../api/admin/users?filter=' + encodeURIComponent(filter) + '&page=' + page;
+    if (search) {
+      url += '&search=' + encodeURIComponent(search);
+    }
+    const res  = await fetch(url, {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const json = await res.json();
-    if (!json.success || !json.data) throw new Error('Bad response');
+    if (!json.success || !json.data) throw new Error(json.message || 'Bad response');
 
     const { users, total, last_page } = json.data;
     if (label) label.textContent = total + ' user' + (total !== 1 ? 's' : '');
 
     if (!tbody) return;
     if (!users || users.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">No users found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">No users found matching query.</td></tr>';
+      if (paginId) {
+        const pEl = document.getElementById(paginId);
+        if (pEl) pEl.style.display = 'none';
+      }
       return;
     }
 
     tbody.innerHTML = users.map(u => {
+      const id      = u.id;
       const name    = u.business_name || '—';
       const email   = u.email || '—';
       const phone   = u.phone || '—';
       const wallet  = '₦' + parseFloat(u.wallet_balance || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 });
       const reqs    = parseInt(u.request_count || 0);
-      const active  = parseInt(u.is_active) === 1;
+      const active  = parseInt(u.is_active) === 1 && !u.deleted_at;
       const pill    = active ? '<span class="pill green">Active</span>' : '<span class="pill red">Suspended</span>';
-      return `<tr>
-        <td data-label="Business" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${name}">${name}</td>
-        <td data-label="Email"    style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${email}">${email}</td>
+
+      const escName  = gvEscapeHtml(name);
+      const escEmail = gvEscapeHtml(email);
+
+      let actionBtn = '';
+      if (!active) {
+        // Requirement 2: Show "Restore Account" ONLY when blocked/disabled/suspended
+        actionBtn = `
+          <button class="primary" style="padding:4px 10px;font-size:11px;background:#10b981;border-color:#10b981;color:#fff;border-radius:6px;cursor:pointer;font-weight:600" 
+                  onclick="openRestoreUserModal(${id})" title="Restore and reactivate user account">Restore Account</button>
+        `;
+      } else {
+        // Active user: can be suspended
+        actionBtn = `
+          <button class="secondary" style="padding:4px 9px;font-size:11px;color:#ef4444;border-color:#fca5a5" 
+                  onclick="openSuspendUserModal(${id}, '${escName}', '${escEmail}')" title="Suspend user account">Suspend</button>
+        `;
+      }
+
+      return `<tr id="user-row-${id}">
+        <td data-label="ID" style="font-family:monospace;font-size:12px;color:var(--muted)">#${id}</td>
+        <td data-label="Business" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" title="${escName}">${escName}</td>
+        <td data-label="Email"    style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escEmail}">${escEmail}</td>
         <td data-label="Phone">${phone}</td>
         <td data-label="Wallet">${wallet}</td>
         <td data-label="Requests">${reqs}</td>
-        <td data-label="Status">${pill}</td>
+        <td data-label="Status" id="user-status-cell-${id}">${pill}</td>
+        <td data-label="Action" style="text-align:center" id="user-action-cell-${id}">
+          <div style="display:inline-flex;gap:4px;align-items:center;justify-content:center">
+            <button class="secondary" style="padding:4px 8px;font-size:11px" onclick="openUserDetailModal(${id})" title="View Details">👁</button>
+            ${actionBtn}
+          </div>
+        </td>
       </tr>`;
     }).join('');
 
@@ -2006,9 +2103,248 @@ async function fetchAdminUsers(page, filter) {
     const msg = isAuth
       ? 'Not authorised to view users. Please log in again.'
       : 'Unable to load users. Please refresh or try again. (' + (e.message || 'Network error') + ')';
-    if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--red);font-weight:600">${msg}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--red);font-weight:600">${msg}</td></tr>`;
     if (label) label.textContent = 'Error';
     console.error('[fetchAdminUsers]', e);
+  }
+}
+
+// ── User Management Modals: Detail, Restore, Suspend ───────────────────────
+
+async function openUserDetailModal(userId) {
+  const token = localStorage.getItem('gv_admin_token');
+  if (!token) return;
+
+  document.getElementById('modalTitle').textContent = 'User Account Details';
+  document.getElementById('modalBody').innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">Loading user details...</div>';
+  document.getElementById('modalFoot').innerHTML = '<button class="secondary" onclick="closeModal()">Close</button>';
+  document.getElementById('modal').classList.add('show');
+
+  try {
+    const res = await fetch('../api/admin/users/' + userId, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (!json.success || !json.data) throw new Error(json.message || 'Failed to fetch user');
+
+    const u = json.data;
+    const active = parseInt(u.is_active) === 1 && !u.deleted_at;
+    const pill = active ? '<span class="pill green">Active</span>' : '<span class="pill red">Suspended</span>';
+
+    document.getElementById('modalBody').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+        <div><small style="color:var(--muted);display:block">User ID</small><strong>#${u.id}</strong></div>
+        <div><small style="color:var(--muted);display:block">Account Status</small>${pill}</div>
+        <div><small style="color:var(--muted);display:block">Full / Business Name</small><strong>${gvEscapeHtml(u.business_name || '—')}</strong></div>
+        <div><small style="color:var(--muted);display:block">Email Address</small><strong>${gvEscapeHtml(u.email || '—')}</strong></div>
+        <div><small style="color:var(--muted);display:block">Phone Number</small><strong>${gvEscapeHtml(u.phone || '—')}</strong></div>
+        <div><small style="color:var(--muted);display:block">Wallet Balance</small><strong style="color:var(--green)">₦${parseFloat(u.wallet_balance || 0).toLocaleString('en-NG', {minimumFractionDigits:2})}</strong></div>
+        <div><small style="color:var(--muted);display:block">Registration Date</small>${u.created_at || '—'}</div>
+        <div><small style="color:var(--muted);display:block">Last Updated</small>${u.updated_at || '—'}</div>
+        <div><small style="color:var(--muted);display:block">Total Requests</small><strong>${u.total_requests || 0}</strong></div>
+        <div><small style="color:var(--muted);display:block">Total Transactions</small><strong>${u.transactions_count || 0}</strong></div>
+      </div>
+    `;
+
+    let actionBtn = '';
+    if (!active) {
+      actionBtn = `<button class="primary" style="background:#10b981;border-color:#10b981;color:#fff;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600" onclick="openRestoreUserModal(${u.id})">Restore Account</button>`;
+    } else {
+      actionBtn = `<button class="secondary" style="color:#ef4444;border-color:#fca5a5;padding:6px 14px;font-size:12px" onclick="openSuspendUserModal(${u.id}, '${gvEscapeHtml(u.business_name)}', '${gvEscapeHtml(u.email)}')">Suspend Account</button>`;
+    }
+
+    document.getElementById('modalFoot').innerHTML = `
+      <button class="secondary" onclick="closeModal()">Close</button>
+      ${actionBtn}
+    `;
+  } catch (e) {
+    document.getElementById('modalBody').innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center">${e.message || 'Error loading user'}</div>`;
+  }
+}
+
+async function openRestoreUserModal(userId) {
+  const token = localStorage.getItem('gv_admin_token');
+  if (!token) return;
+
+  document.getElementById('modalTitle').textContent = 'Restore User Account';
+  document.getElementById('modalBody').innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">Loading user account details...</div>';
+  document.getElementById('modalFoot').innerHTML = '<button class="secondary" onclick="closeModal()">Cancel</button>';
+  document.getElementById('modal').classList.add('show');
+
+  try {
+    const res = await fetch('../api/admin/users/' + userId, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const json = await res.json();
+    if (!json.success || !json.data) throw new Error(json.message || 'Failed to fetch user');
+
+    const u = json.data;
+    const escName  = gvEscapeHtml(u.business_name);
+    const escEmail = gvEscapeHtml(u.email);
+
+    document.getElementById('modalBody').innerHTML = `
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
+        <div><span style="color:var(--muted)">User ID:</span> <strong>#${u.id}</strong></div>
+        <div><span style="color:var(--muted)">Current Status:</span> <span class="pill red">Suspended</span></div>
+        <div><span style="color:var(--muted)">Name:</span> <strong>${escName}</strong></div>
+        <div><span style="color:var(--muted)">Email:</span> <strong>${escEmail}</strong></div>
+        <div><span style="color:var(--muted)">Phone:</span> ${gvEscapeHtml(u.phone || '—')}</div>
+        <div><span style="color:var(--muted)">Wallet Balance:</span> ₦${parseFloat(u.wallet_balance || 0).toLocaleString('en-NG', {minimumFractionDigits:2})}</div>
+        <div style="grid-column:1/-1"><span style="color:var(--muted)">Registered:</span> ${u.created_at || '—'}</div>
+      </div>
+
+      <div style="background:#ecfdf5;border:1px solid #10b981;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#065f46;line-height:1.4">
+        <strong>Are you sure you want to restore this user's account?</strong>
+        <p style="margin:4px 0 0;font-size:12px">The user will be immediately reactivated and permitted to log in with their existing credentials. Their wallet balance, transactions, and verification records are 100% preserved.</p>
+      </div>
+
+      <div style="margin-bottom:8px">
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;color:var(--text)">Reason for restoration (optional):</label>
+        <input id="restoreReasonInput" type="text" placeholder="e.g. Account reviewed and approved" 
+               style="width:100%;padding:8px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);box-sizing:border-box">
+      </div>
+      <div id="restoreModalErr" style="color:#ef4444;font-size:12px;display:none;margin-top:6px"></div>
+    `;
+
+    document.getElementById('modalFoot').innerHTML = `
+      <button class="secondary" onclick="closeModal()">Cancel</button>
+      <button class="primary" style="background:#10b981;border-color:#10b981;color:#fff;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600" id="confirmRestoreBtn" onclick="confirmRestoreUser(${u.id})">Restore Account</button>
+    `;
+  } catch (e) {
+    document.getElementById('modalBody').innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center">${e.message || 'Error loading user'}</div>`;
+  }
+}
+
+async function confirmRestoreUser(userId) {
+  const token = localStorage.getItem('gv_admin_token');
+  if (!token) return;
+
+  const btn   = document.getElementById('confirmRestoreBtn');
+  const errEl = document.getElementById('restoreModalErr');
+  const reasonInput = document.getElementById('restoreReasonInput');
+  const reason = reasonInput ? reasonInput.value.trim() : '';
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Restoring...'; }
+  if (errEl) errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('../api/admin/users/' + userId + '/restore', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ reason: reason })
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Failed to restore user account');
+    }
+
+    closeModal();
+    alert('User account restored successfully.');
+
+    // Dynamic UI update: update table row directly if present
+    const statusCell = document.getElementById('user-status-cell-' + userId);
+    const actionCell = document.getElementById('user-action-cell-' + userId);
+    if (statusCell) {
+      statusCell.innerHTML = '<span class="pill green">Active</span>';
+    }
+    if (actionCell) {
+      actionCell.innerHTML = `
+        <div style="display:inline-flex;gap:4px;align-items:center;justify-content:center">
+          <button class="secondary" style="padding:4px 8px;font-size:11px" onclick="openUserDetailModal(${userId})" title="View Details">👁</button>
+          <button class="secondary" style="padding:4px 9px;font-size:11px;color:#ef4444;border-color:#fca5a5" 
+                  onclick="openSuspendUserModal(${userId}, '', '')" title="Suspend user account">Suspend</button>
+        </div>
+      `;
+    }
+
+    // Refresh current users view and dashboard counters
+    fetchAdminUsers(window._currentUserPage, window._currentUserFilter, window._currentUserSearch);
+    if (typeof fetchDashboardData === 'function') fetchDashboardData();
+  } catch (e) {
+    if (errEl) {
+      errEl.textContent = e.message || 'Failed to restore user';
+      errEl.style.display = 'block';
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Restore Account'; }
+  }
+}
+
+async function openSuspendUserModal(userId, name, email) {
+  document.getElementById('modalTitle').textContent = 'Suspend User Account';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="background:#fef2f2;border:1px solid #ef4444;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#991b1b;line-height:1.4">
+      <strong>Are you sure you want to suspend this user?</strong>
+      <p style="margin:4px 0 0;font-size:12px">User <strong>#${userId} ${gvEscapeHtml(name || '')}</strong> will be blocked from logging in. All currently active sessions will be terminated immediately.</p>
+    </div>
+    <div style="margin-bottom:8px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;color:var(--text)">Reason for suspension (optional):</label>
+      <input id="suspendReasonInput" type="text" placeholder="e.g. Fraud check / Policy violation" 
+             style="width:100%;padding:8px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);box-sizing:border-box">
+    </div>
+    <div id="suspendModalErr" style="color:#ef4444;font-size:12px;display:none;margin-top:6px"></div>
+  `;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="secondary" onclick="closeModal()">Cancel</button>
+    <button class="primary" style="background:#ef4444;border-color:#ef4444;color:#fff;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600" id="confirmSuspendBtn" onclick="confirmSuspendUser(${userId})">Suspend User</button>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+async function confirmSuspendUser(userId) {
+  const token = localStorage.getItem('gv_admin_token');
+  if (!token) return;
+
+  const btn   = document.getElementById('confirmSuspendBtn');
+  const errEl = document.getElementById('suspendModalErr');
+  const reasonInput = document.getElementById('suspendReasonInput');
+  const reason = reasonInput ? reasonInput.value.trim() : '';
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Suspending...'; }
+  if (errEl) errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('../api/admin/users/' + userId + '/suspend', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ reason: reason })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.message || 'Failed to suspend user');
+
+    closeModal();
+    alert('User account suspended successfully.');
+
+    // Dynamic UI update
+    const statusCell = document.getElementById('user-status-cell-' + userId);
+    const actionCell = document.getElementById('user-action-cell-' + userId);
+    if (statusCell) {
+      statusCell.innerHTML = '<span class="pill red">Suspended</span>';
+    }
+    if (actionCell) {
+      actionCell.innerHTML = `
+        <div style="display:inline-flex;gap:4px;align-items:center;justify-content:center">
+          <button class="secondary" style="padding:4px 8px;font-size:11px" onclick="openUserDetailModal(${userId})" title="View Details">👁</button>
+          <button class="primary" style="padding:4px 10px;font-size:11px;background:#10b981;border-color:#10b981;color:#fff;border-radius:6px;cursor:pointer;font-weight:600" 
+                  onclick="openRestoreUserModal(${userId})">Restore Account</button>
+        </div>
+      `;
+    }
+
+    fetchAdminUsers(window._currentUserPage, window._currentUserFilter, window._currentUserSearch);
+    if (typeof fetchDashboardData === 'function') fetchDashboardData();
+  } catch (e) {
+    if (errEl) {
+      errEl.textContent = e.message || 'Failed to suspend user';
+      errEl.style.display = 'block';
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Suspend User'; }
   }
 }
 

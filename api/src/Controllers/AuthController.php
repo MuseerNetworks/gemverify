@@ -116,7 +116,7 @@ class AuthController {
         $db = db();
         
         $stmt = $db->prepare("
-            SELECT u.id, u.business_name, u.email, u.password_hash, u.is_active, w.balance 
+            SELECT u.id, u.business_name, u.email, u.password_hash, u.is_active, u.deleted_at, w.balance 
             FROM users u
             LEFT JOIN wallets w ON u.id = w.user_id
             WHERE u.email = ?
@@ -129,8 +129,8 @@ class AuthController {
             return;
         }
         
-        if (!$user['is_active']) {
-            Response::forbidden('Account is disabled');
+        if ((int)$user['is_active'] === 0 || !empty($user['deleted_at'])) {
+            Response::forbidden('Account is disabled or suspended. Please contact support.');
             return;
         }
         

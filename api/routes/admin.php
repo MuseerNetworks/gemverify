@@ -21,7 +21,10 @@ addRoute('PATCH', '/admin/admins/{id}/active',     function ($p)  { (new \Contro
 
 // Admin Stats & Services Management
 addRoute('GET',   '/admin/stats',                           function () { (new StatsController())->getStats(); });
-addRoute('GET',   '/admin/users',                           function () { (new StatsController())->getUsers(); });
+addRoute('GET',   '/admin/users',                           function () { (new \Controllers\Admin\UserAdminController())->getUsers(); });
+addRoute('GET',   '/admin/users/{id}',                      function ($p) { (new \Controllers\Admin\UserAdminController())->getUserDetail((int)$p['id']); });
+addRoute('POST',  '/admin/users/{id}/restore',              function ($p) { (new \Controllers\Admin\UserAdminController())->restoreUser((int)$p['id']); });
+addRoute('POST',  '/admin/users/{id}/suspend',              function ($p) { (new \Controllers\Admin\UserAdminController())->suspendUser((int)$p['id']); });
 addRoute('GET',   '/admin/transactions',                    function () { (new StatsController())->getTransactions(); });
 addRoute('GET',   '/admin/services',                        function () { (new StatsController())->getServices(); });
 addRoute('POST',  '/admin/services/seed',                   function () { (new StatsController())->seedDatabase(); });
