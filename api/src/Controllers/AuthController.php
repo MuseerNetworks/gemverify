@@ -397,39 +397,106 @@ class AuthController {
     }
 
     public function refreshToken(): void {
-        $payload = AuthMiddleware::getPayload();
-
-        $type   = $payload['type'] ?? 'user';
-        $expiry = ($type === 'admin') ? 7200 : 28800;
-        $now    = time();
-
-        // Revoke old session
-        $oldJti = $payload['jti'] ?? null;
-        $db = db();
-        if ($oldJti) {
-            try {
-                if ($type === 'admin') {
-                    $db->prepare('UPDATE admin_sessions SET is_active = 0 WHERE jti = ?')->execute([$oldJti]);
-                } else {
-                    $db->prepare('UPDATE user_sessions SET is_active = 0 WHERE jti = ?')->execute([$oldJti]);
+        // Extract token: Authorization header preferred → cookie fallback
+        $token = '';
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if (!$authHeader && function_exists('getallheaders')) {
+            $headers = getallheaders();
+            foreach ($headers as $k => $v) {
+                if (strcasecmp($k, 'Authorization') === 0) {
+                    $authHeader = $v;
+                    break;
                 }
-            } catch (\Exception $e) { /* best effort */ }
+            }
+        }
+        if ($authHeader && preg_match('/Bearer\s(\S+)/i', $authHeader, $matches)) {
+            $token = $matches[1];
+        }
+        if (!$token) {
+            $token = $_COOKIE['gv_admin_token'] ?? $_COOKIE['gv_token'] ?? '';
+        }
+
+        if (!$token) {
+            Response::unauthorized('Missing session token');
+            return;
+        }
+
+        $payload = JWT::decode($token);
+        if (!$payload || empty($payload['type'])) {
+            Response::unauthorized('Token invalid or expired');
+            return;
+        }
+
+        $type = $payload['type'];
+        if ($type !== 'admin' && $type !== 'user') {
+            Response::unauthorized('Invalid token type');
+            return;
+        }
+
+        if ($type === 'admin' && empty($payload['admin_id'])) {
+            Response::unauthorized('Invalid admin token');
+            return;
+        }
+        if ($type === 'user' && empty($payload['user_id'])) {
+            Response::unauthorized('Invalid user token');
+            return;
+        }
+
+        $now = time();
+        $db = db();
+        $oldJti = $payload['jti'] ?? null;
+
+        // Verify existing session and enforce inactivity limit
+        if ($oldJti) {
+            $table = ($type === 'admin') ? 'admin_sessions' : 'user_sessions';
+            if ($type === 'admin') {
+                \Middleware\AdminMiddleware::ensureAdminSessionsTable($db);
+            } else {
+                \Middleware\AuthMiddleware::ensureUserSessionsTable($db);
+            }
+
+            try {
+                $stmt = $db->prepare("SELECT last_activity, is_active FROM {$table} WHERE jti = ? LIMIT 1");
+                $stmt->execute([$oldJti]);
+                $sess = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($sess && !(bool)$sess['is_active']) {
+                    Response::unauthorized('Session terminated. Please log in again.');
+                    return;
+                }
+
+                $timeout = ($type === 'admin')
+                    ? (defined('ADMIN_INACTIVITY_TIMEOUT') ? (int)ADMIN_INACTIVITY_TIMEOUT : 300)
+                    : (defined('SESSION_INACTIVITY_TIMEOUT') ? (int)SESSION_INACTIVITY_TIMEOUT : 300);
+
+                if ($sess && ($now - (int)$sess['last_activity']) > $timeout) {
+                    $db->prepare("UPDATE {$table} SET is_active = 0 WHERE jti = ?")->execute([$oldJti]);
+                    Response::unauthorized('Session expired due to inactivity. Please log in again.');
+                    return;
+                }
+
+                // Revoke old session
+                $db->prepare("UPDATE {$table} SET is_active = 0 WHERE jti = ?")->execute([$oldJti]);
+            } catch (\Exception $e) {
+                error_log('[RefreshToken] Session check error: ' . $e->getMessage());
+            }
         }
 
         // Mint new token with fresh jti
+        $expiry = ($type === 'admin') ? 7200 : 28800; // 2h admin, 8h user
         $newJti = bin2hex(random_bytes(16));
         $newPayload = $payload;
         $newPayload['jti'] = $newJti;
-        // Remove JWT standard claims — encode() re-adds them
         unset($newPayload['iss'], $newPayload['iat'], $newPayload['exp']);
 
         $token = JWT::encode($newPayload, JWT_SECRET, $expiry);
 
-        // Insert new session
+        // Record new session in DB
         try {
             if ($type === 'admin') {
-                $adminId = (int)($payload['admin_id'] ?? 0);
-                $db->prepare("INSERT INTO admin_sessions (jti, admin_id, last_activity, expires_at) VALUES (?,?,?,?)")
+                $adminId = (int)$payload['admin_id'];
+                \Middleware\AdminMiddleware::ensureAdminSessionsTable($db);
+                $db->prepare("INSERT INTO admin_sessions (jti, admin_id, last_activity, expires_at, is_active) VALUES (?,?,?,?,1)")
                    ->execute([$newJti, $adminId, $now, $now + $expiry]);
                 setcookie("gv_admin_token", $token, [
                     'expires'  => $now + $expiry, 'path' => '/',
@@ -437,8 +504,9 @@ class AuthController {
                     'httponly' => true, 'samesite' => 'Lax'
                 ]);
             } else {
-                $userId = (int)($payload['user_id'] ?? 0);
-                $db->prepare("INSERT INTO user_sessions (jti, user_id, last_activity, expires_at) VALUES (?,?,?,?)")
+                $userId = (int)$payload['user_id'];
+                \Middleware\AuthMiddleware::ensureUserSessionsTable($db);
+                $db->prepare("INSERT INTO user_sessions (jti, user_id, last_activity, expires_at, is_active) VALUES (?,?,?,?,1)")
                    ->execute([$newJti, $userId, $now, $now + $expiry]);
                 setcookie("gv_token", $token, [
                     'expires'  => $now + $expiry, 'path' => '/',
@@ -446,7 +514,9 @@ class AuthController {
                     'httponly' => true, 'samesite' => 'Lax'
                 ]);
             }
-        } catch (\Exception $e) { /* best effort */ }
+        } catch (\Exception $e) {
+            error_log('[RefreshToken] Session insert error: ' . $e->getMessage());
+        }
 
         Response::success(['token' => $token]);
     }
@@ -459,21 +529,22 @@ class AuthController {
      * Public endpoint — does not call AuthMiddleware (token may already be partially invalid).
      */
     public function logout(): void {
-        // Extract token from cookie → header → JSON body (sendBeacon sends JSON body)
-        $token = $_COOKIE['gv_token'] ?? $_COOKIE['gv_admin_token'] ?? '';
-
-        if (!$token) {
-            $headers     = function_exists('getallheaders') ? getallheaders() : [];
-            $authHeader  = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-            if ($authHeader && preg_match('/Bearer\s(\S+)/i', $authHeader, $m)) {
-                $token = $m[1];
-            }
+        // Extract token: Authorization header preferred → JSON body (sendBeacon) → cookie fallback
+        $token = '';
+        $headers     = function_exists('getallheaders') ? getallheaders() : [];
+        $authHeader  = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if ($authHeader && preg_match('/Bearer\s(\S+)/i', $authHeader, $m)) {
+            $token = $m[1];
         }
 
         if (!$token) {
             // sendBeacon posts as application/json with token in body
             $body  = json_decode(file_get_contents('php://input'), true);
             $token = $body['token'] ?? '';
+        }
+
+        if (!$token) {
+            $token = $_COOKIE['gv_admin_token'] ?? $_COOKIE['gv_token'] ?? '';
         }
 
         if ($token) {
@@ -484,8 +555,10 @@ class AuthController {
                 try {
                     $db = db();
                     if ($type === 'admin') {
+                        \Middleware\AdminMiddleware::ensureAdminSessionsTable($db);
                         $db->prepare('UPDATE admin_sessions SET is_active = 0 WHERE jti = ?')->execute([$jti]);
                     } else {
+                        \Middleware\AuthMiddleware::ensureUserSessionsTable($db);
                         $db->prepare('UPDATE user_sessions  SET is_active = 0 WHERE jti = ?')->execute([$jti]);
                     }
                 } catch (\Exception $e) { /* best effort */ }
@@ -514,19 +587,20 @@ class AuthController {
      * If no reconnect occurs within 15 seconds, the session is invalidated by middleware.
      */
     public function disconnect(): void {
-        $token = $_COOKIE['gv_token'] ?? $_COOKIE['gv_admin_token'] ?? '';
-
-        if (!$token) {
-            $headers    = function_exists('getallheaders') ? getallheaders() : [];
-            $authHeader = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-            if ($authHeader && preg_match('/Bearer\s(\S+)/i', $authHeader, $m)) {
-                $token = $m[1];
-            }
+        $token = '';
+        $headers    = function_exists('getallheaders') ? getallheaders() : [];
+        $authHeader = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if ($authHeader && preg_match('/Bearer\s(\S+)/i', $authHeader, $m)) {
+            $token = $m[1];
         }
 
         if (!$token) {
             $body  = json_decode(file_get_contents('php://input'), true);
             $token = $body['token'] ?? '';
+        }
+
+        if (!$token) {
+            $token = $_COOKIE['gv_admin_token'] ?? $_COOKIE['gv_token'] ?? '';
         }
 
         if ($token) {
@@ -538,9 +612,11 @@ class AuthController {
                 try {
                     $db = db();
                     if ($type === 'admin') {
+                        \Middleware\AdminMiddleware::ensureAdminSessionsTable($db);
                         $db->prepare('UPDATE admin_sessions SET disconnected_at = ? WHERE jti = ? AND is_active = 1')
                            ->execute([$now, $jti]);
                     } else {
+                        \Middleware\AuthMiddleware::ensureUserSessionsTable($db);
                         $db->prepare('UPDATE user_sessions SET disconnected_at = ? WHERE jti = ? AND is_active = 1')
                            ->execute([$now, $jti]);
                     }
@@ -554,11 +630,30 @@ class AuthController {
     /**
      * POST /auth/heartbeat
      * Lightweight protected endpoint the frontend calls to signal user activity.
-     * AuthMiddleware::handle() updates last_activity as a side-effect of any
+     * Middleware updates last_activity as a side-effect of any
      * protected call, so this simply returns 200 to confirm the session is alive.
      */
     public function heartbeat(): void {
-        AuthMiddleware::getUserId(); // validates token + updates last_activity
+        $headers    = function_exists('getallheaders') ? getallheaders() : [];
+        $authHeader = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        $token      = '';
+        if ($authHeader && preg_match('/Bearer\s(\S+)/i', $authHeader, $m)) {
+            $token = $m[1];
+        }
+        if (!$token) {
+            $token = $_COOKIE['gv_admin_token'] ?? $_COOKIE['gv_token'] ?? '';
+        }
+
+        if ($token) {
+            $payload = JWT::decode($token);
+            if ($payload && ($payload['type'] ?? '') === 'admin') {
+                \Middleware\AdminMiddleware::handle();
+                Response::success(null, 'ok');
+                return;
+            }
+        }
+
+        AuthMiddleware::getUserId(); // validates user token + updates last_activity
         Response::success(null, 'ok');
     }
 

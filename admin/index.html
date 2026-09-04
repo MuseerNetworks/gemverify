@@ -2016,9 +2016,7 @@ async function fetchAdminUsers(page, filter, search) {
     if (search) {
       url += '&search=' + encodeURIComponent(search);
     }
-    const res  = await fetch(url, {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
+    const res  = await gvAdminFetch(url);
     const json = await res.json();
     if (!json.success || !json.data) throw new Error(json.message || 'Bad response');
 
@@ -2121,9 +2119,7 @@ async function openUserDetailModal(userId) {
   document.getElementById('modal').classList.add('show');
 
   try {
-    const res = await fetch('../api/admin/users/' + userId, {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
+    const res = await gvAdminFetch('../api/admin/users/' + userId);
     const json = await res.json();
     if (!json.success || !json.data) throw new Error(json.message || 'Failed to fetch user');
 
@@ -2228,12 +2224,9 @@ async function confirmRestoreUser(userId) {
   if (errEl) errEl.style.display = 'none';
 
   try {
-    const res = await fetch('../api/admin/users/' + userId + '/restore', {
+    const res = await gvAdminFetch('../api/admin/users/' + userId + '/restore', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason: reason })
     });
     const json = await res.json();
@@ -2307,12 +2300,9 @@ async function confirmSuspendUser(userId) {
   if (errEl) errEl.style.display = 'none';
 
   try {
-    const res = await fetch('../api/admin/users/' + userId + '/suspend', {
+    const res = await gvAdminFetch('../api/admin/users/' + userId + '/suspend', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason: reason })
     });
     const json = await res.json();
