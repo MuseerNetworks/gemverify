@@ -107,13 +107,38 @@ class ManualRequestController
     public function getRequests(): void
     {
         try {
-            $page = (int)($_GET['page'] ?? 1);
-            $perPage = 50;
+            $page = max(1, (int)($_GET['page'] ?? 1));
+            $perPage = min(100, max(1, (int)($_GET['limit'] ?? $_GET['per_page'] ?? 50)));
             $offset = ($page - 1) * $perPage;
             $status = $_GET['status'] ?? null;
+            $service = trim($_GET['service'] ?? $_GET['service_slug'] ?? $_GET['slug'] ?? '');
 
             $statusClause1 = $status ? " AND r.status = :status1" : "";
             $statusClause2 = $status ? " AND t.gv_status = :status2" : "";
+
+            $serviceClause1 = "";
+            $serviceClause2 = "";
+            $needsServiceBind = false;
+
+            if ($service !== '') {
+                if ($service === 'jamb-services' || str_starts_with($service, 'jamb-')) {
+                    $serviceClause1 = " AND s.slug LIKE 'jamb-%'";
+                    $serviceClause2 = " AND s.slug LIKE 'jamb-%'";
+                } elseif ($service === 'cac-services' || str_starts_with($service, 'cac-')) {
+                    $serviceClause1 = " AND s.slug LIKE 'cac-%'";
+                    $serviceClause2 = " AND s.slug LIKE 'cac-%'";
+                } elseif ($service === 'ipe-clearance') {
+                    $serviceClause1 = " AND s.slug IN ('ipe-clearance', 'ipe-clearance-single')";
+                    $serviceClause2 = " AND s.slug IN ('ipe-clearance', 'ipe-clearance-single')";
+                } elseif ($service === 'nin-validation') {
+                    $serviceClause1 = " AND s.slug IN ('nin-validation', 'nin-validation-single', 'nin-validation-bulk')";
+                    $serviceClause2 = " AND s.slug IN ('nin-validation', 'nin-validation-single', 'nin-validation-bulk')";
+                } else {
+                    $serviceClause1 = " AND s.slug = :service1";
+                    $serviceClause2 = " AND s.slug = :service2";
+                    $needsServiceBind = true;
+                }
+            }
 
             $query = "
                 SELECT 
@@ -135,7 +160,7 @@ class ManualRequestController
                 JOIN services s ON r.service_id = s.id
                 JOIN service_categories c ON s.category_id = c.id
                 LEFT JOIN request_form_data rfd ON rfd.request_id = r.id
-                WHERE r.user_id = :userId1 {$statusClause1}
+                WHERE r.user_id = :userId1 {$statusClause1} {$serviceClause1}
 
                 UNION ALL
 
@@ -158,7 +183,7 @@ class ManualRequestController
                 JOIN services s ON t.service_id = s.id
                 JOIN service_categories c ON s.category_id = c.id
                 LEFT JOIN transactions tx ON t.transaction_id = tx.id
-                WHERE t.user_id = :userId2 {$statusClause2}
+                WHERE t.user_id = :userId2 {$statusClause2} {$serviceClause2}
 
                 ORDER BY submitted_at DESC 
                 LIMIT :perPage OFFSET :offset
@@ -170,6 +195,10 @@ class ManualRequestController
             if ($status) {
                 $stmt->bindValue(':status1', $status, PDO::PARAM_STR);
                 $stmt->bindValue(':status2', $status, PDO::PARAM_STR);
+            }
+            if ($needsServiceBind) {
+                $stmt->bindValue(':service1', $service, PDO::PARAM_STR);
+                $stmt->bindValue(':service2', $service, PDO::PARAM_STR);
             }
             $stmt->bindValue(':perPage', $perPage, PDO::PARAM_INT);
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
