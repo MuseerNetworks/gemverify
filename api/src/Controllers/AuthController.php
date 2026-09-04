@@ -507,6 +507,51 @@ class AuthController {
     }
 
     /**
+     * POST /auth/disconnect
+     * Records disconnected_at timestamp when a tab unloads or pagehides.
+     * Unlike logout(), this does NOT set is_active = 0 immediately.
+     * It allows a 15-second grace period so page refreshes (F5) can reconnect seamlessly.
+     * If no reconnect occurs within 15 seconds, the session is invalidated by middleware.
+     */
+    public function disconnect(): void {
+        $token = $_COOKIE['gv_token'] ?? $_COOKIE['gv_admin_token'] ?? '';
+
+        if (!$token) {
+            $headers    = function_exists('getallheaders') ? getallheaders() : [];
+            $authHeader = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+            if ($authHeader && preg_match('/Bearer\s(\S+)/i', $authHeader, $m)) {
+                $token = $m[1];
+            }
+        }
+
+        if (!$token) {
+            $body  = json_decode(file_get_contents('php://input'), true);
+            $token = $body['token'] ?? '';
+        }
+
+        if ($token) {
+            $payload = JWT::decode($token);
+            if ($payload && !empty($payload['jti'])) {
+                $jti  = $payload['jti'];
+                $type = $payload['type'] ?? 'user';
+                $now  = time();
+                try {
+                    $db = db();
+                    if ($type === 'admin') {
+                        $db->prepare('UPDATE admin_sessions SET disconnected_at = ? WHERE jti = ? AND is_active = 1')
+                           ->execute([$now, $jti]);
+                    } else {
+                        $db->prepare('UPDATE user_sessions SET disconnected_at = ? WHERE jti = ? AND is_active = 1')
+                           ->execute([$now, $jti]);
+                    }
+                } catch (\Exception $e) { /* best effort */ }
+            }
+        }
+
+        Response::success(null, 'Disconnected');
+    }
+
+    /**
      * POST /auth/heartbeat
      * Lightweight protected endpoint the frontend calls to signal user activity.
      * AuthMiddleware::handle() updates last_activity as a side-effect of any

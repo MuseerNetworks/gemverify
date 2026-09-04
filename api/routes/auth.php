@@ -9,6 +9,7 @@ use Controllers\AuthController;
 addRoute('POST', '/auth/register',     function () { \Middleware\RateLimitMiddleware::enforce('register', 3, 60); (new AuthController())->register(); });
 addRoute('POST', '/auth/login',        function () { \Middleware\RateLimitMiddleware::enforce('login', 5, 60); (new AuthController())->login(); });
 addRoute('POST', '/auth/logout',       function () { (new AuthController())->logout(); });
+addRoute('POST', '/auth/disconnect',   function () { (new AuthController())->disconnect(); });
 addRoute('POST', '/auth/heartbeat',    function () { (new AuthController())->heartbeat(); });
 addRoute('POST', '/auth/refresh',      function () { (new AuthController())->refreshToken(); });
 addRoute('GET',  '/auth/me',           function () { (new AuthController())->me(); });

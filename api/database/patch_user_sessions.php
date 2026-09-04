@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * GemVerify — Session Tables Migration
  * Creates user_sessions and admin_sessions for server-side inactivity enforcement.
@@ -15,20 +15,26 @@ $errors = [];
 try {
     $db->exec("
         CREATE TABLE IF NOT EXISTS `user_sessions` (
-            `id`            INT         NOT NULL AUTO_INCREMENT,
-            `jti`           VARCHAR(64) NOT NULL,
-            `user_id`       INT         NOT NULL,
-            `last_activity` BIGINT      NOT NULL COMMENT 'Unix timestamp of last confirmed activity',
-            `expires_at`    BIGINT      NOT NULL COMMENT 'Absolute JWT exp as Unix timestamp',
-            `is_active`     TINYINT(1)  NOT NULL DEFAULT 1,
-            `created_at`    TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `id`              INT         NOT NULL AUTO_INCREMENT,
+            `jti`             VARCHAR(64) NOT NULL,
+            `user_id`         INT         NOT NULL,
+            `last_activity`   BIGINT      NOT NULL COMMENT 'Unix timestamp of last confirmed activity',
+            `expires_at`      BIGINT      NOT NULL COMMENT 'Absolute JWT exp as Unix timestamp',
+            `disconnected_at` BIGINT      NULL DEFAULT NULL COMMENT 'Unix timestamp when tab disconnected/pagehid',
+            `is_active`       TINYINT(1)  NOT NULL DEFAULT 1,
+            `created_at`      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             UNIQUE KEY `uq_jti`         (`jti`),
             KEY `idx_user_active`       (`user_id`, `is_active`),
             KEY `idx_cleanup`           (`expires_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
-    echo "[OK] user_sessions table ready.\n";
+    // Ensure disconnected_at exists if table already existed
+    $cols = $db->query("DESCRIBE user_sessions")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('disconnected_at', $cols)) {
+        $db->exec("ALTER TABLE `user_sessions` ADD COLUMN `disconnected_at` BIGINT NULL DEFAULT NULL AFTER `expires_at`");
+    }
+    echo "[OK] user_sessions table ready with disconnected_at.\n";
 } catch (Exception $e) {
     $errors[] = "user_sessions: " . $e->getMessage();
     echo "[ERROR] user_sessions: " . $e->getMessage() . "\n";
@@ -38,20 +44,25 @@ try {
 try {
     $db->exec("
         CREATE TABLE IF NOT EXISTS `admin_sessions` (
-            `id`            INT         NOT NULL AUTO_INCREMENT,
-            `jti`           VARCHAR(64) NOT NULL,
-            `admin_id`      INT         NOT NULL,
-            `last_activity` BIGINT      NOT NULL,
-            `expires_at`    BIGINT      NOT NULL,
-            `is_active`     TINYINT(1)  NOT NULL DEFAULT 1,
-            `created_at`    TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `id`              INT         NOT NULL AUTO_INCREMENT,
+            `jti`             VARCHAR(64) NOT NULL,
+            `admin_id`        INT         NOT NULL,
+            `last_activity`   BIGINT      NOT NULL,
+            `expires_at`      BIGINT      NOT NULL,
+            `disconnected_at` BIGINT      NULL DEFAULT NULL,
+            `is_active`       TINYINT(1)  NOT NULL DEFAULT 1,
+            `created_at`      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             UNIQUE KEY `uq_jti`         (`jti`),
             KEY `idx_admin_active`      (`admin_id`, `is_active`),
             KEY `idx_cleanup`           (`expires_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
-    echo "[OK] admin_sessions table ready.\n";
+    $adminCols = $db->query("DESCRIBE admin_sessions")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('disconnected_at', $adminCols)) {
+        $db->exec("ALTER TABLE `admin_sessions` ADD COLUMN `disconnected_at` BIGINT NULL DEFAULT NULL AFTER `expires_at`");
+    }
+    echo "[OK] admin_sessions table ready with disconnected_at.\n";
 } catch (Exception $e) {
     $errors[] = "admin_sessions: " . $e->getMessage();
     echo "[ERROR] admin_sessions: " . $e->getMessage() . "\n";

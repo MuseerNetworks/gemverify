@@ -61,7 +61,7 @@ class AdminMiddleware {
         try {
             $db   = db();
             $stmt = $db->prepare(
-                'SELECT last_activity, is_active FROM admin_sessions WHERE jti = ? LIMIT 1'
+                'SELECT last_activity, disconnected_at, is_active FROM admin_sessions WHERE jti = ? LIMIT 1'
             );
             $stmt->execute([$jti]);
             $session = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -75,6 +75,18 @@ class AdminMiddleware {
             exit;
         }
 
+        // ── 4a. Reconnect grace period (tab close vs page reload) ───────────
+        if (!empty($session['disconnected_at'])) {
+            $disconnectElapsed = $now - (int)$session['disconnected_at'];
+            if ($disconnectElapsed > 15) {
+                try {
+                    $db->prepare('UPDATE admin_sessions SET is_active = 0 WHERE jti = ?')->execute([$jti]);
+                } catch (\Exception $e) { /* best effort */ }
+                Response::unauthorized('Session closed. Please log in again.');
+                exit;
+            }
+        }
+
         $timeout = defined('ADMIN_INACTIVITY_TIMEOUT') ? (int)ADMIN_INACTIVITY_TIMEOUT : 300;
 
         if (($now - (int)$session['last_activity']) > $timeout) {
@@ -85,9 +97,10 @@ class AdminMiddleware {
             exit;
         }
 
-        // ── 5. Refresh last_activity ─────────────────────────────────────────
+        // ── 5. Refresh last_activity & clear disconnected_at ─────────────────
         try {
-            $db->prepare('UPDATE admin_sessions SET last_activity = ? WHERE jti = ?')->execute([$now, $jti]);
+            $db->prepare('UPDATE admin_sessions SET last_activity = ?, disconnected_at = NULL WHERE jti = ?')
+               ->execute([$now, $jti]);
         } catch (\Exception $e) { /* non-fatal */ }
 
         return $payload;

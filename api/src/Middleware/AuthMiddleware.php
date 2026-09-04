@@ -54,7 +54,7 @@ class AuthMiddleware {
         try {
             $db   = db();
             $stmt = $db->prepare(
-                'SELECT last_activity, is_active FROM user_sessions WHERE jti = ? LIMIT 1'
+                'SELECT last_activity, disconnected_at, is_active FROM user_sessions WHERE jti = ? LIMIT 1'
             );
             $stmt->execute([$jti]);
             $session = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -69,6 +69,21 @@ class AuthMiddleware {
             exit;
         }
 
+        // ── 4a. Reconnect grace period (tab close vs page reload) ───────────
+        // If disconnected_at was recorded by pagehide sendBeacon:
+        // - If <= 15s elapsed: it's a page reload (F5). Allow through and clear timestamp.
+        // - If > 15s elapsed: the tab was closed and abandoned. Invalidate session.
+        if (!empty($session['disconnected_at'])) {
+            $disconnectElapsed = $now - (int)$session['disconnected_at'];
+            if ($disconnectElapsed > 15) {
+                try {
+                    $db->prepare('UPDATE user_sessions SET is_active = 0 WHERE jti = ?')->execute([$jti]);
+                } catch (\Exception $e) { /* best effort */ }
+                Response::unauthorized('Session closed. Please log in again.');
+                exit;
+            }
+        }
+
         $timeout = defined('SESSION_INACTIVITY_TIMEOUT') ? (int)SESSION_INACTIVITY_TIMEOUT : 300;
 
         if (($now - (int)$session['last_activity']) > $timeout) {
@@ -80,9 +95,10 @@ class AuthMiddleware {
             exit;
         }
 
-        // ── 5. Refresh last_activity ─────────────────────────────────────────
+        // ── 5. Refresh last_activity & clear disconnected_at ─────────────────
         try {
-            $db->prepare('UPDATE user_sessions SET last_activity = ? WHERE jti = ?')->execute([$now, $jti]);
+            $db->prepare('UPDATE user_sessions SET last_activity = ?, disconnected_at = NULL WHERE jti = ?')
+               ->execute([$now, $jti]);
         } catch (\Exception $e) { /* non-fatal */ }
 
         return $payload;

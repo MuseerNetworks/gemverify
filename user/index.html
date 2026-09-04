@@ -1262,12 +1262,27 @@ aside .mt-1.space-y-1 {
     function getToken() { return localStorage.getItem('gv_token'); }
     function isAuthed() { return !!getToken(); }
 
-    // ── Backend logout call (real revocation) ────────────────────────────────
-    function callBackendLogout(token, useBeacon) {
+    // ── Backend logout call (immediate revocation) ──────────────────────────
+    function callBackendLogout(token) {
       if (!token) return;
       var url  = '../api/auth/logout';
       var body = JSON.stringify({ token: token });
-      if (useBeacon && typeof navigator.sendBeacon === 'function') {
+      try {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          keepalive: true,
+          body: body
+        }).catch(function () {});
+      } catch (e) {}
+    }
+
+    // ── Backend disconnect call (15s grace period for page reloads) ──────────
+    function callBackendDisconnect(token) {
+      if (!token) return;
+      var url  = '../api/auth/disconnect';
+      var body = JSON.stringify({ token: token });
+      if (typeof navigator.sendBeacon === 'function') {
         try {
           navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
         } catch (e) {}
@@ -1308,7 +1323,7 @@ aside .mt-1.space-y-1 {
       var token = getToken();
       if (!token) return;
       broadcastLogout();
-      callBackendLogout(token, reason === 'pagehide');
+      callBackendLogout(token);
       _silentLocalLogout(reason);
     }
 
@@ -1393,12 +1408,12 @@ aside .mt-1.space-y-1 {
       }
     });
 
-    // ── Tab / browser close → sendBeacon logout ──────────────────────────────
+    // ── Tab / browser close → sendBeacon disconnect (15s grace period) ──────
     window.addEventListener('pagehide', function () {
       if (!isAuthed()) return;
       var token = getToken();
       if (token) {
-        callBackendLogout(token, true); // use sendBeacon
+        callBackendDisconnect(token); // use sendBeacon to /auth/disconnect
       }
     });
 
