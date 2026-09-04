@@ -536,8 +536,8 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
         <span id="usersCountLabel">Loading...</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <input id="userSearchInput" type="text" placeholder="Search by ID, Name, Email, Phone..." 
-               style="padding:6px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);width:260px"
+        <input id="userSearchInput" type="text" placeholder="Search by ID, Name, Email, Phone, Account Number..." 
+               style="padding:6px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);width:310px"
                oninput="onUserSearchInput(this.value, 'all')">
       </div>
     </div>
@@ -559,8 +559,8 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
         <span id="activeUsersCountLabel">Loading...</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <input id="activeUserSearchInput" type="text" placeholder="Search active users..." 
-               style="padding:6px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);width:240px"
+        <input id="activeUserSearchInput" type="text" placeholder="Search active users by Name, Email, Phone, Account Number..." 
+               style="padding:6px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);width:310px"
                oninput="onUserSearchInput(this.value, 'active')">
       </div>
     </div>
@@ -581,8 +581,8 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
         <span id="suspendedUsersCountLabel">Loading...</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <input id="suspendedUserSearchInput" type="text" placeholder="Search suspended users..." 
-               style="padding:6px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);width:240px"
+        <input id="suspendedUserSearchInput" type="text" placeholder="Search suspended users by Name, Email, Phone, Account Number..." 
+               style="padding:6px 12px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text);width:310px"
                oninput="onUserSearchInput(this.value, 'suspended')">
       </div>
     </div>
@@ -1968,6 +1968,33 @@ function gvEscapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+function gvCopyText(text, msg) {
+  if (!text) return;
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(function() {
+      if (typeof window.showToast === 'function') window.showToast(msg || 'Copied!');
+      else alert(msg || 'Copied to clipboard!');
+    }).catch(function() {
+      prompt('Copy this text:', text);
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      if (typeof window.showToast === 'function') window.showToast(msg || 'Copied!');
+      else alert(msg || 'Copied to clipboard!');
+    } catch(e) {
+      prompt('Copy this text:', text);
+    }
+    document.body.removeChild(ta);
+  }
+}
+
 var _userSearchTimers = {};
 function onUserSearchInput(val, filter) {
   clearTimeout(_userSearchTimers[filter]);
@@ -2046,6 +2073,20 @@ async function fetchAdminUsers(page, filter, search) {
       const escName  = gvEscapeHtml(name);
       const escEmail = gvEscapeHtml(email);
 
+      let vaBadge = '';
+      if (u.account_number) {
+        const bankName = u.bank_name || 'Bank';
+        vaBadge = `<div style="font-size:11px;color:var(--muted);font-family:monospace;margin-top:3px;display:flex;align-items:center;gap:4px">
+          <span style="background:var(--card);border:1px solid var(--line);padding:1px 5px;border-radius:4px;font-size:10px;font-weight:600;color:var(--text)">${gvEscapeHtml(bankName)}</span>
+          <span style="letter-spacing:0.5px">${gvEscapeHtml(u.account_number)}</span>
+          <span onclick="event.stopPropagation();gvCopyText('${gvEscapeHtml(u.account_number)}','Account number copied!')" title="Copy Account Number" style="cursor:pointer;font-size:11px;opacity:0.75" role="button">📋</span>
+        </div>`;
+      } else if (u.va_status === 'pending') {
+        vaBadge = `<div style="margin-top:3px"><span class="pill yellow" style="font-size:10px;padding:1px 6px">VA Pending</span></div>`;
+      } else {
+        vaBadge = `<div style="margin-top:3px;font-size:10px;color:var(--muted)">No Account</div>`;
+      }
+
       let actionBtn = '';
       if (!active) {
         // Requirement 2: Show "Restore Account" ONLY when blocked/disabled/suspended
@@ -2063,7 +2104,10 @@ async function fetchAdminUsers(page, filter, search) {
 
       return `<tr id="user-row-${id}">
         <td data-label="ID" style="font-family:monospace;font-size:12px;color:var(--muted)">#${id}</td>
-        <td data-label="Business" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" title="${escName}">${escName}</td>
+        <td data-label="Business" style="overflow:hidden;text-overflow:ellipsis" title="${escName}">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escName}</div>
+          ${vaBadge}
+        </td>
         <td data-label="Email"    style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escEmail}">${escEmail}</td>
         <td data-label="Phone">${phone}</td>
         <td data-label="Wallet">${wallet}</td>
@@ -2127,6 +2171,53 @@ async function openUserDetailModal(userId) {
     const active = parseInt(u.is_active) === 1 && !u.deleted_at;
     const pill = active ? '<span class="pill green">Active</span>' : '<span class="pill red">Suspended</span>';
 
+    const va = u.virtual_account || {};
+    const hasVa = !!(va.account_number);
+    const vaStatus = va.status || 'none';
+    const vaStatusPill = vaStatus === 'active' 
+      ? '<span class="pill green" style="font-size:10px">Active</span>' 
+      : (vaStatus === 'pending' ? '<span class="pill yellow" style="font-size:10px">Pending</span>' : '<span class="pill red" style="font-size:10px">Not Assigned</span>');
+
+    let vaCardHtml = '';
+    if (hasVa) {
+      vaCardHtml = `
+        <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);color:#fff;border-radius:10px;padding:14px 16px;margin-top:14px;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase">${gvEscapeHtml(va.bank_name || 'Bank')}</span>
+              <span style="font-size:11px;color:#94a3b8">Dedicated Funding Bank Account</span>
+            </div>
+            <div>${vaStatusPill}</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div>
+              <small style="color:#94a3b8;font-size:10px;display:block">ACCOUNT NUMBER (NUBAN)</small>
+              <div style="font-family:monospace;font-size:20px;font-weight:700;letter-spacing:1.5px;color:#38bdf8">${gvEscapeHtml(va.account_number)}</div>
+            </div>
+            <button class="secondary" style="background:rgba(255,255,255,0.14);color:#fff;border-color:rgba(255,255,255,0.25);padding:4px 10px;font-size:11px;border-radius:6px;cursor:pointer" 
+                    onclick="gvCopyText('${gvEscapeHtml(va.account_number)}', 'Account number copied!')">📋 Copy</button>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#cbd5e1;border-top:1px solid rgba(255,255,255,0.12);padding-top:7px;margin-top:4px">
+            <div>Beneficiary: <strong>${gvEscapeHtml(va.account_name || u.business_name || '—')}</strong></div>
+            <button style="background:none;border:none;color:#38bdf8;font-size:11px;cursor:pointer;padding:0;text-decoration:underline" 
+                    onclick="adminRetrieveVirtualAccount(${u.id}, true)" id="vaSyncBtn-${u.id}">🔄 Re-sync Gateway</button>
+          </div>
+        </div>
+      `;
+    } else {
+      vaCardHtml = `
+        <div style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:14px;margin-top:14px;text-align:center">
+          <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:4px">
+            <span style="color:#f59e0b;font-size:15px">⚠️</span>
+            <strong style="font-size:12px;color:var(--text)">No Dedicated Bank Account Assigned</strong>
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin:0 0 10px">The user does not currently have an active KatPay virtual funding account number.</p>
+          <button class="primary" style="background:#2563eb;border-color:#2563eb;color:#fff;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:600" 
+                  onclick="adminRetrieveVirtualAccount(${u.id}, false)" id="vaRetrieveBtn-${u.id}">⚡ Retrieve / Generate Account Number</button>
+        </div>
+      `;
+    }
+
     document.getElementById('modalBody').innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
         <div><small style="color:var(--muted);display:block">User ID</small><strong>#${u.id}</strong></div>
@@ -2140,6 +2231,7 @@ async function openUserDetailModal(userId) {
         <div><small style="color:var(--muted);display:block">Total Requests</small><strong>${u.total_requests || 0}</strong></div>
         <div><small style="color:var(--muted);display:block">Total Transactions</small><strong>${u.transactions_count || 0}</strong></div>
       </div>
+      ${vaCardHtml}
     `;
 
     let actionBtn = '';
@@ -2155,6 +2247,46 @@ async function openUserDetailModal(userId) {
     `;
   } catch (e) {
     document.getElementById('modalBody').innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center">${e.message || 'Error loading user'}</div>`;
+  }
+}
+
+async function adminRetrieveVirtualAccount(userId, isForce) {
+  const btn = document.getElementById(isForce ? ('vaSyncBtn-' + userId) : ('vaRetrieveBtn-' + userId));
+  const origText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = isForce ? 'Querying Gateway...' : 'Generating Account...';
+  }
+
+  try {
+    const res = await gvAdminFetch('../api/admin/users/' + userId + '/virtual-account/retrieve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ force_refresh: !!isForce })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Failed to retrieve virtual account');
+    }
+
+    const va = json.data;
+    if (typeof window.showToast === 'function') {
+      window.showToast('Account: ' + va.account_number + ' (' + (va.bank_name || 'Bank') + ')', 'success');
+    } else {
+      alert('Virtual Account successfully retrieved:\n' + (va.bank_name || 'Bank') + ' - ' + va.account_number);
+    }
+
+    // Refresh modal with updated details
+    openUserDetailModal(userId);
+
+    // Refresh users table in background
+    fetchAdminUsers(window._currentUserPage, window._currentUserFilter, window._currentUserSearch);
+  } catch (e) {
+    alert('Gateway Notice: ' + (e.message || 'Could not retrieve virtual account'));
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
   }
 }
 

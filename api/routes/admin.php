@@ -25,6 +25,7 @@ addRoute('GET',   '/admin/users',                           function () { (new \
 addRoute('GET',   '/admin/users/{id}',                      function ($p) { (new \Controllers\Admin\UserAdminController())->getUserDetail((int)$p['id']); });
 addRoute('POST',  '/admin/users/{id}/restore',              function ($p) { (new \Controllers\Admin\UserAdminController())->restoreUser((int)$p['id']); });
 addRoute('POST',  '/admin/users/{id}/suspend',              function ($p) { (new \Controllers\Admin\UserAdminController())->suspendUser((int)$p['id']); });
+addRoute('POST',  '/admin/users/{id}/virtual-account/retrieve', function ($p) { (new \Controllers\Admin\UserAdminController())->retrieveVirtualAccount((int)$p['id']); });
 addRoute('GET',   '/admin/transactions',                    function () { (new StatsController())->getTransactions(); });
 addRoute('GET',   '/admin/services',                        function () { (new StatsController())->getServices(); });
 addRoute('POST',  '/admin/services/seed',                   function () { (new StatsController())->seedDatabase(); });
