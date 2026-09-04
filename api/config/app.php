@@ -94,6 +94,14 @@ define('KATPAY_CALLBACK_URL', getenv('KATPAY_CALLBACK_URL') ?: '');
 define('KATPAY_MIN_TOPUP',    (float)(getenv('KATPAY_MIN_TOPUP') ?: 100));
 define('KATPAY_BANK_CODES',   getenv('KATPAY_BANK_CODES')   ?: 'PALMPAY,OPAY');
 
+// ── S8V Identity Verification Provider Configuration ─────────────────────────
+// These values come exclusively from .env — never hardcoded, never exposed to frontend.
+define('S8V_API_BASE',        rtrim(getenv('S8V_API_BASE') ?: 'https://www.s8v.ng/api', '/'));
+define('S8V_API_TOKEN',       getenv('S8V_API_TOKEN') ?: '');
+define('S8V_WEBHOOK_SECRET',  getenv('S8V_WEBHOOK_SECRET') ?: '');
+define('S8V_TIMEOUT',         (int)(getenv('S8V_TIMEOUT') ?: 30));
+
+
 
 
 if (APP_DEBUG) {

@@ -33,6 +33,7 @@ use Services\RequestService;
 use Services\FileStorageService;
 use Services\LocalStorageDriver;
 use Services\TechHubService;
+use Services\S8VService;
 use Services\InsufficientBalanceException;
 use Exceptions\InsufficientBalanceException as LegacyInsufficientBalanceException;
 use Exceptions\DuplicateTransactionException;
@@ -47,7 +48,9 @@ class ApiRequestController
     private AuditService $auditService;
     private NotificationService $notificationService;
     private TechHubService $techHubService;
+    private S8VService $s8vService;
     private int $userId;
+
 
     // Variants that must be routed to the manual engine regardless of service is_manual flag
     private const MANUAL_VARIANT_OVERRIDES = [
@@ -90,8 +93,10 @@ class ApiRequestController
         $this->auditService        = new AuditService($this->db);
         $this->notificationService = new NotificationService($this->db);
         $this->techHubService      = new TechHubService();
+        $this->s8vService          = new S8VService();
         $this->userId              = \Middleware\AuthMiddleware::getUserId();
     }
+
 
     // ── Public Endpoint ────────────────────────────────────────────────────
 
@@ -160,10 +165,10 @@ class ApiRequestController
             return;
         }
 
-        // ── 2. Dynamic Manual Routing Check ──────────────────────────────
+        // ── 2. Dynamic Manual & Provider Routing Check ─────────────────────
         // Check if the service is marked as manual (is_manual = 1) in the database,
         // or matches a manual variant override, and route directly to the manual engine.
-        $svcStmt = $this->db->prepare("SELECT id, is_manual FROM services WHERE slug = ? AND is_active = 1 LIMIT 1");
+        $svcStmt = $this->db->prepare("SELECT id, is_manual, provider_name, failure_penalty_fee FROM services WHERE slug = ? AND is_active = 1 LIMIT 1");
         $svcStmt->execute([$serviceSlug]);
         $svcRow = $svcStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -171,6 +176,8 @@ class ApiRequestController
             $this->delegateToManualEngine($serviceSlug, $variantKey, $formData, $idempotencyKey, $pin);
             return;
         }
+
+        $activeProvider = !empty($svcRow['provider_name']) ? strtolower(trim($svcRow['provider_name'])) : 'techhub';
 
         // ── 3. Validate input_method for NIN ──────────────────────────────
         if ($serviceSlug === 'nin-verification') {
@@ -188,11 +195,13 @@ class ApiRequestController
             return;
         }
 
-        // ── 5. TechHub endpoint validation ────────────────────────────────
-        $mappingCheck = $this->techHubService->validateMapping($serviceSlug, $variantKey, $inputMethod);
-        if (!$mappingCheck['valid']) {
-            Response::error('Service configuration error: ' . $mappingCheck['error'], [], 422);
-            return;
+        // ── 5. Provider endpoint / mapping validation ─────────────────────
+        if ($activeProvider === 'techhub') {
+            $mappingCheck = $this->techHubService->validateMapping($serviceSlug, $variantKey, $inputMethod);
+            if (!$mappingCheck['valid']) {
+                Response::error('Service configuration error: ' . $mappingCheck['error'], [], 422);
+                return;
+            }
         }
 
         // ── 6. Pricing check ──────────────────────────────────────────────
@@ -227,7 +236,7 @@ class ApiRequestController
         }
 
         // ── 10. Determine result type ──────────────────────────────────────
-        $resultType = $this->techHubService->getResultType($serviceSlug);
+        $resultType = ($activeProvider === 's8v') ? 'ticket' : $this->techHubService->getResultType($serviceSlug);
 
         // ── 11. Begin DB transaction ───────────────────────────────────────
         try {
@@ -245,16 +254,20 @@ class ApiRequestController
 
             // ── 13. Create api_transactions row (pending) ──────────────────
             $gvReference   = $this->generateGvReference();
-            $inputSummary  = $this->techHubService->buildInputSummary($serviceSlug, $inputMethod, $formData);
+            $inputSummary  = ($activeProvider === 's8v')
+                ? "service={$serviceSlug}" . (!empty($formData['tracking_id']) ? " | Tracking:{$formData['tracking_id']}" : (!empty($formData['nin']) ? " | NIN:{$formData['nin']}" : ''))
+                : $this->techHubService->buildInputSummary($serviceSlug, $inputMethod, $formData);
 
-            $endpoint = $this->techHubService->resolveEndpoint($serviceSlug, $variantKey, $inputMethod);
+            $endpoint = ($activeProvider === 's8v')
+                ? 'https://www.s8v.ng/api/' . $serviceSlug
+                : $this->techHubService->resolveEndpoint($serviceSlug, $variantKey, $inputMethod);
 
             $insertStmt = $this->db->prepare("
                 INSERT INTO api_transactions
                 (gv_reference, user_id, service_id, pricing_id, variant_key, transaction_id,
                  input_method, input_summary, provider, provider_endpoint, gv_status,
                  result_type, idempotency_key, submitted_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'techhub', ?, 'pending', ?, ?, NOW())
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, NOW())
             ");
             $insertStmt->execute([
                 $gvReference,
@@ -265,6 +278,7 @@ class ApiRequestController
                 $txResult['id'],
                 $inputMethod,
                 $inputSummary,
+                $activeProvider,
                 $endpoint,
                 $resultType,
                 $idempotencyKey,
@@ -278,16 +292,23 @@ class ApiRequestController
             // Commit initial deduction & record so DB row lock is immediately released (<5ms)
             $this->db->commit();
 
-            // ── 15. Call TechHub (Outside DB Transaction to prevent locking) ─
-            if ($resultType === 'pdf_base64') {
-                $providerResult = $this->techHubService->submitSync(
-                    $serviceSlug, $variantKey, $inputMethod, $formData
-                );
-            } else {
-                $providerResult = $this->techHubService->submitAsync(
+            // ── 15. Call Provider Gateway (Outside DB Transaction to prevent locking) ─
+            if ($activeProvider === 's8v') {
+                $providerResult = $this->s8vService->submitAsync(
                     $serviceSlug, $variantKey, $formData
                 );
+            } else {
+                if ($resultType === 'pdf_base64') {
+                    $providerResult = $this->techHubService->submitSync(
+                        $serviceSlug, $variantKey, $inputMethod, $formData
+                    );
+                } else {
+                    $providerResult = $this->techHubService->submitAsync(
+                        $serviceSlug, $variantKey, $formData
+                    );
+                }
             }
+
 
             // ── 16. CENTRAL FINANCIAL DECISION ENGINE ──────────────────────────
             $providerAccepted       = $providerResult['provider_accepted'] ?? $providerResult['success'];

@@ -57,3 +57,8 @@ addRoute('POST', '/user/wallet/topup',                            function ()   
 addRoute('GET',  '/user/wallet/topup',                            function ()    { (new TopUpController())->getHistory(); });
 addRoute('GET',  '/user/wallet/topup/{ref}',                      function ($p)  { (new TopUpController())->getStatus($p['ref']); });
 
+// S8V Webhook Route
+addRoute('POST', '/webhooks/s8v',                                 function ()    { (new \Controllers\Webhooks\S8VWebhookController())->handle(); });
+addRoute('POST', '/api/webhooks/s8v',                             function ()    { (new \Controllers\Webhooks\S8VWebhookController())->handle(); });
+
+

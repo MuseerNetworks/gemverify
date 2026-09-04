@@ -434,7 +434,7 @@ class StatsController
             // NOTE: Uses LEFT JOIN + COALESCE so services with missing/null category_id are not excluded.
             // Avoids GROUP BY to prevent ONLY_FULL_GROUP_BY issues on production MySQL.
             $stmt = $this->db->query("
-                SELECT s.id, s.name, s.slug, s.is_active, s.is_manual, s.est_time,
+                SELECT s.id, s.name, s.slug, s.is_active, s.is_manual, s.provider_name, s.failure_penalty_fee, s.est_time,
                        COALESCE(c.name, 'General') AS category
                 FROM services s
                 LEFT JOIN service_categories c ON s.category_id = c.id
@@ -446,7 +446,7 @@ class StatsController
             if (empty($services)) {
                 $this->seedDatabaseInternal();
                 $stmt = $this->db->query("
-                    SELECT s.id, s.name, s.slug, s.is_active, s.is_manual, s.est_time,
+                    SELECT s.id, s.name, s.slug, s.is_active, s.is_manual, s.provider_name, s.failure_penalty_fee, s.est_time,
                            COALESCE(c.name, 'General') AS category
                     FROM services s
                     LEFT JOIN service_categories c ON s.category_id = c.id
@@ -454,6 +454,7 @@ class StatsController
                 ");
                 $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
+
 
             foreach ($services as &$service) {
                 $stmtPrice = $this->db->prepare("SELECT id as pricing_id, variant_key, price, COALESCE(cost_price, 0) as cost_price FROM service_pricing WHERE service_id = ?");
@@ -851,17 +852,19 @@ class StatsController
         $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
         try {
-            $stmtSvc = $this->db->prepare("SELECT name, is_active, is_manual, est_time FROM services WHERE id = ?");
+            $stmtSvc = $this->db->prepare("SELECT name, is_active, is_manual, provider_name, failure_penalty_fee, est_time FROM services WHERE id = ?");
             $stmtSvc->execute([$id]);
             $existing = $stmtSvc->fetch(PDO::FETCH_ASSOC);
             if (!$existing) {
                 Response::notFound('Service not found');
             }
 
-            $name = isset($input['name']) ? $input['name'] : $existing['name'];
-            $isActive = isset($input['active']) ? (int)$input['active'] : (int)$existing['is_active'];
-            $isManual = isset($input['is_manual']) ? (int)$input['is_manual'] : (int)$existing['is_manual'];
-            $estTime = array_key_exists('est_time', $input) ? $input['est_time'] : $existing['est_time'];
+            $name               = isset($input['name']) ? $input['name'] : $existing['name'];
+            $isActive           = isset($input['active']) ? (int)$input['active'] : (int)$existing['is_active'];
+            $isManual           = isset($input['is_manual']) ? (int)$input['is_manual'] : (int)$existing['is_manual'];
+            $providerName       = array_key_exists('provider_name', $input) ? ($input['provider_name'] ? trim($input['provider_name']) : null) : $existing['provider_name'];
+            $failurePenaltyFee  = array_key_exists('failure_penalty_fee', $input) ? (float)$input['failure_penalty_fee'] : (float)($existing['failure_penalty_fee'] ?? 0.00);
+            $estTime            = array_key_exists('est_time', $input) ? $input['est_time'] : $existing['est_time'];
 
             if (!$name) {
                 Response::error('Service name is required', [], 400);
@@ -869,8 +872,8 @@ class StatsController
 
             $this->db->beginTransaction();
 
-            $stmt = $this->db->prepare("UPDATE services SET name = ?, is_active = ?, is_manual = ?, est_time = ? WHERE id = ?");
-            $stmt->execute([$name, $isActive, $isManual, $estTime, $id]);
+            $stmt = $this->db->prepare("UPDATE services SET name = ?, is_active = ?, is_manual = ?, provider_name = ?, failure_penalty_fee = ?, est_time = ? WHERE id = ?");
+            $stmt->execute([$name, $isActive, $isManual, $providerName, $failurePenaltyFee, $estTime, $id]);
 
             $adminId = \Middleware\AdminMiddleware::getAdminId();
             $stmtAudit = $this->db->prepare("INSERT INTO audit_logs (actor_type, actor_id, action, notes) VALUES ('admin', ?, 'SERVICE_UPDATED', ?)");
@@ -878,6 +881,7 @@ class StatsController
 
             $this->db->commit();
             Response::success(['success' => true, 'message' => 'Service updated successfully']);
+
         } catch (Exception $e) {
             if ($this->db->inTransaction()) $this->db->rollBack();
             Response::error($e->getMessage(), [], 500);

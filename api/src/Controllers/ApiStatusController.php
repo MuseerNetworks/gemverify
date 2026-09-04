@@ -24,6 +24,8 @@ namespace Controllers;
 use Core\Database;
 use Helpers\Response;
 use Services\TechHubService;
+use Services\S8VService;
+use Services\WalletService;
 use Services\AuditService;
 use PDO;
 use Exception;
@@ -32,6 +34,8 @@ class ApiStatusController
 {
     private PDO $db;
     private TechHubService $techHubService;
+    private S8VService $s8vService;
+    private WalletService $walletService;
     private AuditService $auditService;
     private int $userId;
 
@@ -45,9 +49,12 @@ class ApiStatusController
     {
         $this->db             = db();
         $this->techHubService = new TechHubService();
+        $this->s8vService     = new S8VService();
+        $this->walletService  = new WalletService($this->db);
         $this->auditService   = new AuditService($this->db);
         $this->userId         = \Middleware\AuthMiddleware::getUserId();
     }
+
 
     // ── Public Endpoints ───────────────────────────────────────────────────
 
@@ -221,12 +228,23 @@ class ApiStatusController
             $this->db->prepare("UPDATE api_transactions SET last_checked_at = NOW() WHERE id = ?")
                      ->execute([$tx['id']]);
 
-            // Call TechHub
-            $statusResult = $this->techHubService->checkAsyncStatus(
-                $tx['service_slug'],
-                $tx['variant_key'],
-                $tx['provider_ticket_id']
-            );
+            $providerName = strtolower(trim($tx['provider'] ?? 'techhub'));
+
+            // Call appropriate provider
+            if ($providerName === 's8v') {
+                $statusResult = $this->s8vService->checkAsyncStatus(
+                    $tx['service_slug'],
+                    $tx['variant_key'],
+                    $tx['provider_ticket_id'],
+                    $tx['input_summary'] // passed for tracking ID fallback lookup
+                );
+            } else {
+                $statusResult = $this->techHubService->checkAsyncStatus(
+                    $tx['service_slug'],
+                    $tx['variant_key'],
+                    $tx['provider_ticket_id']
+                );
+            }
 
             if (!$statusResult['success']) {
                 Response::error(
@@ -238,7 +256,7 @@ class ApiStatusController
             }
 
             // Update DB based on new status
-            $this->applyStatusUpdate($tx['id'], $statusResult);
+            $this->applyStatusUpdate($tx, $statusResult);
 
             // Re-fetch updated row
             $updated = $this->findTransactionById($tx['id']);
@@ -321,6 +339,7 @@ class ApiStatusController
                 at.*,
                 s.name AS service_name,
                 s.slug AS service_slug,
+                s.failure_penalty_fee,
                 sp.price AS price_paid
             FROM api_transactions at
             JOIN services s  ON s.id  = at.service_id
@@ -343,6 +362,7 @@ class ApiStatusController
                 at.*,
                 s.name AS service_name,
                 s.slug AS service_slug,
+                s.failure_penalty_fee,
                 sp.price AS price_paid
             FROM api_transactions at
             JOIN services s  ON s.id  = at.service_id
@@ -357,10 +377,11 @@ class ApiStatusController
 
     /**
      * Apply a provider status update to an api_transaction row.
-     * Called after a successful poll response from TechHub.
+     * Handles successful completion and in-flight failure partial refunds.
      */
-    private function applyStatusUpdate(int $txId, array $statusResult): void
+    private function applyStatusUpdate(array $tx, array $statusResult): void
     {
+        $txId           = (int)$tx['id'];
         $providerStatus = $statusResult['provider_status'] ?? 'pending';
 
         if ($statusResult['is_complete'] && !$statusResult['is_failed']) {
@@ -379,17 +400,45 @@ class ApiStatusController
             ")->execute([$providerStatus, $resultData, $txId]);
 
         } elseif ($statusResult['is_failed']) {
-            // Provider failed — mark failed
+            // Provider failed — execute non-refundable processing fee partial refund
+            $pricePaid  = (float)($tx['price_paid'] ?? 0.00);
+            $penaltyFee = (float)($tx['failure_penalty_fee'] ?? 0.00);
+
+            // Refund = Paid minus Penalty Fee (e.g. ₦1,000 - ₦100 = ₦900)
+            $refundAmount = max(0.00, $pricePaid - $penaltyFee);
+
+            // Execute wallet credit if not already refunded
+            if ((int)($tx['refund_issued'] ?? 0) === 0 && $refundAmount > 0) {
+                $serviceName = $tx['service_name'] ?? 'Service';
+                $penaltyText = $penaltyFee > 0 ? " (₦" . number_format($refundAmount, 2) . " refunded, ₦" . number_format($penaltyFee, 2) . " processing fee applied)" : "";
+                $desc = "Refund: {$serviceName}{$penaltyText} — Ref: {$tx['gv_reference']}";
+
+                $this->walletService->creditAtomically(
+                    (int)$tx['user_id'],
+                    $refundAmount,
+                    $desc,
+                    $txId
+                );
+            }
+
+            $userReason = $statusResult['error_message'] ?? 'No record found on identity registry for this request.';
+            $feeNotice  = $penaltyFee > 0 ? " ₦" . number_format($penaltyFee, 2) . " processing fee applied. ₦" . number_format($refundAmount, 2) . " returned to wallet." : " Full fee refunded to wallet.";
+
             $this->db->prepare("
                 UPDATE api_transactions
-                SET gv_status       = 'failed',
-                    provider_status = ?,
-                    error_message   = ?,
-                    completed_at    = NOW()
+                SET gv_status        = 'failed',
+                    provider_status  = ?,
+                    refund_issued    = 1,
+                    penalty_deducted = ?,
+                    refund_amount    = ?,
+                    error_message    = ?,
+                    completed_at     = NOW()
                 WHERE id = ?
             ")->execute([
                 $providerStatus,
-                $statusResult['response_note'] ?? 'Provider processing failed',
+                $penaltyFee,
+                $refundAmount,
+                $userReason . $feeNotice,
                 $txId,
             ]);
 
@@ -402,6 +451,7 @@ class ApiStatusController
             ")->execute([$providerStatus, $txId]);
         }
     }
+
 
     /**
      * Format a row for the list endpoint (lean — no PDF data).
