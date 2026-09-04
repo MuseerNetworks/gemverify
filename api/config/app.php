@@ -58,6 +58,8 @@ define('APP_DEBUG', filter_var(getenv('APP_DEBUG') ?? true, FILTER_VALIDATE_BOOL
 define('JWT_SECRET', $jwtSecret);
 define('JWT_EXPIRY', 86400); // 24 hours in seconds
 define('JWT_REFRESH_EXPIRY', 604800); // 7 days
+define('SESSION_INACTIVITY_TIMEOUT', 300); // 5 minutes — user portal server-side inactivity limit
+define('ADMIN_INACTIVITY_TIMEOUT',   300); // 5 minutes — admin panel server-side inactivity limit
 define('API_BASE_PATH', getenv('API_BASE_PATH') ?: '/api');
 define('STORAGE_BASE_PATH', realpath($storage_base));
 define('LOG_PATH', realpath($log_base));

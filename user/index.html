@@ -759,6 +759,9 @@ aside .mt-1.space-y-1 {
 
         <!-- Login Panel -->
         <div id="gv-panel-login" class="gv-panel active">
+          <div id="gv-session-expired-msg" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;margin-bottom:14px;color:#856404;font-size:13px;line-height:1.4;">
+            ⚠️ Your session expired due to inactivity. Please sign in again.
+          </div>
           <div class="gv-field">
             <label for="gv-email">User Email</label>
             <input id="gv-email" type="email" placeholder="user@example.com" autocomplete="email">
@@ -776,6 +779,7 @@ aside .mt-1.space-y-1 {
           <button class="gv-submit-btn" id="gv-login-btn" onclick="gvDoLogin()">Sign In to Portal</button>
           <p class="gv-note">Enter your registered email &amp; password to sign in.</p>
         </div>
+
 
         <!-- Signup Panel -->
         <div id="gv-panel-signup" class="gv-panel">
@@ -1005,7 +1009,11 @@ aside .mt-1.space-y-1 {
           // Save auth token and user session
           localStorage.setItem('gv_token', json.data.token);
           localStorage.setItem('gv_user', JSON.stringify(json.data.user));
+          // Hide session-expired banner if shown
+          var expMsg = document.getElementById('gv-session-expired-msg');
+          if (expMsg) expMsg.style.display = 'none';
           gvProceedToApp();
+
         } catch (err) {
           errEl.textContent = 'Connection error. Please ensure backend API is running.';
           errEl.classList.add('show');
@@ -1219,36 +1227,203 @@ aside .mt-1.space-y-1 {
   <script type="module">
   
   
-  // Global inactivity detector (15 minutes for Portal User)
-  (function() {
-    let idleTime = 0;
-    const idleLimit = 15 * 60 * 1000; // 15 minutes
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GemVerify Session Security — v2.0
+  // Implements: 5-min idle timeout, Page Visibility, sendBeacon logout,
+  // BroadcastChannel multi-tab sync, global 401 fetch interceptor.
+  // ═══════════════════════════════════════════════════════════════════════════
+  (function () {
+    'use strict';
 
-    function resetTimer() {
-      idleTime = 0;
+    var IDLE_MS   = 5 * 60 * 1000; // 5 minutes (matches server SESSION_INACTIVITY_TIMEOUT)
+    var idleTimer = null;
+    var hiddenAt  = null;
+    var _logoutInProgress = false;
+
+    // ── BroadcastChannel (multi-tab sync) ───────────────────────────────────
+    var bc = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bc = new BroadcastChannel('gv_session_sync');
+        bc.onmessage = function (e) {
+          if (e.data === 'gv_logout') {
+            // Another tab logged out — mirror it silently here
+            _silentLocalLogout('tab_sync');
+          }
+        };
+      }
+    } catch (e) { bc = null; }
+
+    function broadcastLogout() {
+      try { if (bc) bc.postMessage('gv_logout'); } catch (e) {}
     }
 
-    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
-    events.forEach(name => {
-      window.addEventListener(name, resetTimer, true);
+    // ── Token helpers ────────────────────────────────────────────────────────
+    function getToken() { return localStorage.getItem('gv_token'); }
+    function isAuthed() { return !!getToken(); }
+
+    // ── Backend logout call (real revocation) ────────────────────────────────
+    function callBackendLogout(token, useBeacon) {
+      if (!token) return;
+      var url  = '../api/auth/logout';
+      var body = JSON.stringify({ token: token });
+      if (useBeacon && typeof navigator.sendBeacon === 'function') {
+        try {
+          navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+        } catch (e) {}
+      } else {
+        try {
+          fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            keepalive: true,
+            body: body
+          }).catch(function () {});
+        } catch (e) {}
+      }
+    }
+
+    // ── Local-only cleanup (no network call — used when server already revoked) ─
+    function _silentLocalLogout(reason) {
+      if (_logoutInProgress) return;
+      _logoutInProgress = true;
+      clearTimeout(idleTimer);
+      localStorage.removeItem('gv_token');
+      localStorage.removeItem('gv_user');
+      sessionStorage.removeItem('gv_pending_topup');
+      // Show session-expired message then call UI logout
+      if (reason === 'inactivity' || reason === 'background' || reason === 'tab_sync') {
+        var msgEl = document.getElementById('gv-session-expired-msg');
+        if (msgEl) { msgEl.style.display = 'block'; }
+      }
+      if (typeof window.gvLogout === 'function') {
+        window.gvLogout(true); // pass true = skip network call (already handled)
+      }
+      setTimeout(function () { _logoutInProgress = false; }, 2000);
+    }
+
+    // ── Full logout (network + local + broadcast) ────────────────────────────
+    function doLogout(reason) {
+      if (_logoutInProgress) return;
+      var token = getToken();
+      if (!token) return;
+      broadcastLogout();
+      callBackendLogout(token, reason === 'pagehide');
+      _silentLocalLogout(reason);
+    }
+
+    // ── Patch gvLogout to call backend ───────────────────────────────────────
+    // Wrap the existing gvLogout so it properly revokes the server session.
+    // The `skipNetwork` param lets internal calls avoid double network calls.
+    var _origGvLogout = null;
+    function patchGvLogout() {
+      if (typeof window.gvLogout === 'function' && !window.gvLogout._gvPatched) {
+        _origGvLogout = window.gvLogout;
+        window.gvLogout = function (skipNetwork) {
+          if (!skipNetwork) {
+            var token = getToken();
+            if (token) {
+              broadcastLogout();
+              callBackendLogout(token, false);
+            }
+          }
+          _origGvLogout.call(this);
+        };
+        window.gvLogout._gvPatched = true;
+      }
+    }
+    // Patch now and after a delay in case gvLogout is defined later
+    patchGvLogout();
+    setTimeout(patchGvLogout, 500);
+
+    // ── Idle timer (setTimeout — resets on every deliberate activity) ────────
+    function resetIdleTimer() {
+      if (!isAuthed()) return;
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(function () {
+        if (isAuthed()) {
+          doLogout('inactivity');
+        }
+      }, IDLE_MS);
+    }
+
+    // Deliberate activity only — NO mousemove
+    var ACTIVITY_EVENTS = ['mousedown', 'click', 'keydown', 'scroll', 'wheel', 'touchstart', 'touchmove'];
+    ACTIVITY_EVENTS.forEach(function (ev) {
+      window.addEventListener(ev, function () {
+        if (isAuthed()) resetIdleTimer();
+      }, { passive: true, capture: true });
     });
 
-    setInterval(() => {
-      const token = localStorage.getItem('gv_token');
-      if (token) {
-        idleTime += 1000;
-        if (idleTime >= idleLimit) {
-          console.warn("Session expired due to inactivity.");
-          if (typeof window.gvLogout === 'function') {
-            window.gvLogout();
-          }
-          idleTime = 0;
-        }
-      } else {
-        idleTime = 0;
+    // Start the idle clock once we know the user is authenticated
+    // Poll every 2s until auth state is confirmed, then hand off to events
+    var _startPoll = setInterval(function () {
+      if (isAuthed()) {
+        clearInterval(_startPoll);
+        resetIdleTimer();
       }
-    }, 1000);
+    }, 2000);
+
+    // Also reset on auth state changes (login event)
+    document.addEventListener('gv-auth-changed', function () {
+      if (isAuthed()) { resetIdleTimer(); } else { clearTimeout(idleTimer); }
+    });
+
+    // ── Page Visibility API (background tab / minimize) ──────────────────────
+    document.addEventListener('visibilitychange', function () {
+      if (!isAuthed()) return;
+
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        // Clear JS timer — browser throttles it in background anyway
+        clearTimeout(idleTimer);
+      } else {
+        // Tab became visible again
+        if (hiddenAt !== null) {
+          var hiddenDuration = Date.now() - hiddenAt;
+          hiddenAt = null;
+          if (hiddenDuration >= IDLE_MS) {
+            // Was hidden long enough — treat as inactivity
+            doLogout('background');
+            return;
+          }
+        }
+        // Resume idle timer from now
+        resetIdleTimer();
+      }
+    });
+
+    // ── Tab / browser close → sendBeacon logout ──────────────────────────────
+    window.addEventListener('pagehide', function () {
+      if (!isAuthed()) return;
+      var token = getToken();
+      if (token) {
+        callBackendLogout(token, true); // use sendBeacon
+      }
+    });
+
+    // ── Global 401 fetch interceptor ─────────────────────────────────────────
+    // Catches ALL 401 responses across every fetch() call in the app,
+    // including the compiled React components that don't handle 401 themselves.
+    var _origFetch = window.fetch;
+    window.fetch = function () {
+      return _origFetch.apply(this, arguments).then(function (response) {
+        if (response.status === 401 && isAuthed()) {
+          // Session was rejected server-side — log out immediately
+          setTimeout(function () {
+            if (isAuthed()) {
+              // Don't call backend again — server already rejected us
+              broadcastLogout();
+              _silentLocalLogout('server_rejected');
+            }
+          }, 0);
+        }
+        return response; // always return the original response to the caller
+      });
+    };
+
   })();
+
 
 window.getServicePrice = (slug, variantKey = null) => {
   let db = window.gvDbPricing || {};

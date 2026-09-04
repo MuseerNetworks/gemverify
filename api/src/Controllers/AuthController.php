@@ -135,28 +135,44 @@ class AuthController {
         }
         
         $db->prepare("UPDATE users SET updated_at = NOW() WHERE id = ?")->execute([$user['id']]);
-        
+
+        // Generate a unique JWT ID for server-side session tracking
+        $jti    = bin2hex(random_bytes(16)); // 32-char hex
+        $expiry = 28800; // 8 hours absolute
+        $now    = time();
+
         $token = JWT::encode([
-            'user_id' => $user['id'],
-            'email' => $user['email'],
+            'user_id'       => $user['id'],
+            'email'         => $user['email'],
             'business_name' => $user['business_name'],
-            'type' => 'user'
-        ], JWT_SECRET, 28800); // 8 hours absolute expiry
+            'type'          => 'user',
+            'jti'           => $jti
+        ], JWT_SECRET, $expiry);
+
+        // Revoke any existing active sessions for this user (single-session policy)
+        $db->prepare("UPDATE user_sessions SET is_active = 0 WHERE user_id = ? AND is_active = 1")
+           ->execute([$user['id']]);
+
+        // Insert new session record
+        $db->prepare("
+            INSERT INTO user_sessions (jti, user_id, last_activity, expires_at)
+            VALUES (?, ?, ?, ?)
+        ")->execute([$jti, $user['id'], $now, $now + $expiry]);
 
         setcookie("gv_token", $token, [
-            'expires' => time() + 28800, // 8 hours absolute cookie expiry
-            'path' => '/',
-            'secure' => isset($_SERVER['HTTPS']),
+            'expires'  => $now + $expiry,
+            'path'     => '/',
+            'secure'   => isset($_SERVER['HTTPS']),
             'httponly' => true,
             'samesite' => 'Lax'
         ]);
         
         Response::success([
             'token' => $token,
-            'user' => [
-                'id' => $user['id'],
+            'user'  => [
+                'id'            => $user['id'],
                 'business_name' => $user['business_name'],
-                'email' => $user['email']
+                'email'         => $user['email']
             ],
             'wallet_balance' => (float) $user['balance']
         ], 'Login successful');
@@ -191,19 +207,35 @@ class AuthController {
         }
         
         $db->prepare("UPDATE admins SET last_login_at = NOW() WHERE id = ?")->execute([$admin['id']]);
-        
+
+        // Generate unique JWT ID for server-side admin session tracking
+        $jti    = bin2hex(random_bytes(16));
+        $expiry = 7200; // 2 hours absolute
+        $now    = time();
+
         $token = JWT::encode([
             'admin_id' => $admin['id'],
-            'email' => $admin['email'],
-            'name' => $admin['name'],
-            'role' => $admin['role'],
-            'type' => 'admin'
-        ], JWT_SECRET, 7200); // 2 hours absolute expiry
+            'email'    => $admin['email'],
+            'name'     => $admin['name'],
+            'role'     => $admin['role'],
+            'type'     => 'admin',
+            'jti'      => $jti
+        ], JWT_SECRET, $expiry);
+
+        // Revoke any existing active admin sessions (single-session policy)
+        $db->prepare("UPDATE admin_sessions SET is_active = 0 WHERE admin_id = ? AND is_active = 1")
+           ->execute([$admin['id']]);
+
+        // Insert new admin session record
+        $db->prepare("
+            INSERT INTO admin_sessions (jti, admin_id, last_activity, expires_at)
+            VALUES (?, ?, ?, ?)
+        ")->execute([$jti, $admin['id'], $now, $now + $expiry]);
 
         setcookie("gv_admin_token", $token, [
-            'expires' => time() + 7200, // 2 hours absolute cookie expiry
-            'path' => '/',
-            'secure' => isset($_SERVER['HTTPS']),
+            'expires'  => $now + $expiry,
+            'path'     => '/',
+            'secure'   => isset($_SERVER['HTTPS']),
             'httponly' => true,
             'samesite' => 'Lax'
         ]);
@@ -211,9 +243,9 @@ class AuthController {
         Response::success([
             'token' => $token,
             'admin' => [
-                'id' => $admin['id'],
+                'id'   => $admin['id'],
                 'name' => $admin['name'],
-                'email' => $admin['email'],
+                'email'=> $admin['email'],
                 'role' => $admin['role']
             ]
         ], 'Admin login successful');
@@ -366,17 +398,125 @@ class AuthController {
 
     public function refreshToken(): void {
         $payload = AuthMiddleware::getPayload();
-        
-        $expiry = 86400; // default fallback (24h)
-        if (($payload['type'] ?? '') === 'user') {
-            $expiry = 28800; // 8h
-        } elseif (($payload['type'] ?? '') === 'admin') {
-            $expiry = 7200; // 2h
+
+        $type   = $payload['type'] ?? 'user';
+        $expiry = ($type === 'admin') ? 7200 : 28800;
+        $now    = time();
+
+        // Revoke old session
+        $oldJti = $payload['jti'] ?? null;
+        $db = db();
+        if ($oldJti) {
+            try {
+                if ($type === 'admin') {
+                    $db->prepare('UPDATE admin_sessions SET is_active = 0 WHERE jti = ?')->execute([$oldJti]);
+                } else {
+                    $db->prepare('UPDATE user_sessions SET is_active = 0 WHERE jti = ?')->execute([$oldJti]);
+                }
+            } catch (\Exception $e) { /* best effort */ }
         }
 
-        $token = JWT::encode($payload, JWT_SECRET, $expiry);
+        // Mint new token with fresh jti
+        $newJti = bin2hex(random_bytes(16));
+        $newPayload = $payload;
+        $newPayload['jti'] = $newJti;
+        // Remove JWT standard claims — encode() re-adds them
+        unset($newPayload['iss'], $newPayload['iat'], $newPayload['exp']);
+
+        $token = JWT::encode($newPayload, JWT_SECRET, $expiry);
+
+        // Insert new session
+        try {
+            if ($type === 'admin') {
+                $adminId = (int)($payload['admin_id'] ?? 0);
+                $db->prepare("INSERT INTO admin_sessions (jti, admin_id, last_activity, expires_at) VALUES (?,?,?,?)")
+                   ->execute([$newJti, $adminId, $now, $now + $expiry]);
+                setcookie("gv_admin_token", $token, [
+                    'expires'  => $now + $expiry, 'path' => '/',
+                    'secure'   => isset($_SERVER['HTTPS']),
+                    'httponly' => true, 'samesite' => 'Lax'
+                ]);
+            } else {
+                $userId = (int)($payload['user_id'] ?? 0);
+                $db->prepare("INSERT INTO user_sessions (jti, user_id, last_activity, expires_at) VALUES (?,?,?,?)")
+                   ->execute([$newJti, $userId, $now, $now + $expiry]);
+                setcookie("gv_token", $token, [
+                    'expires'  => $now + $expiry, 'path' => '/',
+                    'secure'   => isset($_SERVER['HTTPS']),
+                    'httponly' => true, 'samesite' => 'Lax'
+                ]);
+            }
+        } catch (\Exception $e) { /* best effort */ }
+
         Response::success(['token' => $token]);
     }
+
+    /**
+     * POST /auth/logout
+     * Revokes the server-side session and clears the HttpOnly cookie.
+     * Accepts token from: HttpOnly cookie | Authorization header | JSON body
+     * (JSON body path supports navigator.sendBeacon() calls on tab close).
+     * Public endpoint — does not call AuthMiddleware (token may already be partially invalid).
+     */
+    public function logout(): void {
+        // Extract token from cookie → header → JSON body (sendBeacon sends JSON body)
+        $token = $_COOKIE['gv_token'] ?? $_COOKIE['gv_admin_token'] ?? '';
+
+        if (!$token) {
+            $headers     = function_exists('getallheaders') ? getallheaders() : [];
+            $authHeader  = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+            if ($authHeader && preg_match('/Bearer\s(\S+)/i', $authHeader, $m)) {
+                $token = $m[1];
+            }
+        }
+
+        if (!$token) {
+            // sendBeacon posts as application/json with token in body
+            $body  = json_decode(file_get_contents('php://input'), true);
+            $token = $body['token'] ?? '';
+        }
+
+        if ($token) {
+            $payload = JWT::decode($token);
+            if ($payload && !empty($payload['jti'])) {
+                $jti  = $payload['jti'];
+                $type = $payload['type'] ?? 'user';
+                try {
+                    $db = db();
+                    if ($type === 'admin') {
+                        $db->prepare('UPDATE admin_sessions SET is_active = 0 WHERE jti = ?')->execute([$jti]);
+                    } else {
+                        $db->prepare('UPDATE user_sessions  SET is_active = 0 WHERE jti = ?')->execute([$jti]);
+                    }
+                } catch (\Exception $e) { /* best effort */ }
+            }
+        }
+
+        // Clear HttpOnly cookies regardless of token validity
+        $cookieBase = [
+            'expires' => time() - 3600,
+            'path'    => '/',
+            'secure'  => isset($_SERVER['HTTPS']),
+            'httponly'=> true,
+            'samesite'=> 'Lax'
+        ];
+        setcookie('gv_token',       '', $cookieBase);
+        setcookie('gv_admin_token', '', $cookieBase);
+
+        Response::success(null, 'Logged out successfully');
+    }
+
+    /**
+     * POST /auth/heartbeat
+     * Lightweight protected endpoint the frontend calls to signal user activity.
+     * AuthMiddleware::handle() updates last_activity as a side-effect of any
+     * protected call, so this simply returns 200 to confirm the session is alive.
+     */
+    public function heartbeat(): void {
+        AuthMiddleware::getUserId(); // validates token + updates last_activity
+        Response::success(null, 'ok');
+    }
+
 
     public function changePassword(): void {
         $userId = AuthMiddleware::getUserId();
