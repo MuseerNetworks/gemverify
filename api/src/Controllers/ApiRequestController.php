@@ -721,12 +721,17 @@ class ApiRequestController
     }
 
     /**
-     * Public method: Poll TechHub live for an async transaction status.
+     * Public method: Poll provider gateway live for an async transaction status.
      */
     public function checkStatus(string $reference): void
     {
+        \Helpers\SchemaHelper::ensureProviderColumns($this->db);
+        $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
+        $providerCol = in_array('provider_name', $cols, true) ? 's.provider_name' : "'techhub' AS provider_name";
+        $penaltyCol  = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : "0.00 AS failure_penalty_fee";
+
         $stmt = $this->db->prepare("
-            SELECT t.*, s.name as service_name, s.slug as service_slug
+            SELECT t.*, s.name as service_name, s.slug as service_slug, {$providerCol}, {$penaltyCol}
             FROM api_transactions t
             LEFT JOIN services s ON s.id = t.service_id
             WHERE t.gv_reference = :ref AND t.user_id = :userId
@@ -744,7 +749,7 @@ class ApiRequestController
             Response::success([
                 'gv_reference' => $tx['gv_reference'],
                 'status'       => $tx['gv_status'],
-                'message'      => 'No provider ticket associated with this transaction.',
+                'message'      => 'No provider session reference associated with this transaction.',
                 'tx'           => $tx
             ]);
             return;
@@ -761,16 +766,27 @@ class ApiRequestController
             return;
         }
 
-        // Live check from TechHub
+        $activeProvider = !empty($tx['provider']) ? strtolower(trim($tx['provider'])) : (!empty($tx['provider_name']) ? strtolower(trim($tx['provider_name'])) : 'techhub');
+
         try {
-            $statusResult = $this->techHubService->checkAsyncStatus(
-                $tx['service_slug'] ?? 'ipe-clearance-single',
-                $tx['variant_key'] ?? null,
-                $tx['provider_ticket_id']
-            );
+            if ($activeProvider === 's8v') {
+                $statusResult = $this->s8vService->checkAsyncStatus(
+                    $tx['service_slug'] ?? 'nin-personalization',
+                    $tx['variant_key'] ?? null,
+                    $tx['provider_ticket_id'],
+                    $tx['input_summary'] ?? null
+                );
+            } else {
+                $statusResult = $this->techHubService->checkAsyncStatus(
+                    $tx['service_slug'] ?? 'ipe-clearance-single',
+                    $tx['variant_key'] ?? null,
+                    $tx['provider_ticket_id']
+                );
+            }
 
             if ($statusResult['success']) {
                 $pStatus = $statusResult['provider_status'] ?? 'pending';
+
                 if ($statusResult['is_complete']) {
                     if (in_array($pStatus, ['success', 'completed'], true)) {
                         $resultJson = json_encode($statusResult['result_data'] ?? []);
@@ -782,10 +798,17 @@ class ApiRequestController
                         $upd->execute([$resultJson, $tx['id']]);
                         $tx['gv_status']   = 'completed';
                         $tx['result_data'] = $resultJson;
+
+                        $this->auditService->log(
+                            'API_STATUS_COMPLETED',
+                            $tx['id'],
+                            'user',
+                            $this->userId,
+                            null, null,
+                            "Async transaction {$reference} completed via {$activeProvider}"
+                        );
+
                     } elseif ($pStatus === 'failed') {
-                        // Check if provider explicitly confirmed reversal/refund
-                        $isReversed = !empty($statusResult['is_reversed']) || !empty($statusResult['result_data']['reversed']);
-                        
                         $priceStmt = $this->db->prepare("
                             SELECT COALESCE(sp.price, t.amount, 0) as price_paid
                             FROM api_transactions at
@@ -797,53 +820,121 @@ class ApiRequestController
                         $priceStmt->execute([$tx['id']]);
                         $pricePaid = (float)($priceStmt->fetchColumn() ?: 0);
 
-                        if ($isReversed && $pricePaid > 0 && empty($tx['refund_issued'])) {
-                            // Safe to refund because provider confirmed reversal
-                            $this->walletService->creditAtomically(
-                                (int)$tx['user_id'],
-                                $pricePaid,
-                                'Refund: Provider job failed and reversed — ' . $tx['gv_reference'],
-                                null
-                            );
-                            $upd = $this->db->prepare("
-                                UPDATE api_transactions
-                                SET gv_status = 'refunded',
-                                    provider_status = 'failed',
-                                    provider_financial_status = 'reversed',
-                                    error_message = ?,
-                                    refund_issued = 1,
-                                    completed_at  = NOW()
-                                WHERE id = ?
-                            ");
-                            $upd->execute([$statusResult['error_message'] ?? 'Provider failed request (reversed)', $tx['id']]);
-                            $tx['gv_status'] = 'refunded';
+                        if ($activeProvider === 's8v') {
+                            // S8V Failure Policy: Non-refundable ₦100 processing fee retained, remaining balance refunded to wallet
+                            $serviceSlug = $tx['service_slug'] ?? '';
+                            $penaltyFee  = (float)($tx['failure_penalty_fee'] ?? 100.00);
+                            if ($penaltyFee <= 0 && $serviceSlug === 'nin-personalization') {
+                                $penaltyFee = 100.00;
+                            }
+                            $refundAmount = max(0.00, $pricePaid - $penaltyFee);
+
+                            if (empty($tx['refund_issued']) && $refundAmount > 0) {
+                                $serviceName = $tx['service_name'] ?? 'Verification';
+                                $penaltyText = $penaltyFee > 0 ? " (₦" . number_format($refundAmount, 2) . " refunded, ₦" . number_format($penaltyFee, 2) . " processing fee applied)" : "";
+                                $desc = "Refund: {$serviceName}{$penaltyText} — Ref: {$tx['gv_reference']}";
+
+                                $this->walletService->creditAtomically(
+                                    (int)$tx['user_id'],
+                                    $refundAmount,
+                                    $desc,
+                                    null
+                                );
+                            }
+
+                            $userReason = $statusResult['error_message'] ?? 'No record found on identity registry for this request.';
+                            $feeNotice  = $penaltyFee > 0 ? " ₦" . number_format($penaltyFee, 2) . " processing fee applied. ₦" . number_format($refundAmount, 2) . " returned to wallet." : " Full fee refunded to wallet.";
+
+                            $txCols = $this->db->query("SHOW COLUMNS FROM api_transactions")->fetchAll(PDO::FETCH_COLUMN);
+                            $hasPenaltyCol = in_array('penalty_deducted', $txCols, true);
+                            $hasRefundCol  = in_array('refund_amount', $txCols, true);
+
+                            $updateSets = [
+                                "gv_status        = 'failed'",
+                                "provider_status  = 'failed'",
+                                "refund_issued    = 1",
+                            ];
+                            $params = [];
+
+                            if ($hasPenaltyCol) {
+                                $updateSets[] = "penalty_deducted = ?";
+                                $params[] = $penaltyFee;
+                            }
+                            if ($hasRefundCol) {
+                                $updateSets[] = "refund_amount = ?";
+                                $params[] = $refundAmount;
+                            }
+
+                            $updateSets[] = "error_message    = ?";
+                            $params[] = $userReason . $feeNotice;
+
+                            $updateSets[] = "completed_at     = NOW()";
+                            $params[] = $tx['id'];
+
+                            $sql = "UPDATE api_transactions SET " . implode(", ", $updateSets) . " WHERE id = ?";
+                            $this->db->prepare($sql)->execute($params);
+
+                            $tx['gv_status']     = 'failed';
+                            $tx['error_message'] = $userReason . $feeNotice;
+
                         } else {
-                            // Provider failed but did NOT confirm reversal: DO NOT BLINDLY REFUND!
-                            $upd = $this->db->prepare("
-                                UPDATE api_transactions
-                                SET gv_status = 'reconciliation_required',
-                                    provider_status = 'failed',
-                                    provider_financial_status = 'charged',
-                                    error_message = ?,
-                                    reconciliation_notes = 'Provider reported failure but charge not confirmed reversed.'
-                                WHERE id = ?
-                            ");
-                            $upd->execute([$statusResult['error_message'] ?? 'Provider failed request', $tx['id']]);
-                            $tx['gv_status'] = 'reconciliation_required';
+                            // TechHub Reversal Check
+                            $isReversed = !empty($statusResult['is_reversed']) || !empty($statusResult['result_data']['reversed']);
+                            
+                            if ($isReversed && $pricePaid > 0 && empty($tx['refund_issued'])) {
+                                $this->walletService->creditAtomically(
+                                    (int)$tx['user_id'],
+                                    $pricePaid,
+                                    'Refund: Verification request unsuccessful and reversed — ' . $tx['gv_reference'],
+                                    null
+                                );
+                                $upd = $this->db->prepare("
+                                    UPDATE api_transactions
+                                    SET gv_status = 'refunded',
+                                        provider_status = 'failed',
+                                        provider_financial_status = 'reversed',
+                                        error_message = ?,
+                                        refund_issued = 1,
+                                        completed_at  = NOW()
+                                    WHERE id = ?
+                                ");
+                                $upd->execute([$statusResult['error_message'] ?? 'Request unsuccessful on registry (reversed)', $tx['id']]);
+                                $tx['gv_status'] = 'refunded';
+                            } else {
+                                $upd = $this->db->prepare("
+                                    UPDATE api_transactions
+                                    SET gv_status = 'reconciliation_required',
+                                        provider_status = 'failed',
+                                        provider_financial_status = 'charged',
+                                        error_message = ?,
+                                        reconciliation_notes = 'Provider reported failure but charge not confirmed reversed.'
+                                    WHERE id = ?
+                                ");
+                                $upd->execute([$statusResult['error_message'] ?? 'Provider failed request', $tx['id']]);
+                                $tx['gv_status'] = 'reconciliation_required';
+                            }
                         }
                     }
+                } else {
+                    // Still processing
+                    $this->db->prepare("UPDATE api_transactions SET provider_status = 'processing' WHERE id = ?")
+                             ->execute([$tx['id']]);
+                    $tx['gv_status'] = 'processing';
                 }
+            } else {
+                $providerError = $statusResult['error_message'] ?? 'Could not retrieve status from registry gateway at this time.';
+                error_log("[ApiRequestController] {$activeProvider} status check note: " . $providerError);
             }
         } catch (\Throwable $e) {
             error_log('[ApiRequestController] Live checkStatus error: ' . $e->getMessage());
         }
 
         $statusLabel = match($tx['gv_status']) {
-            'completed'               => 'Your request has been completed! You can now download your result.',
-            'processing'              => 'Your request is still being processed by the provider. Please check back soon.',
-            'failed'                  => 'Your request was not successful. Please contact support.',
-            'refunded'                => 'Your request failed and your wallet has been refunded.',
-            'reconciliation_required' => 'Your request requires admin review. Please contact support.',
+            'completed'               => 'Your request has been completed! You can now view and download your result.',
+            'processing'              => 'Your request is being processed on the identity registry. Please check back soon.',
+            'failed'                  => !empty($tx['error_message']) ? $tx['error_message'] : 'Your request was not successful. The applicable refund has been credited to your wallet.',
+            'refunded'                => 'Your request was not successful and your wallet has been refunded.',
+            'reconciliation_required' => 'Your request is currently being verified by support. Please check back shortly.',
             default                   => 'Current status: ' . $tx['gv_status'],
         };
 

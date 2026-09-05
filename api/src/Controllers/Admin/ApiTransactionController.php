@@ -27,6 +27,8 @@ namespace Controllers\Admin;
 use Helpers\Response;
 use Services\AuditService;
 use Services\WalletService;
+use Services\TechHubService;
+use Services\S8VService;
 use PDO;
 use Exception;
 
@@ -35,6 +37,8 @@ class ApiTransactionController
     private PDO $db;
     private AuditService $auditService;
     private WalletService $walletService;
+    private TechHubService $techHubService;
+    private S8VService $s8vService;
     private int $adminId;
 
     private const PAGE_SIZE = 25;
@@ -44,10 +48,12 @@ class ApiTransactionController
 
     public function __construct()
     {
-        $this->db           = db();
-        $this->auditService = new AuditService($this->db);
-        $this->walletService = new WalletService($this->db);
-        $this->adminId      = (int)($_SERVER['ADMIN_ID'] ?? 1);
+        $this->db             = db();
+        $this->auditService   = new AuditService($this->db);
+        $this->walletService  = new WalletService($this->db);
+        $this->techHubService = new TechHubService();
+        $this->s8vService     = new S8VService();
+        $this->adminId        = (int)($_SERVER['ADMIN_ID'] ?? 1);
     }
 
     // ── Endpoints ─────────────────────────────────────────────────────────────
@@ -600,7 +606,9 @@ class ApiTransactionController
                 }
             }
 
-            $techHubService = new \Services\TechHubService();
+            $activeProvider = !empty($tx['provider']) ? strtolower(trim($tx['provider'])) : (!empty($tx['provider_name']) ? strtolower(trim($tx['provider_name'])) : 'techhub');
+            $providerLabel  = ($activeProvider === 's8v') ? 'S8V.ng' : 'TechHub';
+
             $ticketId = !empty($tx['provider_ticket_id']) ? trim($tx['provider_ticket_id']) : null;
 
             // If no ticket_id, attempt to extract tracking ID from input_summary
@@ -611,19 +619,23 @@ class ApiTransactionController
             }
 
             if (!$ticketId) {
-                Response::error('Cannot sync: No provider ticket or tracking reference associated with this transaction. You can attach a Ticket ID in Details.', [], 422);
+                Response::error("Cannot sync: No {$providerLabel} ticket or tracking reference associated with this transaction. You can attach a Ticket ID in Details.", [], 422);
                 return;
             }
 
             $serviceSlug = $tx['service_slug'] ?? 'ipe-clearance-single';
             $variantKey  = $tx['variant_key'] ?? null;
 
-            $statusResult = $techHubService->checkAsyncStatus($serviceSlug, $variantKey, $ticketId);
+            if ($activeProvider === 's8v') {
+                $statusResult = $this->s8vService->checkAsyncStatus($serviceSlug, $variantKey, $ticketId, $tx['input_summary'] ?? null);
+            } else {
+                $statusResult = $this->techHubService->checkAsyncStatus($serviceSlug, $variantKey, $ticketId);
+            }
 
             if (!$statusResult['success']) {
                 $rawErrMsg = $statusResult['error_message'] ?? 'Unknown provider error';
                 
-                // Gracefully handle "Ticket not found" on TechHub
+                // Gracefully handle "Ticket not found" on provider system
                 if (stripos($rawErrMsg, 'ticket') !== false && (stripos($rawErrMsg, 'not found') !== false || stripos($rawErrMsg, 'invalid') !== false)) {
                     $this->db->prepare("
                         UPDATE api_transactions
@@ -634,7 +646,7 @@ class ApiTransactionController
                             synced_by = ?
                         WHERE id = ?
                     ")->execute([
-                        'TechHub query: Ticket ' . $ticketId . ' not found on provider system. Flagged for admin reconciliation.',
+                        "{$providerLabel} query: Ticket " . $ticketId . ' not found on provider system. Flagged for admin reconciliation.',
                         'admin_' . $this->adminId,
                         $tx['id']
                     ]);
@@ -645,12 +657,12 @@ class ApiTransactionController
                         'gv_status'        => 'reconciliation_required',
                         'synced_at'        => date('Y-m-d H:i:s'),
                         'ticket_not_found' => true,
-                        'message'          => "TechHub reported: Ticket '{$ticketId}' not found on provider system. Flagged for Admin reconciliation.",
+                        'message'          => "{$providerLabel} reported: Ticket '{$ticketId}' not found on provider system. Flagged for Admin reconciliation.",
                     ]);
                     return;
                 }
 
-                Response::error('Provider sync query failed: ' . $rawErrMsg, [
+                Response::error("{$providerLabel} sync query failed: " . $rawErrMsg, [
                     'provider_response' => $statusResult
                 ], 502);
                 return;
@@ -659,6 +671,7 @@ class ApiTransactionController
             $pStatus = strtolower($statusResult['provider_status'] ?? 'pending');
             $newGvStatus = $tx['gv_status'];
             $resultData = $tx['result_data'] ?? null;
+            $syncMessage = "Synced with {$providerLabel} successfully. Status is now '{$newGvStatus}'.";
 
             if ($pStatus === 'success' || !empty($statusResult['result_data']['pdf_base64']) || !empty($statusResult['result_data']['slip'])) {
                 $newGvStatus = 'completed';
@@ -674,28 +687,88 @@ class ApiTransactionController
                         completed_at = COALESCE(completed_at, NOW())
                     WHERE id = ?
                 ")->execute([$resultData, 'admin_' . $this->adminId, $tx['id']]);
+                $syncMessage = "Synced with {$providerLabel} successfully. Status is now 'completed'.";
 
             } elseif ($pStatus === 'failed') {
-                $isReversed = !empty($statusResult['is_reversed']) || !empty($statusResult['result_data']['reversed']);
-                $newGvStatus = $isReversed ? 'refunded' : 'reconciliation_required';
-                $finStatus   = $isReversed ? 'reversed' : 'charged';
+                if ($activeProvider === 's8v') {
+                    $pricePaid  = (float)($tx['price_paid'] ?? 0.00);
+                    $penaltyFee = (float)($tx['failure_penalty_fee'] ?? 100.00);
+                    if ($penaltyFee <= 0 && $serviceSlug === 'nin-personalization') {
+                        $penaltyFee = 100.00;
+                    }
+                    $refundAmount = max(0.00, $pricePaid - $penaltyFee);
 
-                $this->db->prepare("
-                    UPDATE api_transactions
-                    SET gv_status = ?,
-                        provider_status = 'failed',
-                        provider_financial_status = ?,
-                        synced_at = NOW(),
-                        synced_by = ?,
-                        reconciliation_notes = ?
-                    WHERE id = ?
-                ")->execute([
-                    $newGvStatus,
-                    $finStatus,
-                    'admin_' . $this->adminId,
-                    'Provider sync reported failure (' . ($statusResult['error_message'] ?? 'Provider failed') . '). Charge status: ' . $finStatus,
-                    $tx['id']
-                ]);
+                    if (empty($tx['refund_issued']) && $refundAmount > 0) {
+                        $serviceName = $tx['service_name'] ?? 'Verification';
+                        $penaltyText = $penaltyFee > 0 ? " (₦" . number_format($refundAmount, 2) . " refunded, ₦" . number_format($penaltyFee, 2) . " processing fee applied)" : "";
+                        $desc = "Refund: {$serviceName}{$penaltyText} — Ref: {$tx['gv_reference']}";
+                        $this->walletService->creditAtomically(
+                            (int)$tx['user_id'],
+                            $refundAmount,
+                            $desc,
+                            null
+                        );
+                    }
+
+                    $txCols = $this->db->query("SHOW COLUMNS FROM api_transactions")->fetchAll(PDO::FETCH_COLUMN);
+                    $hasPenaltyCol = in_array('penalty_deducted', $txCols, true);
+                    $hasRefundCol  = in_array('refund_amount', $txCols, true);
+
+                    $updateSets = [
+                        "gv_status                  = 'failed'",
+                        "provider_status           = 'failed'",
+                        "provider_financial_status = 'charged'",
+                        "refund_issued             = 1",
+                        "synced_at                 = NOW()",
+                        "synced_by                 = ?",
+                        "completed_at              = COALESCE(completed_at, NOW())",
+                        "reconciliation_notes      = ?"
+                    ];
+                    $params = ['admin_' . $this->adminId];
+
+                    if ($hasPenaltyCol) {
+                        $updateSets[] = "penalty_deducted = ?";
+                        $params[] = $penaltyFee;
+                    }
+                    if ($hasRefundCol) {
+                        $updateSets[] = "refund_amount = ?";
+                        $params[] = $refundAmount;
+                    }
+
+                    $reconcileNote = "S8V sync reported failure (" . ($statusResult['error_message'] ?? 'Failed') . "). Retained ₦" . number_format($penaltyFee, 2) . " processing fee, refunded ₦" . number_format($refundAmount, 2) . " to wallet.";
+                    $params[] = $reconcileNote;
+
+                    $params[] = $tx['id'];
+
+                    $sql = "UPDATE api_transactions SET " . implode(", ", $updateSets) . " WHERE id = ?";
+                    $this->db->prepare($sql)->execute($params);
+
+                    $newGvStatus = 'failed';
+                    $syncMessage = "Synced with S8V.ng successfully. Status is 'failed' (" . ($statusResult['error_message'] ?? 'Identity not found') . "). ₦" . number_format($penaltyFee, 2) . " processing fee retained, ₦" . number_format($refundAmount, 2) . " refunded to user wallet.";
+
+                } else {
+                    $isReversed = !empty($statusResult['is_reversed']) || !empty($statusResult['result_data']['reversed']);
+                    $newGvStatus = $isReversed ? 'refunded' : 'reconciliation_required';
+                    $finStatus   = $isReversed ? 'reversed' : 'charged';
+
+                    $this->db->prepare("
+                        UPDATE api_transactions
+                        SET gv_status = ?,
+                            provider_status = 'failed',
+                            provider_financial_status = ?,
+                            synced_at = NOW(),
+                            synced_by = ?,
+                            reconciliation_notes = ?
+                        WHERE id = ?
+                    ")->execute([
+                        $newGvStatus,
+                        $finStatus,
+                        'admin_' . $this->adminId,
+                        'TechHub sync reported failure (' . ($statusResult['error_message'] ?? 'Provider failed') . '). Charge status: ' . $finStatus,
+                        $tx['id']
+                    ]);
+                    $syncMessage = "Synced with TechHub successfully. Status is now '{$newGvStatus}'.";
+                }
 
             } else {
                 // Still pending / processing
@@ -706,6 +779,7 @@ class ApiTransactionController
                         synced_by = ?
                     WHERE id = ?
                 ")->execute(['admin_' . $this->adminId, $tx['id']]);
+                $syncMessage = "Synced with {$providerLabel} successfully. Ticket is still being processed on registry.";
             }
 
             $this->auditService->log(
@@ -715,7 +789,7 @@ class ApiTransactionController
                 $this->adminId,
                 ['old_status' => $tx['gv_status']],
                 ['new_status' => $newGvStatus, 'provider_status' => $pStatus],
-                "Live provider sync for {$ref}: provider_status={$pStatus}"
+                "Live {$providerLabel} sync for {$ref}: provider_status={$pStatus}"
             );
 
             Response::success([
@@ -724,7 +798,7 @@ class ApiTransactionController
                 'gv_status'        => $newGvStatus,
                 'synced_at'        => date('Y-m-d H:i:s'),
                 'provider_data'    => $statusResult['result_data'] ?? [],
-                'message'          => "Synced with TechHub successfully. Status is now '{$newGvStatus}'.",
+                'message'          => $syncMessage,
             ]);
 
         } catch (Exception $e) {
@@ -890,11 +964,18 @@ class ApiTransactionController
 
     private function findByRef(string $ref): ?array
     {
+        \Helpers\SchemaHelper::ensureProviderColumns($this->db);
+        $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
+        $penaltyCol  = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : "0.00 AS failure_penalty_fee";
+        $providerCol = in_array('provider_name', $cols, true) ? 's.provider_name' : "'techhub' AS provider_name";
+
         $stmt = $this->db->prepare("
             SELECT
                 at.*,
                 s.name   AS service_name,
                 s.slug   AS service_slug,
+                {$penaltyCol},
+                {$providerCol},
                 sp.price AS price_paid,
                 u.business_name AS user_name,
                 u.email         AS user_email

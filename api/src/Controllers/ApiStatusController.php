@@ -228,7 +228,7 @@ class ApiStatusController
             $this->db->prepare("UPDATE api_transactions SET last_checked_at = NOW() WHERE id = ?")
                      ->execute([$tx['id']]);
 
-            $providerName = strtolower(trim($tx['provider'] ?? 'techhub'));
+            $providerName = !empty($tx['provider']) ? strtolower(trim($tx['provider'])) : (!empty($tx['provider_name']) ? strtolower(trim($tx['provider_name'])) : 'techhub');
 
             // Call appropriate provider
             if ($providerName === 's8v') {
@@ -336,7 +336,8 @@ class ApiStatusController
     {
         \Helpers\SchemaHelper::ensureProviderColumns($this->db);
         $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
-        $penaltyCol = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : '0.00 AS failure_penalty_fee';
+        $penaltyCol  = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : '0.00 AS failure_penalty_fee';
+        $providerCol = in_array('provider_name', $cols, true) ? 's.provider_name' : "'techhub' AS provider_name";
 
         $stmt = $this->db->prepare("
             SELECT
@@ -344,6 +345,7 @@ class ApiStatusController
                 s.name AS service_name,
                 s.slug AS service_slug,
                 {$penaltyCol},
+                {$providerCol},
                 sp.price AS price_paid
             FROM api_transactions at
             JOIN services s  ON s.id  = at.service_id
@@ -363,7 +365,8 @@ class ApiStatusController
     {
         \Helpers\SchemaHelper::ensureProviderColumns($this->db);
         $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
-        $penaltyCol = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : '0.00 AS failure_penalty_fee';
+        $penaltyCol  = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : '0.00 AS failure_penalty_fee';
+        $providerCol = in_array('provider_name', $cols, true) ? 's.provider_name' : "'techhub' AS provider_name";
 
         $stmt = $this->db->prepare("
             SELECT
@@ -371,6 +374,7 @@ class ApiStatusController
                 s.name AS service_name,
                 s.slug AS service_slug,
                 {$penaltyCol},
+                {$providerCol},
                 sp.price AS price_paid
             FROM api_transactions at
             JOIN services s  ON s.id  = at.service_id
