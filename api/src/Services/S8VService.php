@@ -289,7 +289,25 @@ class S8VService implements VerificationProviderInterface
 
     private function checkClearanceStatus(string $ticketId, ?string $trackingId = null): array
     {
-        $res = $this->client->post('clearance/status', ['tracking_id' => $trackingId ?: $ticketId]);
+        $cleanTracking = null;
+        if (!empty($trackingId)) {
+            if (preg_match('/tracking[:=]\s*([a-zA-Z0-9]+)/i', $trackingId, $m)) {
+                $cleanTracking = strtoupper($m[1]);
+            } else {
+                $cleanTracking = strtoupper(trim(preg_replace('/[^A-Za-z0-9]/', '', (string)$trackingId)));
+            }
+        }
+
+        $payload = [];
+        if (!empty($cleanTracking) && $cleanTracking !== 'IPE') {
+            $payload['tracking_id'] = $cleanTracking;
+        } elseif (!empty($ticketId) && is_numeric($ticketId)) {
+            $payload['id'] = (int)$ticketId;
+        } else {
+            $payload['tracking_id'] = strtoupper(trim($ticketId));
+        }
+
+        $res = $this->client->post('clearance/status', $payload);
         if (!$res['success']) {
             return [
                 'success'         => false,

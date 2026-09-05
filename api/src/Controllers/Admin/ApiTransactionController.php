@@ -673,13 +673,18 @@ class ApiTransactionController
             $resultData = $tx['result_data'] ?? null;
             $syncMessage = "Synced with {$providerLabel} successfully. Status is now '{$newGvStatus}'.";
 
-            if ($pStatus === 'success' || !empty($statusResult['result_data']['pdf_base64']) || !empty($statusResult['result_data']['slip'])) {
+            $isSuccess = in_array($pStatus, ['success', 'completed', 'successful'], true) ||
+                         (!empty($statusResult['is_complete']) && empty($statusResult['is_failed'])) ||
+                         !empty($statusResult['result_data']['pdf_base64']) ||
+                         !empty($statusResult['result_data']['slip']);
+
+            if ($isSuccess) {
                 $newGvStatus = 'completed';
                 $resultData  = json_encode($statusResult['result_data'] ?? []);
                 $this->db->prepare("
                     UPDATE api_transactions
                     SET gv_status = 'completed',
-                        provider_status = 'success',
+                        provider_status = 'completed',
                         provider_financial_status = 'charged',
                         result_data = ?,
                         synced_at = NOW(),
@@ -787,15 +792,20 @@ class ApiTransactionController
                 }
 
             } else {
-                // Still pending / processing
-                $this->db->prepare("
-                    UPDATE api_transactions
-                    SET provider_status = 'processing',
-                        synced_at = NOW(),
-                        synced_by = ?
-                    WHERE id = ?
-                ")->execute(['admin_' . $this->adminId, $tx['id']]);
-                $syncMessage = "Synced with {$providerLabel} successfully. Ticket is still being processed on registry.";
+                if ($tx['gv_status'] === 'completed') {
+                    $newGvStatus = 'completed';
+                    $syncMessage = "Synced with {$providerLabel} successfully. Transaction is completed.";
+                } else {
+                    // Still pending / processing
+                    $this->db->prepare("
+                        UPDATE api_transactions
+                        SET provider_status = 'processing',
+                            synced_at = NOW(),
+                            synced_by = ?
+                        WHERE id = ?
+                    ")->execute(['admin_' . $this->adminId, $tx['id']]);
+                    $syncMessage = "Synced with {$providerLabel} successfully. Ticket is still being processed on registry.";
+                }
             }
 
             $this->auditService->log(

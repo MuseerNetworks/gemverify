@@ -1355,7 +1355,7 @@ function viewAtxnDetail(ref) {
       + '<div><strong>Result Type</strong><br>' + (tx.result_type||'\u2014') + '</div>'
       + '<div><strong>Provider</strong><br>' + (tx.provider||'techhub') + '</div>'
       + '<div><strong>Provider Status</strong><br>' + (tx.provider_status||'\u2014') + '</div>'
-      + '<div><strong>Ticket ID</strong><br><div style="display:flex;gap:4px;align-items:center;margin-top:2px"><code style="font-size:11px">' + (tx.provider_ticket_id||'\u2014') + '</code><button onclick="promptEditTicket(\'' + tx.gv_reference + '\',\'' + (tx.provider_ticket_id||'').replace(/'/g,"\\'") + '\')" style="padding:1px 6px;font-size:10px;border-radius:4px;border:1px solid var(--border);cursor:pointer;background:none">✏️ Edit</button></div></div>'
+      + '<div><strong>Ticket ID</strong><br><div style="display:flex;gap:4px;align-items:center;margin-top:2px"><code style="font-size:11px">' + (tx.provider_ticket_id||'\u2014') + '</code><button onclick="promptEditTicket(\'' + tx.gv_reference + '\',\'' + (tx.provider_ticket_id||'').replace(/'/g,"\\'") + '\')" style="padding:1px 6px;font-size:10px;border-radius:4px;border:1px solid var(--border);cursor:pointer;background:none">✏️ Edit</button><button onclick="syncAtxnWithProvider(\'' + tx.gv_reference + '\'); setTimeout(function(){ viewAtxnDetail(\'' + tx.gv_reference + '\'); }, 600);" style="padding:1px 6px;font-size:10px;border-radius:4px;border:1px solid var(--blue);color:var(--blue);cursor:pointer;background:none">🔄 Sync</button></div></div>'
       + '<div><strong>Provider TxnID</strong><br><code style="font-size:11px">' + (tx.provider_txn_id||'\u2014') + '</code></div>'
       + '<div><strong>Submitted</strong><br>' + (tx.submitted_at||'\u2014') + '</div>'
       + '<div><strong>Completed</strong><br>' + (tx.completed_at||'\u2014') + '</div>'
@@ -1460,12 +1460,12 @@ function openAtxnReconcileModal(ref, currentStatus) {
 function syncAtxnWithProvider(ref) {
   var token = localStorage.getItem('gv_admin_token');
   if (!token) return;
-  if (typeof gvShowToast === 'function') gvShowToast('Syncing with TechHub live...', 'info');
+  if (typeof gvShowToast === 'function') gvShowToast('Syncing with provider live...', 'info');
   gvAdminFetch('../api/admin/api-transactions/' + ref + '/sync', { method: 'POST' })
     .then(function(r){ return r.json(); })
     .then(function(json){
       if (json.success) {
-        var msg = (json.data && json.data.message) || json.message || 'Synced with TechHub successfully.';
+        var msg = (json.data && json.data.message) || json.message || 'Synced with provider successfully.';
         if (typeof gvShowToast === 'function') gvShowToast('✓ ' + msg, 'success');
         else alert('✓ ' + msg);
         fetchApiTransactions(atxnCurrentPage);
