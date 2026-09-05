@@ -2046,7 +2046,7 @@ function Eu(){let[e,A]=I.useState(!0),[n,l]=I.useState(()=>localStorage.getItem(
       }
     }
   }, [o, loggedIn]);
-let K=(F,L,j)=>{setPayError("");E({open:!0,service:F,amount:L,meta:j})};/* gv-auth-removed */;let doSubmitPayment = async () => {
+let K=(F,L,j)=>{setPayError("");E({open:!0,service:F,amount:L,meta:j})};window.__gvOpenPaymentModal=K;/* gv-auth-removed */;let doSubmitPayment = async () => {
     let token = localStorage.getItem("gv_token");
     if (!token) {
       setPayError("Session expired. Please sign in again.");
@@ -2468,7 +2468,9 @@ function ServiceHistoryTable({ serviceSlug, requests = [], loading = false, erro
                       if (json.success) {
                         let status = (json.data?.status || "processing").toLowerCase();
                         if (status === "completed") {
-                          try { window.gvShowResultModal(json.data?.tx, r); } catch(me) { alert("Result ready! Ref: " + r.reference); }
+                          try { window.gvShowResultModal(json.data?.tx || r, r); } catch(me) { alert("Result ready! Ref: " + r.reference); }
+                        } else if (status === "failed" || status === "rejected" || status === "refunded") {
+                          try { window.gvShowResultModal(json.data?.tx || r, r); } catch(me) { alert("Status: " + status.toUpperCase()); }
                         } else {
                           let msg = json.message || ("Status: " + status.toUpperCase());
                           try { window.gvShowToast(msg, "info"); } catch(_) { alert(msg); }
@@ -2492,22 +2494,40 @@ function ServiceHistoryTable({ serviceSlug, requests = [], loading = false, erro
                 let actionBtn = isApiCheckable
                   ? checkStatusBtn
                   : isCompleted
-                    ? i("button", {
-                        disabled: downloadingRef === r.reference,
-                        onClick: async () => {
-                          if (downloadingRef === r.reference) return;
-                          setDownloadingRef(r.reference);
-                          try {
-                            await window.gvDownloadResult(r.reference);
-                          } finally {
-                            setTimeout(() => setDownloadingRef(null), 1500);
-                          }
-                        },
-                        className: "px-3 py-1.5 bg-[#0050FF] text-white text-[11px] font-semibold rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-1.5" + (downloadingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
-                        children: downloadingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Downloading..."] : "Download Result"
+                    ? u("div", {
+                        className: "flex items-center gap-1.5",
+                        children: [
+                          i("button", {
+                            onClick: () => {
+                              try { window.gvShowResultModal(r.tx || r, r); } catch(_) {}
+                            },
+                            className: "px-2.5 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 text-[11px] font-semibold rounded-lg transition border border-emerald-500/20 cursor-pointer flex items-center gap-1",
+                            children: "View Result 📄"
+                          }),
+                          i("button", {
+                            disabled: downloadingRef === r.reference,
+                            onClick: async () => {
+                              if (downloadingRef === r.reference) return; 
+                              setDownloadingRef(r.reference);
+                              try {
+                                await window.gvDownloadResult(r.reference);
+                              } finally {
+                                setTimeout(() => setDownloadingRef(null), 1500);
+                              }
+                            },
+                            className: "px-2.5 py-1.5 bg-[#0050FF] text-white text-[11px] font-semibold rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-1" + (downloadingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
+                            children: downloadingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " ..."] : "Download"
+                          })
+                        ]
                       })
                     : isFailedOrRefunded
-                      ? i("span", { className: "opacity-40 text-[11px]", children: "—" })
+                      ? i("button", {
+                          onClick: () => {
+                            try { window.gvShowResultModal(r.tx || r, r); } catch(_) {}
+                          },
+                          className: "px-3 py-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 text-[11px] font-semibold rounded-lg transition border border-rose-500/20 cursor-pointer flex items-center gap-1",
+                          children: "View Report ❌"
+                        })
                       : i("span", { className: "opacity-50 text-[11px]", children: "In Progress" });
 
                 let dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString("en-NG", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "—";
@@ -2565,7 +2585,9 @@ function ServiceHistoryTable({ serviceSlug, requests = [], loading = false, erro
                 if (json.success) {
                   let status = (json.data?.status || "processing").toLowerCase();
                   if (status === "completed") {
-                    try { window.gvShowResultModal(json.data?.tx, r); } catch(me) { alert("Result ready! Ref: " + r.reference); }
+                    try { window.gvShowResultModal(json.data?.tx || r, r); } catch(me) { alert("Result ready! Ref: " + r.reference); }
+                  } else if (status === "failed" || status === "rejected" || status === "refunded") {
+                    try { window.gvShowResultModal(json.data?.tx || r, r); } catch(me) { alert("Status: " + status.toUpperCase()); }
                   } else {
                     let msg = json.message || ("Status: " + status.toUpperCase());
                     try { window.gvShowToast(msg, "info"); } catch(_) { alert(msg); }
@@ -2589,22 +2611,40 @@ function ServiceHistoryTable({ serviceSlug, requests = [], loading = false, erro
           let actionBtn = isApiCheckable
             ? checkStatusBtnMob
             : isCompleted
-              ? i("button", {
-                  disabled: downloadingRef === r.reference,
-                  onClick: async () => {
-                    if (downloadingRef === r.reference) return;
-                    setDownloadingRef(r.reference);
-                    try {
-                      await window.gvDownloadResult(r.reference);
-                    } finally {
-                      setTimeout(() => setDownloadingRef(null), 1500);
-                    }
-                  },
-                  className: "px-3 py-1.5 bg-[#0050FF] text-white text-[11px] font-semibold rounded-lg hover:bg-blue-700 transition w-full text-center flex items-center justify-center gap-1.5" + (downloadingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
-                  children: downloadingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " Downloading..."] : "Download Result"
+              ? u("div", {
+                  className: "flex gap-2 w-full",
+                  children: [
+                    i("button", {
+                      onClick: () => {
+                        try { window.gvShowResultModal(r.tx || r, r); } catch(_) {}
+                      },
+                      className: "flex-1 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 text-[11px] font-semibold rounded-lg transition border border-emerald-500/20 text-center flex items-center justify-center gap-1",
+                      children: "View Result 📄"
+                    }),
+                    i("button", {
+                      disabled: downloadingRef === r.reference,
+                      onClick: async () => {
+                        if (downloadingRef === r.reference) return;
+                        setDownloadingRef(r.reference);
+                        try {
+                          await window.gvDownloadResult(r.reference);
+                        } finally {
+                          setTimeout(() => setDownloadingRef(null), 1500);
+                        }
+                      },
+                      className: "flex-1 py-1.5 bg-[#0050FF] text-white text-[11px] font-semibold rounded-lg hover:bg-blue-700 transition text-center flex items-center justify-center gap-1" + (downloadingRef === r.reference ? " opacity-80 cursor-not-allowed" : ""),
+                      children: downloadingRef === r.reference ? [i("span", { className: "gv-btn-spinner gv-btn-spinner-sm" }), " ..."] : "Download"
+                    })
+                  ]
                 })
               : isFailedOrRefunded
-                ? null
+                ? i("button", {
+                    onClick: () => {
+                      try { window.gvShowResultModal(r.tx || r, r); } catch(_) {}
+                    },
+                    className: "w-full py-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 text-[11px] font-semibold rounded-lg transition border border-rose-500/20 text-center flex items-center justify-center gap-1",
+                    children: "View Report ❌"
+                  })
                 : i("span", { className: "opacity-50 text-[11px]", children: "In Progress" });
 
           let dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString("en-NG", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "—";
@@ -3051,7 +3091,7 @@ function $g({onProceed:e,dbPricing:pricingMap}){
   let unitPrice = window.getServicePrice("nin-enrollment", null);
   let isConfigured = unitPrice > 0; let [enrollPin, setEnrollPin] = I.useState("");
   let [A,n]=I.useState("adult"),[l,o]=I.useState({surname:"",first:"",middle:"",dob:"",gender:"",phone:"",state:"",lga:"",town:"",address:"",originState:"",originLga:"",originTown:"",guarantorSurname:"",guarantorFirst:"",guarantorNin:""}),[t,r]=I.useState(null),[photoFile,setPhotoFile]=I.useState(null),Q=I.useRef(null),c=(q)=>{let U=q.target.files?.[0];if(!U)return;if(U.size>2097152){alert("Max 2MB");return}let C=URL.createObjectURL(U);r(C);setPhotoFile(U);};return u("div",{children:[i(v,{breadcrumb:["NIN Services","Enrollment"],title:"NIN Enrollment",est:window.getServiceEst("nin-enrollment","1-7 days"),price:isConfigured?unitPrice:0}),i("div",{className:"flex gap-2 mb-5",children:["adult","child"].map((q)=>i("button",{onClick:()=>n(q),className:`h-9 px-4 rounded-xl text-sm font-medium border capitalize ${A===q?"bg-[#0050FF]/10 dark:bg-[#0050FF]/20 text-[#0050FF] dark:text-white border-[#0050FF] font-semibold shadow-sm":"bg-white dark:bg-white/5 border-slate-200 dark:border-white/10"}`,children:q},q))}),u("div",{className:"grid lg:grid-cols-1 gap-6",children:[u("div",{className:"space-y-5 max-w-[820px]",children:[u(D,{className:"p-5",children:[i("div",{className:"font-semibold text-sm",children:"Personal Information"}),u("div",{className:"mt-4 grid md:grid-cols-2 gap-4",children:[u("div",{children:[i(h,{req:!0,children:"Surname"}),i(y,{value:l.surname,onChange:(q)=>o({...l,surname:q}),placeholder:"Enter surname"})]}),u("div",{children:[i(h,{req:!0,children:"First Name"}),i(y,{value:l.first,onChange:(q)=>o({...l,first:q}),placeholder:"Enter first name"})]}),u("div",{children:[i(h,{children:"Middle Name"}),i(y,{value:l.middle,onChange:(q)=>o({...l,middle:q}),placeholder:"Enter middle name"})]}),u("div",{children:[i(h,{req:!0,children:"Date of Birth"}),i(y,{type:"date",value:l.dob,onChange:(q)=>o({...l,dob:q})})]}),u("div",{children:[i(h,{req:!0,children:"Gender"}),i(H,{value:l.gender,onChange:(q)=>o({...l,gender:q}),options:an,placeholder:"Select gender"})]}),u("div",{children:[i(h,{req:!0,children:"Phone"}),i(y,{value:l.phone,onChange:(q)=>o({...l,phone:q}),placeholder:"080..."})]})]})]}),u(D,{className:"p-5",children:[i("div",{className:"font-semibold text-sm",children:"Residential Information"}),u("div",{className:"mt-4 grid md:grid-cols-2 gap-4",children:[u("div",{children:[i(h,{req:!0,children:"State"}),i(H,{value:l.state,onChange:(q)=>o({...l,state:q}),options:ne,placeholder:"Select state"})]}),u("div",{children:[i(h,{req:!0,children:"LGA"}),i(LgaSelect,{state:l.state,value:l.lga,onChange:(q)=>o({...l,lga:q})})]}),u("div",{children:[i(h,{req:!0,children:"Town"}),i(y,{value:l.town,onChange:(q)=>o({...l,town:q}),placeholder:"Enter town"})]}),u("div",{className:"md:col-span-2",children:[i(h,{req:!0,children:"Address"}),i(fe,{value:l.address,onChange:(q)=>o({...l,address:q}),placeholder:"Full residential address"})]})]})]}),u(D,{className:"p-5",children:[i("div",{className:"font-semibold text-sm",children:"Origin Information"}),u("div",{className:"mt-4 grid md:grid-cols-3 gap-4",children:[u("div",{children:[i(h,{req:!0,children:"State of Origin"}),i(H,{value:l.originState,onChange:(q)=>o({...l,originState:q}),options:ne,placeholder:"Select"})]}),u("div",{children:[i(h,{req:!0,children:"LGA of Origin"}),i(LgaSelect,{state:l.originState,value:l.originLga,onChange:(q)=>o({...l,originLga:q})})]}),u("div",{children:[i(h,{req:!0,children:"Town of Origin"}),i(y,{value:l.originTown,onChange:(q)=>o({...l,originTown:q}),placeholder:"Town"})]})]}),A==="child"&&u("div",{className:"mt-5 pt-5 border-t border-slate-200 dark:border-white/10",children:[i("div",{className:"font-semibold text-sm",children:"Guarantor Information (Child)"}),u("div",{className:"mt-4 grid md:grid-cols-3 gap-4",children:[u("div",{children:[i(h,{req:!0,children:"Guarantor Surname"}),i(y,{value:l.guarantorSurname,onChange:(q)=>o({...l,guarantorSurname:q}),placeholder:"Surname"})]}),u("div",{children:[i(h,{req:!0,children:"Guarantor First Name"}),i(y,{value:l.guarantorFirst,onChange:(q)=>o({...l,guarantorFirst:q}),placeholder:"First name"})]}),u("div",{children:[i(h,{req:!0,children:"Guarantor NIN"}),i(y,{value:l.guarantorNin,onChange:(q)=>o({...l,guarantorNin:q}),placeholder:"11-digit NIN"})]})]})]})]}),u(D,{className:"p-5",children:[i("div",{className:"font-semibold text-sm",children:"Applicant Photo"}),u("div",{className:"mt-4 flex gap-4 items-start",children:[i("div",{className:"w-[120px] h-[120px] rounded-2xl border border-dashed border-slate-300 grid place-items-center overflow-hidden bg-slate-50 dark:bg-white/5",children:t?i("img",{src:t,className:"w-full h-full object-cover"}):i("span",{className:"text-xs opacity-50",children:"No photo"})}),u("div",{className:"flex-1",children:[i("div",{className:"text-xs opacity-60",children:"JPG, PNG Max 2MB, clear face, white background"}),u("div",{className:"mt-3 flex gap-2",children:[i("button",{onClick:()=>Q.current?.click(),className:"h-9 px-4 rounded-xl bg-[#0A1931] dark:bg-white dark:text-black text-white text-sm",children:"Upload"}),t&&i("button",{onClick:()=>{r(null);setPhotoFile(null);},className:"h-9 px-4 rounded-xl border text-sm",children:"Remove"})]}),i("input",{ref:Q,type:"file",accept:".jpg,.jpeg,.png",hidden:!0,onChange:c})]})]}),u("div",{className:"mt-4",children:[i(h,{req:!0,children:"Transaction PIN"}),i(y,{type:"password",maxLength:4,value:enrollPin,onChange:setEnrollPin,placeholder:"4-digit PIN"})]}),i("button",{disabled:!isConfigured||!enrollPin||enrollPin.length!==4,onClick:()=>e("NIN Enrollment",unitPrice,{slug:"nin-enrollment",type:A,pin:enrollPin,photo:photoFile,...l}),className:"mt-6 w-full h-12 rounded-xl bg-[#0050FF] text-white font-medium"+((!isConfigured||!enrollPin||enrollPin.length!==4)?" opacity-50 cursor-not-allowed":""),children:isConfigured?"Submit Enrollment":"Price not configured"})]})]}),null]})]})}function ey({onProceed:e}){let[A,n]=I.useState("nin"),updatedUc=uc.map(x=>({...x,price:window.getServicePrice("nin-verification",x.id)})),[l,o]=I.useState(updatedUc[0]),[t,r]=I.useState(""),[Q,c]=I.useState(""),[q,U]=I.useState(""),[C,E]=I.useState(""),[R,f]=I.useState(""),[a,w]=I.useState("");let currentPrice=updatedUc.find(x=>x.id===l.id)?.price||l.price,isConfigured=currentPrice>0;return u("div",{children:[i(v,{breadcrumb:["NIN Services","Verification"],title:"NIN Verification",est:window.getServiceEst("nin-verification","Instant"),price:isConfigured?currentPrice:0}),u("div",{className:"grid lg:grid-cols-[1fr_340px] gap-6",children:[i("div",{className:"space-y-5",children:u(D,{className:"p-5",children:[i(h,{children:"Verification Method"}),i("div",{className:"mt-2 flex flex-wrap gap-2",children:[{id:"nin",label:"NIN Number"},{id:"phone",label:"Phone Number"},{id:"demographic",label:"Demographic Search"}].map((d)=>i("button",{onClick:()=>n(d.id),className:`h-9 px-4 rounded-xl border text-[13px] font-medium transition ${A===d.id?"bg-[#0050FF] text-white border-[#0050FF]":"bg-white dark:bg-white/5 border-slate-200 dark:border-white/10"}`,children:d.label},d.id))}),u("div",{className:"mt-5",children:[i(h,{children:"Slip Type"}),i("div",{className:"mt-2 flex flex-wrap gap-2",children:updatedUc.map((d)=>u("button",{onClick:()=>o(d),className:`h-10 px-3.5 rounded-xl border text-[12px] font-medium flex items-center gap-2 transition ${l.id===d.id?"bg-[#0050FF]/10 dark:bg-[#0050FF]/20 text-[#0050FF] dark:text-white border-[#0050FF] dark:border-[#0050FF] shadow-sm":"bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-white/10 hover:border-[#0050FF]/40"}`,children:[i("span",{className:`w-3.5 h-3.5 rounded-full border grid place-items-center ${l.id===d.id?"border-[#0050FF] bg-[#0050FF]":"border-slate-300 dark:border-white/30"}`,children:i("span",{className:`w-1.5 h-1.5 rounded-full ${l.id===d.id?"bg-white":"bg-transparent"}`})}),i("span",{className:l.id===d.id?"font-semibold":"" ,children:d.label}),i("span",{className:`ml-1 text-[10px] px-2 py-0.5 rounded-md font-bold ${l.id===d.id?"bg-[#0050FF] text-white shadow-sm":"bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200"}`,children:k(d.price)})]},d.id))})]}),u("div",{className:"mt-6 grid md:grid-cols-2 gap-4",children:[A==="nin"&&u("div",{className:"md:col-span-2",children:[i(h,{req:!0,children:"NIN Number (11 digits)"}),i(y,{value:t,onChange:r,placeholder:"Enter 11-digit NIN"})]}),A==="phone"&&u("div",{className:"md:col-span-2",children:[i(h,{req:!0,children:"Phone Number"}),i(y,{value:Q,onChange:c,placeholder:"080..."})]}),A==="demographic"&&u(Be,{children:[u("div",{children:[i(h,{req:!0,children:"First Name"}),i(y,{value:q,onChange:U,placeholder:"First name"})]}),u("div",{children:[i(h,{req:!0,children:"Last Name"}),i(y,{value:C,onChange:E,placeholder:"Last name"})]}),u("div",{children:[i(h,{req:!0,children:"Date of Birth"}),i(y,{type:"date",value:R,onChange:f})]})]}),u("div",{className:"md:col-span-2",children:[i(h,{req:!0,children:"Transaction PIN"}),i(y,{type:"password",value:a,onChange:w,placeholder:"Enter 4-digit PIN"})]})]}),u("button",{disabled:!isConfigured,onClick:()=>e("NIN Verification",currentPrice,{slug:"nin-verification",variantKey:l.id,pin:a,method:A,nin:t,phone:Q,first:q,last:C,dob:R}),className:"mt-6 w-full h-12 rounded-xl bg-[#0050FF] text-white font-semibold"+(!isConfigured?" opacity-50 cursor-not-allowed pointer-events-none":""),children:isConfigured?["Verify NIN — ",k(currentPrice)]:"Price not configured"})]})}),u("div",{className:"space-y-4",children:[u(D,{className:"p-4",children:[i("div",{className:"text-sm font-semibold",children:"Service Details"}),u("div",{className:"mt-3 text-xs space-y-2",children:[i(He,{label:"Method",value:A}),i(He,{label:"Slip",value:l.label}),i(He,{label:"Fee",value:k(l.price),bold:!0})]})]}),i(D,{className:"p-4",children:i("div",{className:"text-xs opacity-60",children:"Supports NIN, phone & demographic search. Slip delivered instantly as PDF."})})]})]})]})}function Ay({onProceed:e}){let[A,n]=I.useState(""),[l,o]=I.useState("");let price=window.getServicePrice("ipe-modification",null),isConfigured=price>0;return u("div",{children:[i(v,{breadcrumb:["NIN Services","IPE Modification"],title:"IPE Modification",est:window.getServiceEst("ipe-modification","2-5 days"),price:isConfigured?price:0}),i("div",{className:"max-w-[560px]",children:i(D,{className:"p-5",children:u("div",{className:"grid gap-4",children:[u("div",{children:[i(h,{req:!0,children:"Service Cost"}),i("div",{className:"h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center text-sm font-semibold",children:isConfigured?k(price):"Price not configured"})]}),u("div",{children:[i(h,{req:!0,children:"Tracking ID"}),i(y,{value:A,onChange:n,placeholder:"Enter tracking ID"})]}),u("div",{children:[i(h,{req:!0,children:"Transaction PIN"}),i(y,{type:"password",value:l,onChange:o,placeholder:"Enter PIN"})]}),i("button",{disabled:!isConfigured||!A,onClick:()=>e("IPE Modification",price,{slug:"ipe-modification",pin:l,trackingId:A}),className:`h-12 rounded-xl bg-[#0050FF] text-white font-medium ${!isConfigured?"opacity-40 cursor-not-allowed":""}`,children:isConfigured?"Submit":"Price not configured",children:"Submit Request"})]})})})]})}function ny({onProceed:e,dbPricing:pricingMap}){
-  let [A,n]=I.useState("single"),[l,o]=I.useState(""),[t,r]=I.useState(""),[Q,c]=I.useState("");
+  let [A,n]=I.useState("single"),[l,o]=I.useState(()=>window.__gvPreFillIpeTrackingId||""),[t,r]=I.useState(""),[Q,c]=I.useState("");I.useEffect(()=>{if(window.__gvPreFillIpeTrackingId){o(window.__gvPreFillIpeTrackingId);window.__gvPreFillIpeTrackingId="";}},[]);
   let singlePrice = window.getServicePrice("ipe-clearance-single", null);
   let bulkPrice = window.getServicePrice("ipe-clearance", null);
   let unitPrice = A === "single" ? singlePrice : bulkPrice;
@@ -3948,56 +3988,111 @@ async function gvDownloadResult(reference) {
 
   function parseResult(tx, req){
     var slug = (tx && tx.service_slug) || (req && req.service_slug) || '';
+    var status = String((tx && tx.status) || (req && req.status) || '').toLowerCase();
+    var isFailed = (status === 'failed' || status === 'rejected' || status === 'refunded');
+
     var rd = {};
     try { rd = JSON.parse((tx && tx.result_data) ? tx.result_data : '{}'); } catch(e){}
-    var primary = {label:'Status', value:'COMPLETED', mono:false};
+
+    var primary = {label:'Status', value: isFailed ? 'UNSUCCESSFUL' : 'COMPLETED', mono:false};
     var fields  = [];
-    var note    = rd.response || rd.note || null;
+    var note    = (tx && (tx.error_message || tx.message)) || (req && (req.error_message || req.message)) || rd.response || rd.note || '';
+    var photoHtml = '';
 
-    if (slug === 'bvn-retrieval') {
-      primary = {label:'Bank Verification Number', value: rd.bvn || rd.BVN || 'See details below', mono:true};
-      if (rd.first_name || rd.last_name) fields.push({label:'Full Name',     value:[rd.first_name, rd.last_name].filter(Boolean).join(' ')});
-      if (rd.date_of_birth || rd.dob)   fields.push({label:'Date of Birth', value: rd.date_of_birth || rd.dob});
-      if (rd.phone_number  || rd.phone) fields.push({label:'Phone',         value: rd.phone_number  || rd.phone});
-    } else if (slug === 'ipe-clearance-single' || slug === 'ipe-clearance') {
-      if (rd.new_nin) {
-        primary = {label:'New NIN', value: rd.new_nin, mono:true};
-        fields.push({label:'Clearance Status', value:(rd.status || 'CLEARED').toUpperCase()});
-      } else {
-        primary = {label:'Clearance Status', value:(rd.status || 'CLEARED').toUpperCase(), mono:false};
+    // Extract tracking ID safely
+    var trackingId = '';
+    if (req && req.input_summary) {
+      var m = req.input_summary.match(/Tracking:([^\s|]+)/i);
+      if (m) trackingId = m[1].trim();
+    }
+    if (!trackingId && req && req.form_data) {
+      try {
+        var fd = typeof req.form_data === 'string' ? JSON.parse(req.form_data) : req.form_data;
+        if (fd.tracking_id) trackingId = String(fd.tracking_id).trim();
+        else if (fd.trackingId) trackingId = String(fd.trackingId).trim();
+      } catch(e){}
+    }
+    if (!trackingId && tx) {
+      if (tx.tracking_id) trackingId = String(tx.tracking_id).trim();
+      else if (tx.input_summary) {
+        var m2 = tx.input_summary.match(/Tracking:([^\s|]+)/i);
+        if (m2) trackingId = m2[1].trim();
       }
-      if (rd.new_tracking_id) fields.push({label:'New Tracking ID', value: rd.new_tracking_id});
-      if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
-      var m = req && req.input_summary && req.input_summary.match(/Tracking:([^\s|]+)/);
-      if (m) fields.push({label:'Original Tracking ID', value: m[1]});
-    } else if (slug === 'self-service') {
-      primary = {label:'Delinking Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
-      if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
-    } else if (slug === 'personalization') {
-      var citizenData = (rd && rd.data) ? rd.data : (rd || {});
-      var fullName = [citizenData.firstName || citizenData.firstname, citizenData.middleName || citizenData.middlename, citizenData.lastName || citizenData.lastname].filter(Boolean).join(' ');
-      if (fullName) fields.push({label:'Full Name', value: fullName});
-      if (citizenData.idNumber || citizenData.nin) fields.push({label:'National ID (NIN)', value: citizenData.idNumber || citizenData.nin});
-      if (citizenData.dateOfBirth || citizenData.dob) fields.push({label:'Date of Birth', value: citizenData.dateOfBirth || citizenData.dob});
-      if (citizenData.gender) fields.push({label:'Gender', value: citizenData.gender === 'M' ? 'Male' : (citizenData.gender === 'F' ? 'Female' : citizenData.gender)});
-      if (citizenData.tracking_id) fields.push({label:'Tracking ID', value: citizenData.tracking_id});
-      if (citizenData.photo) {
-        photoHtml = '<div style="text-align:center;margin-bottom:14px;"><img src="' + citizenData.photo + '" style="width:84px;height:84px;border-radius:18px;border:2px solid #10b981;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:inline-block;" /></div>';
-      }
-      primary = {label:'Personalization Status', value:(citizenData.status || rd.status || 'COMPLETED').toUpperCase(), mono:false};
-      if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
-
-      primary = {label:'Personalization Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
-      if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
-    } else {
-      primary = {label:'Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
     }
 
-    if (tx && tx.gv_reference) fields.push({label:'Reference',    value: tx.gv_reference});
-    if (tx && tx.completed_at) fields.push({label:'Completed At', value: new Date(tx.completed_at).toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})});
+    // Check for IPE exception keyword
+    var isIpe = isFailed && (/ipe|clearance|internal processing/i.test(note) || /ipe|clearance|internal processing/i.test(String((tx && tx.error_code) || '')));
 
-    var svcName = (req && req.service_name) || (tx && tx.service_name) || slug || 'Service';
-    return {primary:primary, fields:fields, note:note, serviceName:svcName};
+    // Financial ledger
+    var originalPaid = Number((tx && tx.price_paid) || (req && req.price_paid) || 1000);
+    var penaltyDeducted = Number((tx && (tx.penalty_deducted || tx.failure_penalty_fee)) || (req && (req.penalty_deducted || req.failure_penalty_fee)) || (isFailed ? 100 : 0));
+    var refundAmount = Number((tx && tx.refund_amount) || (req && req.refund_amount) || Math.max(0, originalPaid - penaltyDeducted));
+
+    if (isFailed) {
+      primary = {label:'Verification Status', value:'FAILED / NOT FOUND', mono:false};
+      if (trackingId) fields.push({label:'Tracking ID', value: trackingId});
+      if (tx && tx.provider_ticket_id) fields.push({label:'Registry Ticket ID', value: String(tx.provider_ticket_id)});
+      if (tx && tx.gv_reference) fields.push({label:'Session Reference', value: tx.gv_reference});
+      else if (req && req.reference) fields.push({label:'Session Reference', value: req.reference});
+      if (tx && (tx.created_at || tx.submitted_at)) {
+        var d = tx.created_at || tx.submitted_at;
+        fields.push({label:'Submitted At', value: new Date(d).toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})});
+      }
+    } else {
+      // Completed services logic
+      if (slug === 'bvn-retrieval') {
+        primary = {label:'Bank Verification Number', value: rd.bvn || rd.BVN || 'See details below', mono:true};
+        if (rd.first_name || rd.last_name) fields.push({label:'Full Name',     value:[rd.first_name, rd.last_name].filter(Boolean).join(' ')});
+        if (rd.date_of_birth || rd.dob)   fields.push({label:'Date of Birth', value: rd.date_of_birth || rd.dob});
+        if (rd.phone_number  || rd.phone) fields.push({label:'Phone',         value: rd.phone_number  || rd.phone});
+      } else if (slug === 'ipe-clearance-single' || slug === 'ipe-clearance') {
+        if (rd.new_nin) {
+          primary = {label:'New NIN', value: rd.new_nin, mono:true};
+          fields.push({label:'Clearance Status', value:(rd.status || 'CLEARED').toUpperCase()});
+        } else {
+          primary = {label:'Clearance Status', value:(rd.status || 'CLEARED').toUpperCase(), mono:false};
+        }
+        if (rd.new_tracking_id) fields.push({label:'New Tracking ID', value: rd.new_tracking_id});
+        if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
+        if (trackingId) fields.push({label:'Original Tracking ID', value: trackingId});
+      } else if (slug === 'self-service') {
+        primary = {label:'Delinking Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
+        if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
+      } else if (slug === 'personalization') {
+        var citizenData = (rd && rd.data) ? rd.data : (rd || {});
+        var fullName = [citizenData.firstName || citizenData.firstname, citizenData.middleName || citizenData.middleName, citizenData.lastName || citizenData.lastname].filter(Boolean).join(' ');
+        if (fullName) fields.push({label:'Full Name', value: fullName});
+        if (citizenData.idNumber || citizenData.nin) fields.push({label:'National ID (NIN)', value: citizenData.idNumber || citizenData.nin});
+        if (citizenData.dateOfBirth || citizenData.dob) fields.push({label:'Date of Birth', value: citizenData.dateOfBirth || citizenData.dob});
+        if (citizenData.gender) fields.push({label:'Gender', value: citizenData.gender === 'M' ? 'Male' : (citizenData.gender === 'F' ? 'Female' : citizenData.gender)});
+        if (citizenData.tracking_id || trackingId) fields.push({label:'Tracking ID', value: citizenData.tracking_id || trackingId});
+        if (citizenData.photo) {
+          photoHtml = '<div style="text-align:center;margin-bottom:14px;"><img src="' + citizenData.photo + '" style="width:84px;height:84px;border-radius:18px;border:2px solid #10b981;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:inline-block;" /></div>';
+        }
+        primary = {label:'Personalization Status', value:(citizenData.status || rd.status || 'COMPLETED').toUpperCase(), mono:false};
+        if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
+      } else {
+        primary = {label:'Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
+      }
+
+      if (tx && tx.gv_reference) fields.push({label:'Reference', value: tx.gv_reference});
+      if (tx && tx.completed_at) fields.push({label:'Completed At', value: new Date(tx.completed_at).toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})});
+    }
+
+    var svcName = (req && req.service_name) || (tx && tx.service_name) || slug || 'Personalization';
+    return {
+      isFailed: isFailed,
+      isIpe: isIpe,
+      primary: primary,
+      fields: fields,
+      note: note,
+      serviceName: svcName,
+      trackingId: trackingId,
+      originalPaid: originalPaid,
+      penaltyDeducted: penaltyDeducted,
+      refundAmount: refundAmount,
+      photoHtml: photoHtml
+    };
   }
 
   function closeModal(){
@@ -4010,25 +4105,118 @@ async function gvDownloadResult(reference) {
     var p = result.primary;
 
     var fieldRowsHtml = result.fields.map(function(f, i){
-      return '<div class="gv-rm-row" data-label="' + f.label + '" data-val="' + f.value.replace(/"/g,'&quot;') + '">'
+      return '<div class="gv-rm-row" data-label="' + f.label + '" data-val="' + String(f.value).replace(/"/g,'&quot;') + '">'
         + '<span class="gv-rm-flabel">' + f.label + '</span>'
         + '<div class="gv-rm-fright">'
         + '<span class="gv-rm-fval">' + f.value + '</span>'
-        + '<button class="gv-rm-copybtn" data-copy="' + f.value.replace(/"/g,'&quot;') + '">&#x2398; Copy</button>'
+        + '<button class="gv-rm-copybtn" data-copy="' + String(f.value).replace(/"/g,'&quot;') + '">&#x2398; Copy</button>'
         + '</div></div>';
     }).join('');
 
+    if (result.isFailed) {
+      // ===== FAILED VERIFICATION / PERSONALIZATION REPORT =====
+      var ipePrice = (window.getServicePrice && window.getServicePrice('ipe-clearance-single', null)) || 500;
+      var ipePriceFmt = '₦' + Number(ipePrice).toLocaleString('en-NG', {minimumFractionDigits: 2});
+
+      var ipeBoxHtml = result.isIpe ? (
+        '<div style="border-radius:14px;background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(99,102,241,.12));border:1.5px solid rgba(124,58,237,.3);padding:14px 16px;margin-bottom:14px;">'
+        + '<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:#7c3aed;margin-bottom:4px;">'
+        + '<span>⚡</span> Registry Requires IPE Clearance'
+        + '</div>'
+        + '<p style="font-size:11.5px;margin:0 0 10px;line-height:1.5;color:' + c.text + ';opacity:0.9;">'
+        + 'This record was flagged with an <strong>Internal Processing Error (IPE)</strong>. Personalization cannot resolve this, but you can clear it directly using <strong>IPE Clearance</strong>.'
+        + '</p>'
+        + '<div style="background:rgba(124,58,237,.08);border-radius:8px;padding:8px 10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-size:11.5px;">'
+        + '<span>Tracking ID: <strong style="font-family:monospace;">' + (result.trackingId || 'N/A') + '</strong></span>'
+        + '<span>Clearance Fee: <strong style="color:#7c3aed;font-family:monospace;">' + ipePriceFmt + '</strong></span>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;">'
+        + '<input type="password" id="gv-rm-ipe-pin" maxlength="4" placeholder="Enter 4-digit PIN" style="flex:1;height:38px;padding:0 12px;border-radius:10px;border:1px solid rgba(124,58,237,.3);background:' + c.card + ';color:' + c.text + ';font-size:12px;font-family:inherit;outline:none;" />'
+        + '<button id="gv-rm-ipe-btn" style="flex:1.4;height:38px;border-radius:10px;border:none;background:linear-gradient(135deg,#7c3aed,#6366f1);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(124,58,237,.3);white-space:nowrap;">'
+        + 'Submit IPE Clearance'
+        + '</button>'
+        + '</div>'
+        + '<div id="gv-rm-ipe-err" style="display:none;color:#ef4444;font-size:11px;margin-top:6px;font-weight:600;"></div>'
+        + '</div>'
+      ) : '';
+
+      return '<div id="gv-result-overlay">'
+        + '<div id="gv-result-card" class="gv-rm-pop" style="background:' + c.card + ';border-radius:24px;border:1px solid ' + c.border + ';box-shadow:0 25px 60px rgba(0,0,0,.35);width:100%;max-width:480px;overflow:hidden;color:' + c.text + ';font-family:\'Inter\',ui-sans-serif,system-ui,sans-serif;">'
+
+        // Red Header
+        + '<div style="background:rgba(239,68,68,.07);border-bottom:1px solid rgba(239,68,68,.18);padding:26px 24px 18px;text-align:center;">'
+          + '<div style="position:relative;width:56px;height:56px;margin:0 auto 12px;">'
+            + '<div class="gv-rm-ring" style="position:absolute;inset:0;border-radius:50%;background:rgba(239,68,68,.25);"></div>'
+            + '<div style="width:56px;height:56px;border-radius:50%;background:#ef4444;box-shadow:0 8px 24px rgba(239,68,68,.35);display:flex;align-items:center;justify-content:center;">'
+              + '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>'
+            + '</div>'
+          + '</div>'
+          + '<div style="font-size:17px;font-weight:900;margin-bottom:3px;color:#ef4444;">Verification Unsuccessful</div>'
+          + '<div style="font-size:12px;color:' + c.muted + ';">Identity registry returned an exception report</div>'
+          + '<div style="margin-top:10px;display:inline-flex;align-items:center;background:' + c.card + ';border:1px solid ' + c.border + ';border-radius:99px;padding:4px 12px;font-size:11px;font-weight:700;">' + result.serviceName + '</div>'
+        + '</div>'
+
+        // Content
+        + '<div class="gv-rm-slide" style="padding:20px;max-height:75vh;overflow-y:auto;">'
+
+          // Official Note Card
+          + '<div style="border-radius:14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);padding:14px 16px;margin-bottom:14px;">'
+            + '<div style="display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#dc2626;margin-bottom:4px;">'
+              + '<span>⚠️</span> Official Verification Note'
+            + '</div>'
+            + '<div style="font-size:12.5px;line-height:1.55;color:' + c.text + ';font-weight:500;">' + (result.note || 'No matching record found for this tracking ID on identity registry.') + '</div>'
+          + '</div>'
+
+          // Financial Ledger
+          + '<div style="border-radius:14px;background:' + c.rowBg + ';border:1px solid ' + c.border + ';padding:14px 16px;margin-bottom:14px;">'
+            + '<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:' + c.muted + ';margin-bottom:8px;">'
+              + 'Financial Refund Breakdown'
+            + '</div>'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:3px 0;">'
+              + '<span style="color:' + c.muted + ';">Service Fee Paid</span>'
+              + '<span style="font-weight:600;font-family:monospace;">₦' + Number(result.originalPaid).toLocaleString('en-NG',{minimumFractionDigits:2}) + '</span>'
+            + '</div>'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:3px 0;color:#ef4444;">'
+              + '<span>Registry Processing Fee</span>'
+              + '<span style="font-weight:600;font-family:monospace;">-₦' + Number(result.penaltyDeducted).toLocaleString('en-NG',{minimumFractionDigits:2}) + '</span>'
+            + '</div>'
+            + '<div style="height:1px;background:' + c.border + ';margin:6px 0;"></div>'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0;color:#10b981;">'
+              + '<span style="font-weight:700;">Refunded to Wallet</span>'
+              + '<span style="font-weight:800;font-family:monospace;background:rgba(16,185,129,.12);padding:2px 8px;border-radius:6px;">+₦' + Number(result.refundAmount).toLocaleString('en-NG',{minimumFractionDigits:2}) + '</span>'
+            + '</div>'
+            + '<div style="font-size:10.5px;color:' + c.muted + ';margin-top:8px;line-height:1.45;">'
+              + 'ℹ️ A non-refundable ₦100 fee applies to registry searches. The remaining balance was credited directly back to your wallet balance.'
+            + '</div>'
+          + '</div>'
+
+          // Tracking & Session Details
+          + (result.fields.length ? '<div style="background:' + c.rowBg + ';border:1px solid ' + c.border + ';border-radius:12px;padding:0 12px;margin-bottom:14px;">' + fieldRowsHtml + '</div>' : '')
+
+          // Smart IPE Upsell
+          + ipeBoxHtml
+
+          // Footer: STRICTLY "Close" button only, NEVER "Try Again"
+          + '<div style="display:flex;gap:10px;margin-top:16px;">'
+            + '<button id="gv-rm-close" style="flex:1;height:44px;border-radius:14px;border:1px solid ' + c.border + ';background:transparent;color:' + c.muted + ';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>'
+          + '</div>'
+        + '</div>'
+      + '</div>'
+      + '</div>';
+    }
+
+    // ===== SUCCESS RESULT READY MODAL =====
     var noteHtml = result.note
       ? '<div class="gv-rm-note"><div class="gv-rm-note-label">Official Verification Note</div><p class="gv-rm-note-text">' + result.note + '</p></div>'
       : '';
 
-    var fsize = p.value.length > 12 ? '26px' : '32px';
+    var fsize = p.value.length > 12 ? '24px' : '30px';
     var fmono = p.mono ? 'font-family:monospace;' : '';
 
     return '<div id="gv-result-overlay">'
-      + '<div id="gv-result-card" class="gv-rm-pop" style="background:' + tok().card + ';border-radius:24px;border:1px solid ' + tok().border + ';box-shadow:0 25px 60px rgba(0,0,0,.35);width:100%;max-width:480px;overflow:hidden;color:' + tok().text + ';font-family:\'Inter\',ui-sans-serif,system-ui,sans-serif;">'
+      + '<div id="gv-result-card" class="gv-rm-pop" style="background:' + c.card + ';border-radius:24px;border:1px solid ' + c.border + ';box-shadow:0 25px 60px rgba(0,0,0,.35);width:100%;max-width:480px;overflow:hidden;color:' + c.text + ';font-family:\'Inter\',ui-sans-serif,system-ui,sans-serif;">'
 
-      + '<div style="background:rgba(16,185,129,.07);border-bottom:1px solid ' + tok().hdrBdr + ';padding:28px 24px 20px;text-align:center;">'
+      + '<div style="background:rgba(16,185,129,.07);border-bottom:1px solid ' + c.hdrBdr + ';padding:28px 24px 20px;text-align:center;">'
         + '<div style="position:relative;width:56px;height:56px;margin:0 auto 12px;">'
           + '<div class="gv-rm-ring" style="position:absolute;inset:0;border-radius:50%;background:rgba(16,185,129,.25);"></div>'
           + '<div style="width:56px;height:56px;border-radius:50%;background:#10b981;box-shadow:0 8px 24px rgba(16,185,129,.35);display:flex;align-items:center;justify-content:center;">'
@@ -4036,25 +4224,26 @@ async function gvDownloadResult(reference) {
           + '</div>'
         + '</div>'
         + '<div style="font-size:17px;font-weight:900;margin-bottom:3px;">Result Ready</div>'
-        + '<div style="font-size:12px;color:' + tok().muted + ';">Verification processed successfully</div>'
-        + '<div style="margin-top:10px;display:inline-flex;align-items:center;background:' + tok().card + ';border:1px solid ' + tok().border + ';border-radius:99px;padding:4px 12px;font-size:11px;font-weight:700;">' + result.serviceName + '</div>'
+        + '<div style="font-size:12px;color:' + c.muted + ';">Verification processed successfully</div>'
+        + '<div style="margin-top:10px;display:inline-flex;align-items:center;background:' + c.card + ';border:1px solid ' + c.border + ';border-radius:99px;padding:4px 12px;font-size:11px;font-weight:700;">' + result.serviceName + '</div>'
       + '</div>'
 
-      + '<div class="gv-rm-slide" style="padding:20px;">'
+      + '<div class="gv-rm-slide" style="padding:20px;max-height:75vh;overflow-y:auto;">'
+        + (result.photoHtml || '')
         + '<div style="border-radius:16px;border:2px solid rgba(16,185,129,.28);background:linear-gradient(135deg,rgba(16,185,129,.06),rgba(16,185,129,.12));padding:16px;margin-bottom:14px;">'
           + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
             + '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#059669;">' + p.label + '</span>'
-            + '<button id="gv-rm-pcopy" class="gv-rm-copybtn gv-rm-pcopy-btn" data-copy="' + p.value.replace(/"/g,'&quot;') + '" style="background:rgba(16,185,129,.15);color:#059669;border:none;">&#x2398; Copy</button>'
+            + '<button id="gv-rm-pcopy" class="gv-rm-copybtn gv-rm-pcopy-btn" data-copy="' + String(p.value).replace(/"/g,'&quot;') + '" style="background:rgba(16,185,129,.15);color:#059669;border:none;">&#x2398; Copy</button>'
           + '</div>'
           + '<div style="font-size:' + fsize + ';font-weight:900;color:#059669;letter-spacing:' + (p.mono?'.08em':'0') + ';' + fmono + '">' + p.value + '</div>'
         + '</div>'
 
-        + (result.fields.length ? '<div style="background:' + tok().rowBg + ';border:1px solid ' + tok().border + ';border-radius:12px;padding:0 12px;margin-bottom:4px;">' + fieldRowsHtml + '</div>' : '')
+        + (result.fields.length ? '<div style="background:' + c.rowBg + ';border:1px solid ' + c.border + ';border-radius:12px;padding:0 12px;margin-bottom:4px;">' + fieldRowsHtml + '</div>' : '')
         + noteHtml
 
         + '<div style="display:flex;gap:10px;margin-top:16px;">'
-          + '<button id="gv-rm-close" style="flex:1;height:44px;border-radius:16px;border:1px solid ' + tok().border + ';background:transparent;color:' + tok().muted + ';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>'
-          + '<button id="gv-rm-ctacopy" class="gv-rm-copybtn" data-copy="' + p.value.replace(/"/g,'&quot;') + '" style="flex:2;height:44px;border-radius:16px;border:none;background:#0050FF;color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,80,255,.25);font-family:inherit;">&#x2398; Copy ' + p.label + '</button>'
+          + '<button id="gv-rm-close" style="flex:1;height:44px;border-radius:16px;border:1px solid ' + c.border + ';background:transparent;color:' + c.muted + ';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>'
+          + '<button id="gv-rm-ctacopy" class="gv-rm-copybtn" data-copy="' + String(p.value).replace(/"/g,'&quot;') + '" style="flex:2;height:44px;border-radius:16px;border:none;background:#0050FF;color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,80,255,.25);font-family:inherit;">&#x2398; Copy ' + p.label + '</button>'
         + '</div>'
       + '</div>'
     + '</div>'
@@ -4086,8 +4275,49 @@ async function gvDownloadResult(reference) {
       btn.style.cssText += ';height:26px;padding:0 10px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;';
       btn.addEventListener('click', function(){ doCopy(this); });
     });
-    overlay.querySelector('#gv-rm-close').addEventListener('click', closeModal);
+    var closeBtn = overlay.querySelector('#gv-rm-close');
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
     overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
+
+    // IPE submit button handler
+    var ipeBtn = overlay.querySelector('#gv-rm-ipe-btn');
+    if (ipeBtn) {
+      ipeBtn.addEventListener('click', function(){
+        var pinInput = overlay.querySelector('#gv-rm-ipe-pin');
+        var errDiv = overlay.querySelector('#gv-rm-ipe-err');
+        var pinVal = (pinInput ? pinInput.value : '').trim();
+
+        if (pinVal.length !== 4 || !/^\d{4}$/.test(pinVal)) {
+          if (errDiv) {
+            errDiv.textContent = 'Please enter your 4-digit Transaction PIN.';
+            errDiv.style.display = 'block';
+          }
+          return;
+        }
+
+        var ipePrice = (window.getServicePrice && window.getServicePrice('ipe-clearance-single', null)) || 500;
+        var tid = result.trackingId || '';
+
+        closeModal();
+
+        // 1. Pre-fill tracking ID for the IPE page form
+        window.__gvPreFillIpeTrackingId = tid;
+
+        // 2. Switch active page to IPE clearance
+        if (window.__gvSetPage) {
+          window.__gvSetPage('ipe-clearance');
+        }
+
+        // 3. Directly launch the official payment preview modal
+        if (window.__gvOpenPaymentModal) {
+          window.__gvOpenPaymentModal('IPE Clearance — Single', ipePrice, {
+            slug: 'ipe-clearance-single',
+            tracking_id: tid,
+            pin: pinVal
+          });
+        }
+      });
+    }
 
     document.body.appendChild(overlay);
 
