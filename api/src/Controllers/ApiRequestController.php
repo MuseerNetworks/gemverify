@@ -755,8 +755,13 @@ class ApiRequestController
             return;
         }
 
-        // If already final state, return immediately
-        if (in_array($tx['gv_status'], ['completed', 'failed', 'refunded'], true)) {
+        $activeProvider = !empty($tx['provider']) ? strtolower(trim($tx['provider'])) : (!empty($tx['provider_name']) ? strtolower(trim($tx['provider_name'])) : 'techhub');
+
+        // Check if an S8V failed transaction needs diagnostics/IPE enrichment
+        $needsS8vRefresh = ($activeProvider === 's8v' && !empty($tx['provider_ticket_id']) && $tx['gv_status'] === 'failed' && (empty($tx['result_data']) || empty($tx['error_code']) || stripos($tx['error_message'] ?? '', 'No matching record found') !== false));
+
+        // If already final state and doesn't need refresh, return immediately
+        if (!$needsS8vRefresh && in_array($tx['gv_status'], ['completed', 'failed', 'refunded'], true)) {
             Response::success([
                 'gv_reference' => $tx['gv_reference'],
                 'status'       => $tx['gv_status'],
@@ -765,8 +770,6 @@ class ApiRequestController
             ]);
             return;
         }
-
-        $activeProvider = !empty($tx['provider']) ? strtolower(trim($tx['provider'])) : (!empty($tx['provider_name']) ? strtolower(trim($tx['provider_name'])) : 'techhub');
 
         try {
             if ($activeProvider === 's8v') {
@@ -842,12 +845,17 @@ class ApiRequestController
                                 );
                             }
 
-                            $userReason = $statusResult['error_message'] ?? 'No record found on identity registry for this request.';
-                            $feeNotice  = $penaltyFee > 0 ? " ₦" . number_format($penaltyFee, 2) . " processing fee applied. ₦" . number_format($refundAmount, 2) . " returned to wallet." : " Full fee refunded to wallet.";
+                            $userReason   = $statusResult['error_message'] ?? 'No record found on identity registry for this request.';
+                            $feeNotice    = $penaltyFee > 0 ? " ₦" . number_format($penaltyFee, 2) . " processing fee applied. ₦" . number_format($refundAmount, 2) . " returned to wallet." : " Full fee refunded to wallet.";
+                            $fullErrorMsg = $userReason . $feeNotice;
+                            $errorCode    = $statusResult['error_code'] ?? 'FAILED_RECORD_NOT_FOUND';
+                            $resultDataJson = !empty($statusResult['result_data']) ? json_encode($statusResult['result_data']) : null;
 
                             $txCols = $this->db->query("SHOW COLUMNS FROM api_transactions")->fetchAll(PDO::FETCH_COLUMN);
-                            $hasPenaltyCol = in_array('penalty_deducted', $txCols, true);
-                            $hasRefundCol  = in_array('refund_amount', $txCols, true);
+                            $hasPenaltyCol   = in_array('penalty_deducted', $txCols, true);
+                            $hasRefundCol    = in_array('refund_amount', $txCols, true);
+                            $hasErrorCodeCol = in_array('error_code', $txCols, true);
+                            $hasResultDataCol = in_array('result_data', $txCols, true);
 
                             $updateSets = [
                                 "gv_status        = 'failed'",
@@ -864,9 +872,17 @@ class ApiRequestController
                                 $updateSets[] = "refund_amount = ?";
                                 $params[] = $refundAmount;
                             }
+                            if ($hasErrorCodeCol && $errorCode) {
+                                $updateSets[] = "error_code = ?";
+                                $params[] = $errorCode;
+                            }
+                            if ($hasResultDataCol && $resultDataJson) {
+                                $updateSets[] = "result_data = ?";
+                                $params[] = $resultDataJson;
+                            }
 
                             $updateSets[] = "error_message    = ?";
-                            $params[] = $userReason . $feeNotice;
+                            $params[] = $fullErrorMsg;
 
                             $updateSets[] = "completed_at     = NOW()";
                             $params[] = $tx['id'];
@@ -875,7 +891,11 @@ class ApiRequestController
                             $this->db->prepare($sql)->execute($params);
 
                             $tx['gv_status']     = 'failed';
-                            $tx['error_message'] = $userReason . $feeNotice;
+                            $tx['error_message'] = $fullErrorMsg;
+                            $tx['error_code']    = $errorCode;
+                            if ($resultDataJson) {
+                                $tx['result_data'] = $resultDataJson;
+                            }
 
                         } else {
                             // TechHub Reversal Check

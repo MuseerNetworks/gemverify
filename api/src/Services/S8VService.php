@@ -29,6 +29,7 @@ class S8VService implements VerificationProviderInterface
     {
         switch ($serviceSlug) {
             case 'personalization':
+            case 'nin-personalization':
                 return $this->submitPersonalization($formData, $variantKey);
 
             case 'ipe-clearance':
@@ -36,6 +37,7 @@ class S8VService implements VerificationProviderInterface
                 return $this->submitClearance($formData);
 
             case 'nin-validation':
+            case 'vnin-validation':
                 return $this->submitValidation($formData);
 
             default:
@@ -61,6 +63,7 @@ class S8VService implements VerificationProviderInterface
     {
         switch ($serviceSlug) {
             case 'personalization':
+            case 'nin-personalization':
                 return $this->checkPersonalizationStatus($ticketId, $trackingId);
 
             case 'ipe-clearance':
@@ -68,6 +71,7 @@ class S8VService implements VerificationProviderInterface
                 return $this->checkClearanceStatus($ticketId, $trackingId);
 
             case 'nin-validation':
+            case 'vnin-validation':
                 return $this->checkValidationStatus($ticketId, $trackingId);
 
             default:
@@ -202,13 +206,33 @@ class S8VService implements VerificationProviderInterface
         }
 
         if ($status === 'failed') {
+            $isIpe = (
+                strtoupper((string)($data['tracking_id'] ?? '')) === 'IPE' ||
+                strtoupper((string)($data['data']['idNumber'] ?? '')) === 'IPE' ||
+                strtoupper((string)($data['data']['tracking_id'] ?? '')) === 'IPE' ||
+                stripos(($data['message'] ?? ''), 'IPE') !== false ||
+                stripos(($data['message'] ?? ''), 'clearance') !== false
+            );
+
+            if ($isIpe) {
+                return [
+                    'success'         => true,
+                    'is_complete'     => true,
+                    'is_failed'       => true,
+                    'provider_status' => 'failed',
+                    'result_data'     => $data,
+                    'error_message'   => 'Tracking ID has IPE (Send for clearance).',
+                    'error_code'      => 'FAILED_IPE_CLEARANCE_REQUIRED'
+                ];
+            }
+
             // Failed: Provider penalty fee applies
             return [
                 'success'         => true,
                 'is_complete'     => true,
                 'is_failed'       => true,
                 'provider_status' => 'failed',
-                'result_data'     => null,
+                'result_data'     => $data,
                 'error_message'   => $data['message'] ?? 'No matching record found for this tracking ID on identity registry.',
                 'error_code'      => 'FAILED_RECORD_NOT_FOUND'
             ];

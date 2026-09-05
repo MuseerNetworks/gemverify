@@ -3992,36 +3992,64 @@ async function gvDownloadResult(reference) {
     var isFailed = (status === 'failed' || status === 'rejected' || status === 'refunded');
 
     var rd = {};
-    try { rd = JSON.parse((tx && tx.result_data) ? tx.result_data : '{}'); } catch(e){}
+    try {
+      if (tx && tx.result_data) {
+        rd = typeof tx.result_data === 'object' ? tx.result_data : JSON.parse(tx.result_data);
+      } else if (req && req.result_data) {
+        rd = typeof req.result_data === 'object' ? req.result_data : JSON.parse(req.result_data);
+      }
+    } catch(e){}
+    var rdStr = JSON.stringify(rd);
 
     var primary = {label:'Status', value: isFailed ? 'UNSUCCESSFUL' : 'COMPLETED', mono:false};
     var fields  = [];
     var note    = (tx && (tx.error_message || tx.message)) || (req && (req.error_message || req.message)) || rd.response || rd.note || '';
     var photoHtml = '';
 
-    // Extract tracking ID safely
+    // Extract tracking ID safely (ignoring literal "IPE")
     var trackingId = '';
+    function checkTracking(val) {
+      if (!val) return '';
+      var s = String(val).trim();
+      return (s.toUpperCase() === 'IPE') ? '' : s;
+    }
+
     if (req && req.input_summary) {
-      var m = req.input_summary.match(/Tracking:([^\s|]+)/i);
-      if (m) trackingId = m[1].trim();
+      var m = req.input_summary.match(/Tracking(?:\s*ID)?\s*[:=]\s*([^\s|]+)/i);
+      if (m) trackingId = checkTracking(m[1]);
     }
     if (!trackingId && req && req.form_data) {
       try {
         var fd = typeof req.form_data === 'string' ? JSON.parse(req.form_data) : req.form_data;
-        if (fd.tracking_id) trackingId = String(fd.tracking_id).trim();
-        else if (fd.trackingId) trackingId = String(fd.trackingId).trim();
+        trackingId = checkTracking(fd.tracking_id || fd.trackingId || fd.tracking);
       } catch(e){}
     }
     if (!trackingId && tx) {
-      if (tx.tracking_id) trackingId = String(tx.tracking_id).trim();
-      else if (tx.input_summary) {
-        var m2 = tx.input_summary.match(/Tracking:([^\s|]+)/i);
-        if (m2) trackingId = m2[1].trim();
+      if (tx.input_summary) {
+        var m2 = tx.input_summary.match(/Tracking(?:\s*ID)?\s*[:=]\s*([^\s|]+)/i);
+        if (m2) trackingId = checkTracking(m2[1]);
       }
+      if (!trackingId) trackingId = checkTracking(tx.tracking_id);
+    }
+    if (!trackingId && rd && rd.data && rd.data.tracking_id) {
+      trackingId = checkTracking(rd.data.tracking_id);
     }
 
-    // Check for IPE exception keyword
-    var isIpe = isFailed && (/ipe|clearance|internal processing/i.test(note) || /ipe|clearance|internal processing/i.test(String((tx && tx.error_code) || '')));
+    // Deep IPE detection
+    var isIpe = isFailed && (
+      /\bipe\b|clearance/i.test(note) ||
+      /\bipe\b|clearance/i.test(String((tx && tx.error_code) || '')) ||
+      /\bipe\b|clearance/i.test(String((req && req.error_code) || '')) ||
+      /\bIPE\b/.test(rdStr) ||
+      String(rd.idNumber || '').toUpperCase() === 'IPE' ||
+      String(rd.tracking_id || '').toUpperCase() === 'IPE' ||
+      String((rd.data && rd.data.idNumber) || '').toUpperCase() === 'IPE' ||
+      String((rd.data && rd.data.tracking_id) || '').toUpperCase() === 'IPE'
+    );
+
+    if (isIpe) {
+      note = 'Tracking ID has IPE (Send for clearance).';
+    }
 
     // Financial ledger
     var originalPaid = Number((tx && tx.price_paid) || (req && req.price_paid) || 1000);
@@ -4121,10 +4149,10 @@ async function gvDownloadResult(reference) {
       var ipeBoxHtml = result.isIpe ? (
         '<div style="border-radius:14px;background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(99,102,241,.12));border:1.5px solid rgba(124,58,237,.3);padding:14px 16px;margin-bottom:14px;">'
         + '<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:#7c3aed;margin-bottom:4px;">'
-        + '<span>⚡</span> Registry Requires IPE Clearance'
+        + '<span>⚡</span> IPE (Send for clearance)'
         + '</div>'
         + '<p style="font-size:11.5px;margin:0 0 10px;line-height:1.5;color:' + c.text + ';opacity:0.9;">'
-        + 'This record was flagged with an <strong>Internal Processing Error (IPE)</strong>. Personalization cannot resolve this, but you can clear it directly using <strong>IPE Clearance</strong>.'
+        + 'This record has <strong>IPE</strong>. Personalization cannot resolve this, please <strong>Send for clearance</strong> using the button below.'
         + '</p>'
         + '<div style="background:rgba(124,58,237,.08);border-radius:8px;padding:8px 10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-size:11.5px;">'
         + '<span>Tracking ID: <strong style="font-family:monospace;">' + (result.trackingId || 'N/A') + '</strong></span>'

@@ -714,6 +714,10 @@ class ApiTransactionController
                     $hasPenaltyCol = in_array('penalty_deducted', $txCols, true);
                     $hasRefundCol  = in_array('refund_amount', $txCols, true);
 
+                    $errorCode      = $statusResult['error_code'] ?? 'FAILED_RECORD_NOT_FOUND';
+                    $userReason     = $statusResult['error_message'] ?? 'Failed';
+                    $resultDataJson = !empty($statusResult['result_data']) ? json_encode($statusResult['result_data']) : null;
+
                     $updateSets = [
                         "gv_status                  = 'failed'",
                         "provider_status           = 'failed'",
@@ -734,8 +738,20 @@ class ApiTransactionController
                         $updateSets[] = "refund_amount = ?";
                         $params[] = $refundAmount;
                     }
+                    if (in_array('error_code', $txCols, true) && $errorCode) {
+                        $updateSets[] = "error_code = ?";
+                        $params[] = $errorCode;
+                    }
+                    if (in_array('result_data', $txCols, true) && $resultDataJson) {
+                        $updateSets[] = "result_data = ?";
+                        $params[] = $resultDataJson;
+                    }
+                    if (in_array('error_message', $txCols, true) && $userReason) {
+                        $updateSets[] = "error_message = ?";
+                        $params[] = $userReason;
+                    }
 
-                    $reconcileNote = "S8V sync reported failure (" . ($statusResult['error_message'] ?? 'Failed') . "). Retained ₦" . number_format($penaltyFee, 2) . " processing fee, refunded ₦" . number_format($refundAmount, 2) . " to wallet.";
+                    $reconcileNote = "S8V sync reported failure (" . $userReason . "). Retained ₦" . number_format($penaltyFee, 2) . " processing fee, refunded ₦" . number_format($refundAmount, 2) . " to wallet.";
                     $params[] = $reconcileNote;
 
                     $params[] = $tx['id'];
