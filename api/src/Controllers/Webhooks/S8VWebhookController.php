@@ -54,11 +54,15 @@ class S8VWebhookController
         $ticketId   = trim((string)($payload['id'] ?? $payload['ticket_id'] ?? ''));
         $status     = strtolower(trim((string)($payload['status'] ?? '')));
 
+        \Helpers\SchemaHelper::ensureProviderColumns($this->db);
+        $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
+        $penaltyCol = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : '0.00 AS failure_penalty_fee';
+
         // 2. Locate matching pending/processing api_transaction
         $tx = null;
         if (!empty($ticketId)) {
             $stmt = $this->db->prepare("
-                SELECT at.*, s.name AS service_name, s.failure_penalty_fee, sp.price AS price_paid
+                SELECT at.*, s.name AS service_name, {$penaltyCol}, sp.price AS price_paid
                 FROM api_transactions at
                 JOIN services s ON s.id = at.service_id
                 JOIN service_pricing sp ON sp.id = at.pricing_id
@@ -71,7 +75,7 @@ class S8VWebhookController
 
         if (!$tx && !empty($trackingId)) {
             $stmt = $this->db->prepare("
-                SELECT at.*, s.name AS service_name, s.failure_penalty_fee, sp.price AS price_paid
+                SELECT at.*, s.name AS service_name, {$penaltyCol}, sp.price AS price_paid
                 FROM api_transactions at
                 JOIN services s ON s.id = at.service_id
                 JOIN service_pricing sp ON sp.id = at.pricing_id
@@ -85,7 +89,7 @@ class S8VWebhookController
 
         if (!$tx && !empty($nin)) {
             $stmt = $this->db->prepare("
-                SELECT at.*, s.name AS service_name, s.failure_penalty_fee, sp.price AS price_paid
+                SELECT at.*, s.name AS service_name, {$penaltyCol}, sp.price AS price_paid
                 FROM api_transactions at
                 JOIN services s ON s.id = at.service_id
                 JOIN service_pricing sp ON sp.id = at.pricing_id
@@ -156,22 +160,35 @@ class S8VWebhookController
             $userReason = $payload['message'] ?? 'No record found on identity registry for this request.';
             $feeNotice  = $penaltyFee > 0 ? " ₦" . number_format($penaltyFee, 2) . " processing fee applied. ₦" . number_format($refundAmount, 2) . " returned to wallet." : " Full fee refunded to wallet.";
 
-            $this->db->prepare("
-                UPDATE api_transactions
-                SET gv_status        = 'failed',
-                    provider_status  = 'failed',
-                    refund_issued    = 1,
-                    penalty_deducted = ?,
-                    refund_amount    = ?,
-                    error_message    = ?,
-                    completed_at     = NOW()
-                WHERE id = ?
-            ")->execute([
-                $penaltyFee,
-                $refundAmount,
-                $userReason . $feeNotice,
-                $txId,
-            ]);
+            $txCols = $this->db->query("SHOW COLUMNS FROM api_transactions")->fetchAll(PDO::FETCH_COLUMN);
+            $hasPenaltyCol = in_array('penalty_deducted', $txCols, true);
+            $hasRefundCol  = in_array('refund_amount', $txCols, true);
+
+            $updateSets = [
+                "gv_status        = 'failed'",
+                "provider_status  = 'failed'",
+                "refund_issued    = 1",
+            ];
+            $params = [];
+
+            if ($hasPenaltyCol) {
+                $updateSets[] = "penalty_deducted = ?";
+                $params[] = $penaltyFee;
+            }
+            if ($hasRefundCol) {
+                $updateSets[] = "refund_amount = ?";
+                $params[] = $refundAmount;
+            }
+
+            $updateSets[] = "error_message    = ?";
+            $params[] = $userReason . $feeNotice;
+
+            $updateSets[] = "completed_at     = NOW()";
+
+            $params[] = $txId;
+
+            $sql = "UPDATE api_transactions SET " . implode(", ", $updateSets) . " WHERE id = ?";
+            $this->db->prepare($sql)->execute($params);
 
             $this->auditService->log(
                 'S8V_WEBHOOK_FAILED',

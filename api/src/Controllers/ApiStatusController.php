@@ -334,12 +334,16 @@ class ApiStatusController
      */
     private function findTransaction(string $ref): ?array
     {
+        \Helpers\SchemaHelper::ensureProviderColumns($this->db);
+        $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
+        $penaltyCol = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : '0.00 AS failure_penalty_fee';
+
         $stmt = $this->db->prepare("
             SELECT
                 at.*,
                 s.name AS service_name,
                 s.slug AS service_slug,
-                s.failure_penalty_fee,
+                {$penaltyCol},
                 sp.price AS price_paid
             FROM api_transactions at
             JOIN services s  ON s.id  = at.service_id
@@ -357,12 +361,16 @@ class ApiStatusController
      */
     private function findTransactionById(int $id): ?array
     {
+        \Helpers\SchemaHelper::ensureProviderColumns($this->db);
+        $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
+        $penaltyCol = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : '0.00 AS failure_penalty_fee';
+
         $stmt = $this->db->prepare("
             SELECT
                 at.*,
                 s.name AS service_name,
                 s.slug AS service_slug,
-                s.failure_penalty_fee,
+                {$penaltyCol},
                 sp.price AS price_paid
             FROM api_transactions at
             JOIN services s  ON s.id  = at.service_id
@@ -424,23 +432,35 @@ class ApiStatusController
             $userReason = $statusResult['error_message'] ?? 'No record found on identity registry for this request.';
             $feeNotice  = $penaltyFee > 0 ? " ₦" . number_format($penaltyFee, 2) . " processing fee applied. ₦" . number_format($refundAmount, 2) . " returned to wallet." : " Full fee refunded to wallet.";
 
-            $this->db->prepare("
-                UPDATE api_transactions
-                SET gv_status        = 'failed',
-                    provider_status  = ?,
-                    refund_issued    = 1,
-                    penalty_deducted = ?,
-                    refund_amount    = ?,
-                    error_message    = ?,
-                    completed_at     = NOW()
-                WHERE id = ?
-            ")->execute([
-                $providerStatus,
-                $penaltyFee,
-                $refundAmount,
-                $userReason . $feeNotice,
-                $txId,
-            ]);
+            $txCols = $this->db->query("SHOW COLUMNS FROM api_transactions")->fetchAll(PDO::FETCH_COLUMN);
+            $hasPenaltyCol = in_array('penalty_deducted', $txCols, true);
+            $hasRefundCol  = in_array('refund_amount', $txCols, true);
+
+            $updateSets = [
+                "gv_status        = 'failed'",
+                "provider_status  = ?",
+                "refund_issued    = 1",
+            ];
+            $params = [$providerStatus];
+
+            if ($hasPenaltyCol) {
+                $updateSets[] = "penalty_deducted = ?";
+                $params[] = $penaltyFee;
+            }
+            if ($hasRefundCol) {
+                $updateSets[] = "refund_amount = ?";
+                $params[] = $refundAmount;
+            }
+
+            $updateSets[] = "error_message    = ?";
+            $params[] = $userReason . $feeNotice;
+
+            $updateSets[] = "completed_at     = NOW()";
+
+            $params[] = $txId;
+
+            $sql = "UPDATE api_transactions SET " . implode(", ", $updateSets) . " WHERE id = ?";
+            $this->db->prepare($sql)->execute($params);
 
         } else {
             // Still in progress — update provider_status only

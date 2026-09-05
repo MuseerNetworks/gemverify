@@ -14,6 +14,7 @@ class StatsController
     public function __construct()
     {
         $this->db = db();
+        \Helpers\SchemaHelper::ensureProviderColumns($this->db);
         $this->ensureCostPriceColumn();
     }
 
@@ -431,27 +432,26 @@ class StatsController
     public function getServices(): void
     {
         try {
-            // NOTE: Uses LEFT JOIN + COALESCE so services with missing/null category_id are not excluded.
-            // Avoids GROUP BY to prevent ONLY_FULL_GROUP_BY issues on production MySQL.
-            $stmt = $this->db->query("
-                SELECT s.id, s.name, s.slug, s.is_active, s.is_manual, s.provider_name, s.failure_penalty_fee, s.est_time,
+            \Helpers\SchemaHelper::ensureProviderColumns($this->db);
+
+            $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
+            $providerCol = in_array('provider_name', $cols, true) ? 's.provider_name' : "'techhub' AS provider_name";
+            $penaltyCol  = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : "0.00 AS failure_penalty_fee";
+
+            $query = "
+                SELECT s.id, s.name, s.slug, s.is_active, s.is_manual, {$providerCol}, {$penaltyCol}, s.est_time,
                        COALESCE(c.name, 'General') AS category
                 FROM services s
                 LEFT JOIN service_categories c ON s.category_id = c.id
                 ORDER BY c.name, s.name
-            ");
+            ";
+            $stmt = $this->db->query($query);
             $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // Auto-seed if the production services table is empty
             if (empty($services)) {
                 $this->seedDatabaseInternal();
-                $stmt = $this->db->query("
-                    SELECT s.id, s.name, s.slug, s.is_active, s.is_manual, s.provider_name, s.failure_penalty_fee, s.est_time,
-                           COALESCE(c.name, 'General') AS category
-                    FROM services s
-                    LEFT JOIN service_categories c ON s.category_id = c.id
-                    ORDER BY c.name, s.name
-                ");
+                $stmt = $this->db->query($query);
                 $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
 
@@ -852,7 +852,16 @@ class StatsController
         $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
         try {
-            $stmtSvc = $this->db->prepare("SELECT name, is_active, is_manual, provider_name, failure_penalty_fee, est_time FROM services WHERE id = ?");
+            \Helpers\SchemaHelper::ensureProviderColumns($this->db);
+
+            $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
+            $hasProvider = in_array('provider_name', $cols, true);
+            $hasPenalty  = in_array('failure_penalty_fee', $cols, true);
+
+            $providerCol = $hasProvider ? 'provider_name' : "'techhub' AS provider_name";
+            $penaltyCol  = $hasPenalty ? 'failure_penalty_fee' : "0.00 AS failure_penalty_fee";
+
+            $stmtSvc = $this->db->prepare("SELECT name, is_active, is_manual, {$providerCol}, {$penaltyCol}, est_time FROM services WHERE id = ?");
             $stmtSvc->execute([$id]);
             $existing = $stmtSvc->fetch(PDO::FETCH_ASSOC);
             if (!$existing) {
@@ -862,7 +871,7 @@ class StatsController
             $name               = isset($input['name']) ? $input['name'] : $existing['name'];
             $isActive           = isset($input['active']) ? (int)$input['active'] : (int)$existing['is_active'];
             $isManual           = isset($input['is_manual']) ? (int)$input['is_manual'] : (int)$existing['is_manual'];
-            $providerName       = array_key_exists('provider_name', $input) ? ($input['provider_name'] ? trim($input['provider_name']) : null) : $existing['provider_name'];
+            $providerName       = array_key_exists('provider_name', $input) ? ($input['provider_name'] ? trim($input['provider_name']) : null) : ($existing['provider_name'] ?? 'techhub');
             $failurePenaltyFee  = array_key_exists('failure_penalty_fee', $input) ? (float)$input['failure_penalty_fee'] : (float)($existing['failure_penalty_fee'] ?? 0.00);
             $estTime            = array_key_exists('est_time', $input) ? $input['est_time'] : $existing['est_time'];
 
@@ -872,8 +881,26 @@ class StatsController
 
             $this->db->beginTransaction();
 
-            $stmt = $this->db->prepare("UPDATE services SET name = ?, is_active = ?, is_manual = ?, provider_name = ?, failure_penalty_fee = ?, est_time = ? WHERE id = ?");
-            $stmt->execute([$name, $isActive, $isManual, $providerName, $failurePenaltyFee, $estTime, $id]);
+            $updateCols = ["name = ?", "is_active = ?", "is_manual = ?"];
+            $params = [$name, $isActive, $isManual];
+
+            if ($hasProvider) {
+                $updateCols[] = "provider_name = ?";
+                $params[] = $providerName;
+            }
+            if ($hasPenalty) {
+                $updateCols[] = "failure_penalty_fee = ?";
+                $params[] = $failurePenaltyFee;
+            }
+
+            $updateCols[] = "est_time = ?";
+            $params[] = $estTime;
+
+            $params[] = $id;
+
+            $sql = "UPDATE services SET " . implode(", ", $updateCols) . " WHERE id = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
 
             $adminId = \Middleware\AdminMiddleware::getAdminId();
             $stmtAudit = $this->db->prepare("INSERT INTO audit_logs (actor_type, actor_id, action, notes) VALUES ('admin', ?, 'SERVICE_UPDATED', ?)");

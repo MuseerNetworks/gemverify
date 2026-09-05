@@ -18,6 +18,10 @@ require_once __DIR__ . '/src/Helpers/Response.php';
 require_once __DIR__ . '/src/Helpers/JWT.php';
 require_once __DIR__ . '/src/Helpers/Validator.php';
 require_once __DIR__ . '/src/Helpers/Sanitizer.php';
+require_once __DIR__ . '/src/Helpers/SchemaHelper.php';
+
+// Self-heal provider columns dynamically on boot
+\Helpers\SchemaHelper::ensureProviderColumns();
 
 // ── Autoloader ─────────────────────────────────────────────────────────────
 spl_autoload_register(function (string $class): void {

@@ -168,7 +168,12 @@ class ApiRequestController
         // ── 2. Dynamic Manual & Provider Routing Check ─────────────────────
         // Check if the service is marked as manual (is_manual = 1) in the database,
         // or matches a manual variant override, and route directly to the manual engine.
-        $svcStmt = $this->db->prepare("SELECT id, is_manual, provider_name, failure_penalty_fee FROM services WHERE slug = ? AND is_active = 1 LIMIT 1");
+        \Helpers\SchemaHelper::ensureProviderColumns($this->db);
+        $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
+        $providerCol = in_array('provider_name', $cols, true) ? 'provider_name' : "'techhub' AS provider_name";
+        $penaltyCol  = in_array('failure_penalty_fee', $cols, true) ? 'failure_penalty_fee' : "0.00 AS failure_penalty_fee";
+
+        $svcStmt = $this->db->prepare("SELECT id, is_manual, {$providerCol}, {$penaltyCol} FROM services WHERE slug = ? AND is_active = 1 LIMIT 1");
         $svcStmt->execute([$serviceSlug]);
         $svcRow = $svcStmt->fetch(PDO::FETCH_ASSOC);
 
