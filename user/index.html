@@ -1674,10 +1674,16 @@ function Eu(){let[e,A]=I.useState(!0),[n,l]=I.useState(()=>localStorage.getItem(
             status: r.gv_status || r.status,
             price_paid: r.amount || r.price_paid || 0,
             submitted_at: r.submitted_at || r.created_at,
+            completed_at: r.completed_at || null,
             request_type: "api",
             input_summary: r.input_summary || "",
             variant_key: r.variant_key || "",
             form_data: null,
+            result_data: r.result_data || null,
+            error_code: r.error_code || null,
+            error_message: r.error_message || null,
+            penalty_deducted: r.penalty_deducted || 0,
+            refund_amount: r.refund_amount || 0,
             provider_ticket_id: r.provider_ticket_id || r.ticket_id || null, 
             ticket_id: r.ticket_id || r.provider_ticket_id || null,
             service_name: r.service_name || r.service || (r.service_slug ? (Rn[r.service_slug]?.title || r.service_slug.replace(/-/g, " ").toUpperCase()) : "Service"),
@@ -1687,8 +1693,11 @@ function Eu(){let[e,A]=I.useState(!0),[n,l]=I.useState(()=>localStorage.getItem(
         });
       }
 
-      // Deduplicate by reference
-      let combined = manualList.concat(apiList);
+      // Deduplicate by reference: filter hollow api records from manualList so rich apiList records take precedence
+      let filteredManual = manualList.filter(function(m) {
+        return m.request_type !== "api";
+      });
+      let combined = apiList.concat(filteredManual);
       let seen = new Set();
       let uniqueList = [];
       for (let r of combined) {
@@ -4031,8 +4040,10 @@ async function gvDownloadResult(reference) {
   }
 
   function parseResult(tx, req){
-    var slug = (tx && tx.service_slug) || (req && req.service_slug) || '';
-    var isPersonalization = (slug === 'personalization' || slug === 'nin-personalization');
+    var slug = (tx && (tx.service_slug || (tx.service && tx.service.slug))) || (req && (req.service_slug || (req.service && req.service.slug))) || '';
+    var cleanSlug = String(slug || '').toLowerCase().trim();
+    var isPersonalization = (cleanSlug === 'personalization' || cleanSlug === 'nin-personalization' || cleanSlug === 'personalisation' || cleanSlug === 'nin-personalisation');
+    var isIpeService = (cleanSlug === 'ipe-clearance' || cleanSlug === 'ipe-clearance-single' || cleanSlug === 'ipe_clearance' || cleanSlug === 'ipe');
 
     var rd = {};
     try {
@@ -4040,10 +4051,15 @@ async function gvDownloadResult(reference) {
         rd = typeof tx.result_data === 'object' ? tx.result_data : JSON.parse(tx.result_data);
       } else if (req && req.result_data) {
         rd = typeof req.result_data === 'object' ? req.result_data : JSON.parse(req.result_data);
+      } else if (tx && tx._raw && tx._raw.result_data) {
+        rd = typeof tx._raw.result_data === 'object' ? tx._raw.result_data : JSON.parse(tx._raw.result_data);
       }
     } catch(e){}
     var rdStr = JSON.stringify(rd);
-    var citizenData = (rd && rd.data) ? rd.data : (rd || {});
+    var citizenData = (rd && rd.data && typeof rd.data === 'object') ? rd.data : (rd || {});
+    if (citizenData.data && typeof citizenData.data === 'object') {
+      citizenData = Object.assign({}, citizenData.data, citizenData);
+    }
 
     // Collect all candidate status values from all possible levels
     var statusCandidates = [
@@ -4054,11 +4070,12 @@ async function gvDownloadResult(reference) {
       req && req.status,
       req && req.provider_status,
       rd && rd.status,
+      rd && rd.clearance_status,
       citizenData && citizenData.status
     ].filter(Boolean).map(function(s){ return String(s).toLowerCase().trim(); });
 
     var isExplicitlyCompleted = statusCandidates.some(function(s){
-      return s === 'completed' || s === 'successful' || s === 'success';
+      return s === 'completed' || s === 'successful' || s === 'success' || s === 'cleared';
     });
 
     var isExplicitlyFailed = statusCandidates.some(function(s){
@@ -4099,8 +4116,9 @@ async function gvDownloadResult(reference) {
       } else {
         isFailed = isExplicitlyFailed;
       }
-    } else if (slug === 'ipe-clearance' || slug === 'ipe-clearance-single') {
-      if (rd.new_nin || isExplicitlyCompleted) {
+    } else if (isIpeService) {
+      var newNinCandidate = rd.new_nin || rd.newNin || citizenData.new_nin || citizenData.newNin || citizenData.nin || rd.nin || citizenData.idNumber || rd.idNumber;
+      if (newNinCandidate || isExplicitlyCompleted) {
         isFailed = false;
       } else {
         isFailed = isExplicitlyFailed;
@@ -4161,65 +4179,129 @@ async function gvDownloadResult(reference) {
     if (isFailed) {
       primary = {label:'Verification Status', value: isIpe ? 'FAILED (IPE DETECTED)' : 'FAILED / NOT FOUND', mono:false};
       if (trackingId) fields.push({label:'Tracking ID', value: trackingId});
-      if (tx && tx.provider_ticket_id) fields.push({label:'Registry Ticket ID', value: String(tx.provider_ticket_id)});
-      if (tx && tx.gv_reference) fields.push({label:'Session Reference', value: tx.gv_reference});
-      else if (req && req.reference) fields.push({label:'Session Reference', value: req.reference});
-      if (tx && (tx.created_at || tx.submitted_at)) {
-        var d = tx.created_at || tx.submitted_at;
-        fields.push({label:'Submitted At', value: new Date(d).toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})});
+      var regTicket = (tx && (tx.provider_ticket_id || tx.ticket_id)) || (req && (req.provider_ticket_id || req.ticket_id));
+      if (regTicket) fields.push({label:'Registry Ticket ID', value: String(regTicket)});
+      var failRef = (tx && (tx.gv_reference || tx.reference)) || (req && (req.gv_reference || req.reference));
+      if (failRef) fields.push({label:'Session Reference', value: failRef});
+      var subTime = (tx && (tx.created_at || tx.submitted_at)) || (req && (req.created_at || req.submitted_at));
+      if (subTime) {
+        try {
+          fields.push({label:'Submitted At', value: new Date(subTime).toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})});
+        } catch(_) {
+          fields.push({label:'Submitted At', value: String(subTime)});
+        }
       }
     } else {
       // Completed services logic
-      if (slug === 'bvn-retrieval') {
+      if (cleanSlug === 'bvn-retrieval') {
         primary = {label:'Bank Verification Number', value: rd.bvn || rd.BVN || 'See details below', mono:true};
         if (rd.first_name || rd.last_name) fields.push({label:'Full Name',     value:[rd.first_name, rd.last_name].filter(Boolean).join(' ')});
         if (rd.date_of_birth || rd.dob)   fields.push({label:'Date of Birth', value: rd.date_of_birth || rd.dob});
         if (rd.phone_number  || rd.phone) fields.push({label:'Phone',         value: rd.phone_number  || rd.phone});
-      } else if (slug === 'ipe-clearance-single' || slug === 'ipe-clearance') {
-        if (rd.new_nin) {
-          primary = {label:'New NIN', value: rd.new_nin, mono:true};
-          fields.push({label:'Clearance Status', value:(rd.status || 'CLEARED').toUpperCase()});
+      } else if (isIpeService) {
+        var newNinVal = rd.new_nin || rd.newNin || citizenData.new_nin || citizenData.newNin || citizenData.nin || rd.nin || citizenData.idNumber || rd.idNumber || '';
+        var displayNewNin = newNinVal;
+        if (newNinVal && String(newNinVal).length === 11 && /^\d+$/.test(String(newNinVal))) {
+          displayNewNin = String(newNinVal).slice(0,4) + ' ' + String(newNinVal).slice(4,7) + ' ' + String(newNinVal).slice(7);
+        }
+        var clearanceStatusVal = (rd.clearance_status || rd.status || citizenData.status || (tx && tx.gv_status) || (req && req.status) || 'CLEARED').toUpperCase();
+        var newTrackingVal = checkTracking(rd.new_tracking_id || rd.newTrackingId || citizenData.new_tracking_id || citizenData.newTrackingId || rd.new_tracking || citizenData.new_tracking) || '';
+        var ipeSessionId = (tx && (tx.provider_ticket_id || tx.ticket_id)) || (req && (req.provider_ticket_id || req.ticket_id)) || rd.ticket_id || rd.id || citizenData.id || '';
+        var origTid = trackingId || checkTracking(rd.original_tracking_id || rd.orig_tracking_id || citizenData.original_tracking_id || rd.tracking_id || citizenData.tracking_id);
+
+        if (newNinVal) {
+          primary = {label:'New NIN', value: displayNewNin, mono:true};
+          fields.push({label:'Clearance Status', value: clearanceStatusVal});
         } else {
-          primary = {label:'Clearance Status', value:(rd.status || 'CLEARED').toUpperCase(), mono:false};
+          primary = {label:'Clearance Status', value: clearanceStatusVal, mono:false};
         }
-        if (rd.new_tracking_id) fields.push({label:'New Tracking ID', value: rd.new_tracking_id});
-        if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
-        if (trackingId) fields.push({label:'Original Tracking ID', value: trackingId});
-      } else if (slug === 'self-service') {
-        primary = {label:'Delinking Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
-        if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
-      } else if (slug === 'personalization' || slug === 'nin-personalization') {
-        var fullName = [citizenData.firstName || citizenData.firstname, citizenData.middleName || citizenData.middlename, citizenData.lastName || citizenData.lastname || citizenData.surname].filter(Boolean).join(' ');
-        if (fullName) fields.push({label:'Full Name', value: fullName});
-        var rawNin = citizenData.idNumber || citizenData.nin || '';
-        var displayNin = citizenData.formatted_nin || rd.formatted_nin || rawNin;
-        if (rawNin) fields.push({label:'National ID (NIN)', value: displayNin});
-        if (citizenData.dateOfBirth || citizenData.dob) fields.push({label:'Date of Birth', value: citizenData.dateOfBirth || citizenData.dob});
-        if (citizenData.gender) fields.push({label:'Gender', value: citizenData.gender === 'M' ? 'Male' : (citizenData.gender === 'F' ? 'Female' : citizenData.gender)});
-        if (citizenData.tracking_id || trackingId) fields.push({label:'Tracking ID', value: checkTracking(citizenData.tracking_id) || trackingId});
-        if (citizenData.photo) {
-          photoHtml = '<div style="text-align:center;margin-bottom:14px;"><img src="' + citizenData.photo + '" style="width:84px;height:84px;border-radius:18px;border:2px solid #10b981;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:inline-block;" /></div>';
+        if (newTrackingVal && newTrackingVal !== origTid) fields.push({label:'New Tracking ID', value: newTrackingVal});
+        if (origTid) fields.push({label:'Original Tracking ID', value: origTid});
+        if (ipeSessionId) fields.push({label:'Session ID', value: String(ipeSessionId)});
+      } else if (cleanSlug === 'self-service') {
+        primary = {label:'Delinking Status', value:(rd.status || (tx && tx.gv_status) || (req && req.status) || 'COMPLETED').toUpperCase(), mono:false};
+        var delinkSession = (tx && (tx.provider_ticket_id || tx.ticket_id)) || (req && (req.provider_ticket_id || req.ticket_id));
+        if (delinkSession) fields.push({label:'Session ID', value: String(delinkSession)});
+      } else if (isPersonalization) {
+        var first = citizenData.firstName || citizenData.firstname || citizenData.first_name || rd.firstName || rd.firstname || rd.first_name || '';
+        var middle = citizenData.middleName || citizenData.middlename || citizenData.middle_name || citizenData.other_name || citizenData.othernames || rd.middleName || rd.middlename || rd.middle_name || '';
+        var last = citizenData.lastName || citizenData.lastname || citizenData.surname || citizenData.last_name || rd.lastName || rd.lastname || rd.surname || rd.last_name || '';
+        var fullName = [first, middle, last].filter(Boolean).join(' ');
+        if (!fullName) {
+          fullName = citizenData.fullName || citizenData.fullname || citizenData.full_name || citizenData.name || rd.fullName || rd.fullname || rd.full_name || rd.name || '';
         }
-        primary = {label:'National ID (NIN)', value: displayNin || 'COMPLETED', mono:true};
-        if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
+        if (fullName) fields.push({label:'Full Name', value: fullName.toUpperCase()});
+
+        var rawNin = citizenData.idNumber || citizenData.nin || citizenData.nin_number || rd.idNumber || rd.nin || rd.nin_number || '';
+        var displayNin = citizenData.formatted_nin || rd.formatted_nin || '';
+        if (!displayNin && rawNin) {
+          var cleanNin = String(rawNin).replace(/\D/g, '');
+          displayNin = cleanNin.length === 11 ? cleanNin.slice(0,4) + ' ' + cleanNin.slice(4,7) + ' ' + cleanNin.slice(7) : rawNin;
+        }
+        if (displayNin || rawNin) fields.push({label:'National ID (NIN)', value: displayNin || rawNin});
+
+        var rawDob = citizenData.dateOfBirth || citizenData.dob || citizenData.birthdate || citizenData.birthDate || rd.dateOfBirth || rd.dob || rd.birthdate || rd.birthDate || '';
+        if (rawDob) {
+          var formattedDob = rawDob;
+          try {
+            var dobDate = new Date(rawDob);
+            if (!isNaN(dobDate.getTime())) {
+              formattedDob = dobDate.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+            }
+          } catch(_) {}
+          fields.push({label:'Date of Birth', value: formattedDob});
+        }
+
+        var rawGender = citizenData.gender || citizenData.sex || rd.gender || rd.sex || '';
+        if (rawGender) {
+          var gUpper = String(rawGender).toUpperCase().trim();
+          var genderVal = (gUpper === 'M' || gUpper === 'MALE') ? 'Male' : ((gUpper === 'F' || gUpper === 'FEMALE') ? 'Female' : rawGender);
+          fields.push({label:'Gender', value: genderVal});
+        }
+
+        var persTid = checkTracking(citizenData.tracking_id || citizenData.trackingId || citizenData.tracking || rd.tracking_id || rd.trackingId || rd.tracking) || trackingId;
+        if (persTid) fields.push({label:'Tracking ID', value: persTid});
+
+        var rawPhoto = citizenData.photo || rd.photo || citizenData.image || rd.image || null;
+        if (rawPhoto && typeof rawPhoto === 'string' && rawPhoto.length > 50) {
+          var photoSrc = rawPhoto.trim();
+          if (!photoSrc.startsWith('data:') && !photoSrc.startsWith('http')) {
+            photoSrc = 'data:image/jpeg;base64,' + photoSrc;
+          }
+          photoHtml = '<div style="text-align:center;margin-bottom:14px;"><img src="' + photoSrc + '" alt="Citizen Photo" style="width:84px;height:84px;border-radius:18px;border:2px solid #10b981;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:inline-block;" /></div>';
+        }
+
+        primary = {label:'National ID (NIN)', value: displayNin || rawNin || 'COMPLETED', mono:true};
+
+        var persSessionId = (tx && (tx.provider_ticket_id || tx.ticket_id)) || (req && (req.provider_ticket_id || req.ticket_id)) || rd.ticket_id || rd.id || citizenData.id || '';
+        if (persSessionId) fields.push({label:'Session ID', value: String(persSessionId)});
       } else {
-        primary = {label:'Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
+        primary = {label:'Status', value:(rd.status || (tx && tx.gv_status) || (req && req.status) || 'COMPLETED').toUpperCase(), mono:false};
       }
 
-      if (tx && tx.gv_reference) fields.push({label:'Reference', value: tx.gv_reference});
-      if (tx && tx.completed_at) fields.push({label:'Completed At', value: new Date(tx.completed_at).toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})});
+      var cRef = (tx && (tx.gv_reference || tx.reference)) || (req && (req.gv_reference || req.reference)) || '';
+      if (cRef) fields.push({label:'Reference', value: cRef});
+
+      var compTime = (tx && (tx.completed_at || tx.submitted_at)) || (req && (req.completed_at || req.submitted_at));
+      if (compTime) {
+        try {
+          fields.push({label:'Completed At', value: new Date(compTime).toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})});
+        } catch(_) {
+          fields.push({label:'Completed At', value: String(compTime)});
+        }
+      }
     }
 
     var pdfBase64 = rd.pdf_base64 || (rd.data && rd.data.pdf_base64) || (tx && tx.pdf_base64) || null;
-    var ref = (tx && tx.gv_reference) || (req && req.reference) || (tx && tx.reference) || '';
+    var ref = (tx && (tx.gv_reference || tx.reference)) || (req && (req.gv_reference || req.reference)) || '';
     var fileName = rd.file_name || (rd.data && rd.data.file_name) || (tx && tx.file_name) || ('NIN_Slip_' + (ref || Date.now()) + '.pdf');
-    var isPersonalization = (slug === 'personalization' || slug === 'nin-personalization');
 
-    var svcName = (req && req.service_name) || (tx && tx.service_name) || (isPersonalization ? 'NIN Personalisation' : (slug || 'Personalization'));
+    var svcName = (req && req.service_name) || (tx && tx.service_name) || (isPersonalization ? 'NIN Personalisation' : (isIpeService ? 'IPE Clearance' : (cleanSlug || 'Service')));
     return {
       isFailed: isFailed,
       isIpe: isIpe,
       isPersonalization: isPersonalization,
+      isIpeService: isIpeService,
       primary: primary,
       fields: fields,
       note: note,
@@ -4410,8 +4492,44 @@ async function gvDownloadResult(reference) {
     setTimeout(function(){ btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; btn.style.border = ''; }, 1800);
   }
 
-  window.gvShowResultModal = function(tx, req){
+  window.gvShowResultModal = async function(tx, req){
     closeModal();
+
+    // Resilient fallback: If result_data is missing/empty, dynamically fetch from status endpoint
+    var ref = (tx && (tx.gv_reference || tx.reference)) || (req && (req.gv_reference || req.reference)) || '';
+    var hasResultData = (tx && tx.result_data && (typeof tx.result_data === 'object' ? Object.keys(tx.result_data).length > 0 : tx.result_data.length > 2)) ||
+                        (req && req.result_data && (typeof req.result_data === 'object' ? Object.keys(req.result_data).length > 0 : req.result_data.length > 2));
+
+    var statusStr = String((tx && (tx.gv_status || tx.status)) || (req && (req.gv_status || req.status)) || '').toLowerCase();
+    var isTerminal = statusStr === 'completed' || statusStr === 'failed' || statusStr === 'rejected' || statusStr === 'refunded';
+
+    if (!hasResultData && isTerminal && ref) {
+      try {
+        var token = localStorage.getItem('gv_token');
+        if (token) {
+          var res = await fetch('../api/api-services/' + encodeURIComponent(ref) + '/status', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (res.ok) {
+            var resJson = await res.json();
+            if (resJson && resJson.success && resJson.data && resJson.data.tx) {
+              var fetchedTx = resJson.data.tx;
+              tx = Object.assign({}, tx, fetchedTx);
+              if (req) {
+                req.tx = tx;
+                req.result_data = tx.result_data;
+                req.completed_at = tx.completed_at;
+                req.error_code = tx.error_code;
+                req.error_message = tx.error_message;
+              }
+            }
+          }
+        }
+      } catch(e) {
+        console.warn('[GemVerify] Fallback status fetch error:', e);
+      }
+    }
+
     var result = parseResult(tx, req);
     var d = document.createElement('div');
     d.innerHTML = buildModal(result);

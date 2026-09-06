@@ -117,6 +117,9 @@ class ApiStatusController
                     at.gv_status,
                     at.provider_status,
                     at.result_type,
+                    at.result_data,
+                    at.penalty_deducted,
+                    at.refund_amount,
                     at.variant_key,
                     at.input_method,
                     at.input_summary,
@@ -538,23 +541,40 @@ class ApiStatusController
      */
     private function formatListRow(array $row): array
     {
+        $leanResultData = null;
+        if (!empty($row['result_data'])) {
+            $parsed = is_array($row['result_data']) ? $row['result_data'] : json_decode($row['result_data'], true);
+            if (is_array($parsed)) {
+                unset($parsed['pdf_base64']);
+                if (isset($parsed['data']) && is_array($parsed['data'])) {
+                    unset($parsed['data']['pdf_base64']);
+                }
+                $leanResultData = $parsed;
+            }
+        }
+
         return [
-            'gv_reference'     => $row['gv_reference'],
-            'service_name'     => $row['service_name'],
-            'service_slug'     => $row['service_slug'],
-            'variant_key'      => $row['variant_key'],
-            'input_method'     => $row['input_method'],
-            'gv_status'        => $row['gv_status'],
-            'provider_status'  => $row['provider_status'],
-            'result_type'      => $row['result_type'],
-            'has_pdf'          => ($row['result_type'] === 'pdf_base64' && $row['gv_status'] === 'completed'),
-            'ticket_id'        => $row['provider_ticket_id'] ?? null,
-            'price_paid'       => (float)($row['price_paid'] ?? 0),
-            'error_code'       => $row['error_code']  ?? null,
-            'error_message'    => $row['error_message'] ?? null,
-            'submitted_at'     => $row['submitted_at'],
-            'completed_at'     => $row['completed_at'] ?? null,
-            'last_checked_at'  => $row['last_checked_at'] ?? null,
+            'gv_reference'      => $row['gv_reference'],
+            'service_name'      => $row['service_name'],
+            'service_slug'      => $row['service_slug'],
+            'variant_key'       => $row['variant_key'],
+            'input_method'      => $row['input_method'],
+            'input_summary'     => $row['input_summary'] ?? null,
+            'gv_status'         => $row['gv_status'],
+            'provider_status'   => $row['provider_status'],
+            'result_type'       => $row['result_type'],
+            'result_data'       => $leanResultData,
+            'penalty_deducted'  => (float)($row['penalty_deducted'] ?? 0),
+            'refund_amount'     => (float)($row['refund_amount'] ?? 0),
+            'has_pdf'           => ($row['result_type'] === 'pdf_base64' && $row['gv_status'] === 'completed'),
+            'ticket_id'         => $row['provider_ticket_id'] ?? null,
+            'provider_ticket_id'=> $row['provider_ticket_id'] ?? null,
+            'price_paid'        => (float)($row['price_paid'] ?? 0),
+            'error_code'        => $row['error_code']  ?? null,
+            'error_message'     => $row['error_message'] ?? null,
+            'submitted_at'      => $row['submitted_at'],
+            'completed_at'      => $row['completed_at'] ?? null,
+            'last_checked_at'   => $row['last_checked_at'] ?? null,
         ];
     }
 
