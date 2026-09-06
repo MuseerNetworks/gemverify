@@ -4032,8 +4032,6 @@ async function gvDownloadResult(reference) {
 
   function parseResult(tx, req){
     var slug = (tx && tx.service_slug) || (req && req.service_slug) || '';
-    var status = String((tx && tx.status) || (req && req.status) || '').toLowerCase();
-    var isFailed = (status === 'failed' || status === 'rejected' || status === 'refunded');
 
     var rd = {};
     try {
@@ -4044,55 +4042,85 @@ async function gvDownloadResult(reference) {
       }
     } catch(e){}
     var rdStr = JSON.stringify(rd);
+    var citizenData = (rd && rd.data) ? rd.data : (rd || {});
+
+    // Collect all candidate status values from all possible levels
+    var statusCandidates = [
+      tx && tx.gv_status,
+      tx && tx.status,
+      tx && tx.provider_status,
+      req && req.gv_status,
+      req && req.status,
+      req && req.provider_status,
+      rd && rd.status,
+      citizenData && citizenData.status
+    ].filter(Boolean).map(function(s){ return String(s).toLowerCase().trim(); });
+
+    var note = (tx && (tx.error_message || tx.message)) ||
+               (req && (req.error_message || req.message)) ||
+               rd.response || rd.note || citizenData.note || '';
+
+    // Deep IPE detection
+    var isIpe = (
+      /\bipe\b|clearance/i.test(note) ||
+      /\bipe\b|clearance/i.test(String((tx && tx.error_code) || '')) ||
+      /\bipe\b|clearance/i.test(String((req && req.error_code) || '')) ||
+      String(citizenData.idNumber || rd.idNumber || '').toUpperCase() === 'IPE' ||
+      String(citizenData.tracking_id || rd.tracking_id || '').toUpperCase() === 'IPE' ||
+      /\bIPE\b/.test(rdStr)
+    );
+
+    var isFailed = isIpe || statusCandidates.some(function(s){
+      return s === 'failed' || s === 'rejected' || s === 'refunded' || s === 'unsuccessful';
+    });
+
+    if (isIpe) {
+      isFailed = true;
+      note = 'Tracking ID has IPE (Send for clearance).';
+    }
 
     var primary = {label:'Status', value: isFailed ? 'UNSUCCESSFUL' : 'COMPLETED', mono:false};
     var fields  = [];
-    var note    = (tx && (tx.error_message || tx.message)) || (req && (req.error_message || req.message)) || rd.response || rd.note || '';
     var photoHtml = '';
 
-    // Extract tracking ID safely (ignoring literal "IPE")
+    // Extract tracking ID safely (ignoring literal "IPE", "NULL", "UNDEFINED")
     var trackingId = '';
     function checkTracking(val) {
       if (!val) return '';
       var s = String(val).trim();
-      return (s.toUpperCase() === 'IPE') ? '' : s;
+      return (s.toUpperCase() === 'IPE' || s.toUpperCase() === 'NULL' || s.toUpperCase() === 'UNDEFINED') ? '' : s;
     }
 
     if (req && req.input_summary) {
-      var m = req.input_summary.match(/Tracking(?:\s*ID)?\s*[:=]\s*([^\s|]+)/i);
+      var m = req.input_summary.match(/Tracking(?:\s*ID)?\s*[:=]\s*([^\s|,]+)/i);
       if (m) trackingId = checkTracking(m[1]);
+    }
+    if (!trackingId && tx && tx.input_summary) {
+      var m2 = tx.input_summary.match(/Tracking(?:\s*ID)?\s*[:=]\s*([^\s|,]+)/i);
+      if (m2) trackingId = checkTracking(m2[1]);
     }
     if (!trackingId && req && req.form_data) {
       try {
         var fd = typeof req.form_data === 'string' ? JSON.parse(req.form_data) : req.form_data;
-        trackingId = checkTracking(fd.tracking_id || fd.trackingId || fd.tracking);
+        trackingId = checkTracking(fd.tracking_id || fd.trackingId || fd.tracking || fd.number);
       } catch(e){}
     }
-    if (!trackingId && tx) {
-      if (tx.input_summary) {
-        var m2 = tx.input_summary.match(/Tracking(?:\s*ID)?\s*[:=]\s*([^\s|]+)/i);
-        if (m2) trackingId = checkTracking(m2[1]);
-      }
-      if (!trackingId) trackingId = checkTracking(tx.tracking_id);
+    if (!trackingId && tx && tx.form_data) {
+      try {
+        var fd2 = typeof tx.form_data === 'string' ? JSON.parse(tx.form_data) : tx.form_data;
+        trackingId = checkTracking(fd2.tracking_id || fd2.trackingId || fd2.tracking || fd2.number);
+      } catch(e){}
     }
-    if (!trackingId && rd && rd.data && rd.data.tracking_id) {
-      trackingId = checkTracking(rd.data.tracking_id);
-    }
+    if (!trackingId && tx && tx.tracking_id) trackingId = checkTracking(tx.tracking_id);
+    if (!trackingId && req && req.tracking_id) trackingId = checkTracking(req.tracking_id);
+    if (!trackingId && rd && rd.data && rd.data.tracking_id) trackingId = checkTracking(rd.data.tracking_id);
+    if (!trackingId && rd && rd.tracking_id) trackingId = checkTracking(rd.tracking_id);
 
-    // Deep IPE detection
-    var isIpe = isFailed && (
-      /\bipe\b|clearance/i.test(note) ||
-      /\bipe\b|clearance/i.test(String((tx && tx.error_code) || '')) ||
-      /\bipe\b|clearance/i.test(String((req && req.error_code) || '')) ||
-      /\bIPE\b/.test(rdStr) ||
-      String(rd.idNumber || '').toUpperCase() === 'IPE' ||
-      String(rd.tracking_id || '').toUpperCase() === 'IPE' ||
-      String((rd.data && rd.data.idNumber) || '').toUpperCase() === 'IPE' ||
-      String((rd.data && rd.data.tracking_id) || '').toUpperCase() === 'IPE'
-    );
-
-    if (isIpe) {
-      note = 'Tracking ID has IPE (Send for clearance).';
+    // Fallback: search for 10-25 character alphanumeric tracking ID in input_summary
+    if (!trackingId) {
+      var rawSummary = (tx && tx.input_summary) || (req && req.input_summary) || '';
+      var m3 = rawSummary.match(/[A-Z0-9]{10,25}/i);
+      if (m3) trackingId = checkTracking(m3[0]);
     }
 
     // Financial ledger
@@ -4101,7 +4129,7 @@ async function gvDownloadResult(reference) {
     var refundAmount = Number((tx && tx.refund_amount) || (req && req.refund_amount) || Math.max(0, originalPaid - penaltyDeducted));
 
     if (isFailed) {
-      primary = {label:'Verification Status', value:'FAILED / NOT FOUND', mono:false};
+      primary = {label:'Verification Status', value: isIpe ? 'FAILED (IPE DETECTED)' : 'FAILED / NOT FOUND', mono:false};
       if (trackingId) fields.push({label:'Tracking ID', value: trackingId});
       if (tx && tx.provider_ticket_id) fields.push({label:'Registry Ticket ID', value: String(tx.provider_ticket_id)});
       if (tx && tx.gv_reference) fields.push({label:'Session Reference', value: tx.gv_reference});
@@ -4131,7 +4159,6 @@ async function gvDownloadResult(reference) {
         primary = {label:'Delinking Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
         if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
       } else if (slug === 'personalization' || slug === 'nin-personalization') {
-        var citizenData = (rd && rd.data) ? rd.data : (rd || {});
         var fullName = [citizenData.firstName || citizenData.firstname, citizenData.middleName || citizenData.middlename, citizenData.lastName || citizenData.lastname || citizenData.surname].filter(Boolean).join(' ');
         if (fullName) fields.push({label:'Full Name', value: fullName});
         var rawNin = citizenData.idNumber || citizenData.nin || '';
@@ -4139,7 +4166,7 @@ async function gvDownloadResult(reference) {
         if (rawNin) fields.push({label:'National ID (NIN)', value: displayNin});
         if (citizenData.dateOfBirth || citizenData.dob) fields.push({label:'Date of Birth', value: citizenData.dateOfBirth || citizenData.dob});
         if (citizenData.gender) fields.push({label:'Gender', value: citizenData.gender === 'M' ? 'Male' : (citizenData.gender === 'F' ? 'Female' : citizenData.gender)});
-        if (citizenData.tracking_id || trackingId) fields.push({label:'Tracking ID', value: citizenData.tracking_id || trackingId});
+        if (citizenData.tracking_id || trackingId) fields.push({label:'Tracking ID', value: checkTracking(citizenData.tracking_id) || trackingId});
         if (citizenData.photo) {
           photoHtml = '<div style="text-align:center;margin-bottom:14px;"><img src="' + citizenData.photo + '" style="width:84px;height:84px;border-radius:18px;border:2px solid #10b981;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:inline-block;" /></div>';
         }
@@ -4154,12 +4181,15 @@ async function gvDownloadResult(reference) {
     }
 
     var pdfBase64 = rd.pdf_base64 || (rd.data && rd.data.pdf_base64) || (tx && tx.pdf_base64) || null;
-    var fileName = rd.file_name || (rd.data && rd.data.file_name) || (tx && tx.file_name) || ('NIN_Slip_' + ((tx && tx.gv_reference) || (req && req.reference) || Date.now()) + '.pdf');
+    var ref = (tx && tx.gv_reference) || (req && req.reference) || (tx && tx.reference) || '';
+    var fileName = rd.file_name || (rd.data && rd.data.file_name) || (tx && tx.file_name) || ('NIN_Slip_' + (ref || Date.now()) + '.pdf');
+    var isPersonalization = (slug === 'personalization' || slug === 'nin-personalization');
 
-    var svcName = (req && req.service_name) || (tx && tx.service_name) || slug || 'Personalization';
+    var svcName = (req && req.service_name) || (tx && tx.service_name) || (isPersonalization ? 'NIN Personalisation' : (slug || 'Personalization'));
     return {
       isFailed: isFailed,
       isIpe: isIpe,
+      isPersonalization: isPersonalization,
       primary: primary,
       fields: fields,
       note: note,
@@ -4171,7 +4201,7 @@ async function gvDownloadResult(reference) {
       photoHtml: photoHtml,
       pdfBase64: pdfBase64,
       fileName: fileName,
-      reference: (tx && tx.gv_reference) || (req && req.reference) || ''
+      reference: ref
     };
   }
 
@@ -4293,7 +4323,9 @@ async function gvDownloadResult(reference) {
     var fsize = p.value.length > 12 ? '24px' : '30px';
     var fmono = p.mono ? 'font-family:monospace;' : '';
 
-    return '<div id="gv-result-overlay">'
+        var canDownloadSlip = !result.isFailed && (result.isPersonalization || result.pdfBase64);
+
+        return '<div id="gv-result-overlay">'
       + '<div id="gv-result-card" class="gv-rm-pop" style="background:' + c.card + ';border-radius:24px;border:1px solid ' + c.border + ';box-shadow:0 25px 60px rgba(0,0,0,.35);width:100%;max-width:480px;overflow:hidden;color:' + c.text + ';font-family:\'Inter\',ui-sans-serif,system-ui,sans-serif;">'
 
       + '<div style="background:rgba(16,185,129,.07);border-bottom:1px solid ' + c.hdrBdr + ';padding:28px 24px 20px;text-align:center;">'
@@ -4319,9 +4351,9 @@ async function gvDownloadResult(reference) {
         + '</div>'
 
         + (result.fields.length ? '<div style="background:' + c.rowBg + ';border:1px solid ' + c.border + ';border-radius:12px;padding:0 12px;margin-bottom:12px;">' + fieldRowsHtml + '</div>' : '')
-        + (result.pdfBase64 ? (
-            '<button id="gv-rm-download-slip" style="width:100%;height:46px;border-radius:16px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:0 4px 16px rgba(16,185,129,.3);display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;">'
-            + '<span style="font-size:16px;">📥</span> Download Official NIN Slip (PDF)'
+        + (canDownloadSlip ? (
+            '<button id="gv-rm-download-slip" style="width:100%;height:46px;border-radius:16px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:0 4px 16px rgba(16,185,129,.3);display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;">'
+            + '<span style="font-size:17px;">📥</span> Download Official NIN Slip (PDF)'
             + '</button>'
           ) : '')
         + noteHtml
@@ -4366,23 +4398,36 @@ async function gvDownloadResult(reference) {
 
     // Download NIN Slip button handler
     var downloadSlipBtn = overlay.querySelector('#gv-rm-download-slip');
-    if (downloadSlipBtn && result.pdfBase64) {
-      downloadSlipBtn.addEventListener('click', function(){
+    if (downloadSlipBtn) {
+      downloadSlipBtn.addEventListener('click', async function(){
+        downloadSlipBtn.disabled = true;
+        var origHtml = downloadSlipBtn.innerHTML;
+        downloadSlipBtn.innerHTML = '<span>⏳</span> Downloading NIN Slip...';
         try {
-          var cleanPdf = String(result.pdfBase64).trim();
-          if (!cleanPdf.startsWith('data:')) {
-            cleanPdf = 'data:application/pdf;base64,' + cleanPdf;
+          if (result.pdfBase64) {
+            var cleanPdf = String(result.pdfBase64).trim();
+            if (!cleanPdf.startsWith('data:')) {
+              cleanPdf = 'data:application/pdf;base64,' + cleanPdf;
+            }
+            var link = document.createElement('a');
+            link.href = cleanPdf;
+            link.download = result.fileName || ('NIN_Slip_' + (result.reference || Date.now()) + '.pdf');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          } else if (result.reference) {
+            await window.gvDownloadResult(result.reference);
           }
-          var link = document.createElement('a');
-          link.href = cleanPdf;
-          link.download = result.fileName || 'NIN_Slip.pdf';
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
         } catch(err) {
+          console.error('Download slip error:', err);
           if (result.reference) {
-            window.gvDownloadResult(result.reference);
+            await window.gvDownloadResult(result.reference);
           }
+        } finally {
+          setTimeout(function(){
+            downloadSlipBtn.disabled = false;
+            downloadSlipBtn.innerHTML = origHtml;
+          }, 1500);
         }
       });
     }

@@ -760,6 +760,25 @@ class ApiRequestController
         // Check if an S8V failed transaction needs diagnostics/IPE enrichment
         $needsS8vRefresh = ($activeProvider === 's8v' && !empty($tx['provider_ticket_id']) && $tx['gv_status'] === 'failed' && (empty($tx['result_data']) || empty($tx['error_code']) || stripos($tx['error_message'] ?? '', 'No matching record found') !== false));
 
+        // If already completed Personalization, ensure PDF slip is synthesized if missing
+        if ($tx['gv_status'] === 'completed' && in_array($tx['service_slug'] ?? '', ['personalization', 'nin-personalization'], true)) {
+            $rd = json_decode($tx['result_data'] ?? '', true);
+            if (is_array($rd) && empty($rd['pdf_base64'])) {
+                require_once __DIR__ . '/../Services/SlipGeneratorService.php';
+                $slipRes = \Services\SlipGeneratorService::generateNinSlip($rd);
+                if ($slipRes['success']) {
+                    $rd['pdf_base64']    = $slipRes['pdf_base64'];
+                    $rd['file_name']     = $slipRes['filename'];
+                    $rd['formatted_nin'] = $slipRes['nin'];
+                    $newJson = json_encode($rd);
+                    $this->db->prepare("UPDATE api_transactions SET result_type = 'pdf_base64', result_data = ? WHERE id = ?")
+                             ->execute([$newJson, $tx['id']]);
+                    $tx['result_type'] = 'pdf_base64';
+                    $tx['result_data'] = $newJson;
+                }
+            }
+        }
+
         // If already final state and doesn't need refresh, return immediately
         if (!$needsS8vRefresh && in_array($tx['gv_status'], ['completed', 'failed', 'refunded'], true)) {
             Response::success([
