@@ -13,8 +13,8 @@ require_once __DIR__ . '/../Lib/QRCode.php';
 class SlipGeneratorService
 {
     private const TEMPLATE_PATH = __DIR__ . '/../../../assets/img/templates/nin_highres_slip_template.jpg';
-    private const FONT_BOLD     = 'C:/Windows/Fonts/arialbd.ttf';
-    private const FONT_REGULAR  = 'C:/Windows/Fonts/arial.ttf';
+    private const FONT_BOLD     = __DIR__ . '/../../../assets/fonts/arialbd.ttf';
+    private const FONT_REGULAR  = __DIR__ . '/../../../assets/fonts/arial.ttf';
 
     /**
      * Generate an official A4 PDF NIN Slip from citizen data.
@@ -131,11 +131,11 @@ class SlipGeneratorService
                 imagettftext($tpl, 12, 0, $labelX, 506, $black, $fontBold, $dobFormatted);
 
                 // NIN - Centered horizontally across card with 15px gap above, 20px gap below
-                $fontSize = 20;
+                $fontSize = 24;
                 $bbox = imagettfbbox($fontSize, 0, $fontBold, $ninFormatted);
                 $textW = $bbox[2] - $bbox[0];
                 $ninX = (int)round(387.5 - ($textW / 2));
-                $ninY = 603;
+                $ninY = 605;
                 imagettftext($tpl, $fontSize, 0, $ninX, $ninY, $black, $fontBold, $ninFormatted);
             } else {
                 imagestring($tpl, 5, $labelX, 386, $surname, $black);

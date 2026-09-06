@@ -176,7 +176,20 @@ class S8VService implements VerificationProviderInterface
 
         $res = $this->client->post('personalization/check', $payload);
 
-        if (!$res['success']) {
+        $data = is_array($res['data'] ?? null) ? $res['data'] : [];
+        $rawStatus = (string)($data['status'] ?? $res['status'] ?? '');
+        $status = strtolower(trim($rawStatus));
+
+        // Check if provider explicitly responded with success == false and an error message
+        $isExplicitFailure = (
+            $status === 'failed' ||
+            $status === 'rejected' ||
+            $status === 'error' ||
+            (!empty($res['http_code']) && $res['http_code'] >= 400 && $res['http_code'] < 500 && $res['http_code'] !== 402) ||
+            (!empty($data['success']) === false && !empty($data['message']) && !in_array($status, ['processing', 'pending', 'queued', 'in-progress']))
+        );
+
+        if (!$res['success'] && !$isExplicitFailure) {
             return [
                 'success'         => false,
                 'is_complete'     => false,
@@ -188,12 +201,9 @@ class S8VService implements VerificationProviderInterface
             ];
         }
 
-        $data   = $res['data'];
-        $status = strtolower(trim((string)($data['status'] ?? '')));
-
-        if ($status === 'successful') {
+        if ($status === 'successful' || $status === 'completed' || $status === 'success') {
             // Citizen demographic record + photo
-            $citizenData = $data['data'] ?? [];
+            $citizenData = $data['data'] ?? $data;
             return [
                 'success'         => true,
                 'is_complete'     => true,
@@ -205,13 +215,16 @@ class S8VService implements VerificationProviderInterface
             ];
         }
 
-        if ($status === 'failed') {
+        if ($status === 'failed' || $status === 'rejected' || $isExplicitFailure) {
+            $rawMsg = (string)($data['message'] ?? $data['reason'] ?? $data['comment'] ?? $data['error'] ?? $data['description'] ?? $res['error_message'] ?? '');
+
             $isIpe = (
                 strtoupper((string)($data['tracking_id'] ?? '')) === 'IPE' ||
                 strtoupper((string)($data['data']['idNumber'] ?? '')) === 'IPE' ||
                 strtoupper((string)($data['data']['tracking_id'] ?? '')) === 'IPE' ||
-                stripos(($data['message'] ?? ''), 'IPE') !== false ||
-                stripos(($data['message'] ?? ''), 'clearance') !== false
+                stripos($rawMsg, 'IPE') !== false ||
+                stripos($rawMsg, 'clearance') !== false ||
+                stripos((string)($data['tracking_id'] ?? ''), 'IPE') !== false
             );
 
             if ($isIpe) {
@@ -226,6 +239,9 @@ class S8VService implements VerificationProviderInterface
                 ];
             }
 
+            // Clean failure reason without fee notices
+            $failureReason = !empty($rawMsg) ? $rawMsg : 'No matching record found for this tracking ID on identity registry.';
+
             // Failed: Provider penalty fee applies
             return [
                 'success'         => true,
@@ -233,7 +249,7 @@ class S8VService implements VerificationProviderInterface
                 'is_failed'       => true,
                 'provider_status' => 'failed',
                 'result_data'     => $data,
-                'error_message'   => $data['message'] ?? 'No matching record found for this tracking ID on identity registry.',
+                'error_message'   => $failureReason,
                 'error_code'      => 'FAILED_RECORD_NOT_FOUND'
             ];
         }

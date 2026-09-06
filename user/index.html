@@ -4225,90 +4225,90 @@ async function gvDownloadResult(reference) {
 
     if (result.isFailed) {
       // ===== FAILED VERIFICATION / PERSONALIZATION REPORT =====
-      var ipePrice = (window.getServicePrice && window.getServicePrice('ipe-clearance-single', null)) || 500;
+      var ipePrice = (window.getServicePrice && (window.getServicePrice('ipe-clearance-single', null) || window.getServicePrice('ipe-clearance', null))) || 500;
       var ipePriceFmt = '₦' + Number(ipePrice).toLocaleString('en-NG', {minimumFractionDigits: 2});
 
       var ipeBoxHtml = result.isIpe ? (
-        '<div style="border-radius:14px;background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(99,102,241,.12));border:1.5px solid rgba(124,58,237,.3);padding:14px 16px;margin-bottom:14px;">'
-        + '<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:#7c3aed;margin-bottom:4px;">'
+        '<div style="border-radius:12px;background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(99,102,241,.12));border:1.5px solid rgba(124,58,237,.3);padding:12px 14px;margin-bottom:12px;">'
+        + '<div style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:800;color:#7c3aed;margin-bottom:3px;">'
         + '<span>⚡</span> IPE (Send for clearance)'
         + '</div>'
-        + '<p style="font-size:11.5px;margin:0 0 10px;line-height:1.5;color:' + c.text + ';opacity:0.9;">'
+        + '<p style="font-size:11px;margin:0 0 8px;line-height:1.45;color:' + c.text + ';opacity:0.9;">'
         + 'This record has <strong>IPE</strong>. Personalization cannot resolve this, please <strong>Send for clearance</strong> using the button below.'
         + '</p>'
-        + '<div style="background:rgba(124,58,237,.08);border-radius:8px;padding:8px 10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-size:11.5px;">'
+        + '<div style="background:rgba(124,58,237,.08);border-radius:8px;padding:6px 10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:11px;">'
         + '<span>Tracking ID: <strong style="font-family:monospace;">' + (result.trackingId || 'N/A') + '</strong></span>'
         + '<span>Clearance Fee: <strong style="color:#7c3aed;font-family:monospace;">' + ipePriceFmt + '</strong></span>'
         + '</div>'
-        + '<div style="display:flex;gap:8px;">'
-        + '<input type="password" id="gv-rm-ipe-pin" maxlength="4" placeholder="Enter 4-digit PIN" style="flex:1;height:38px;padding:0 12px;border-radius:10px;border:1px solid rgba(124,58,237,.3);background:' + c.card + ';color:' + c.text + ';font-size:12px;font-family:inherit;outline:none;" />'
-        + '<button id="gv-rm-ipe-btn" style="flex:1.4;height:38px;border-radius:10px;border:none;background:linear-gradient(135deg,#7c3aed,#6366f1);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(124,58,237,.3);white-space:nowrap;">'
-        + 'Submit IPE Clearance'
+        + '<div style="display:flex;gap:6px;">'
+        + '<input type="password" id="gv-rm-ipe-pin" maxlength="4" placeholder="4-digit PIN" style="flex:1;height:36px;padding:0 10px;border-radius:8px;border:1px solid rgba(124,58,237,.3);background:' + c.card + ';color:' + c.text + ';font-size:11.5px;font-family:inherit;outline:none;" />'
+        + '<button id="gv-rm-ipe-btn" style="flex:1.4;height:36px;border-radius:8px;border:none;background:linear-gradient(135deg,#7c3aed,#6366f1);color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 3px 10px rgba(124,58,237,.3);white-space:nowrap;">'
+        + 'Submit Clearance'
         + '</button>'
         + '</div>'
-        + '<div id="gv-rm-ipe-err" style="display:none;color:#ef4444;font-size:11px;margin-top:6px;font-weight:600;"></div>'
+        + '<div id="gv-rm-ipe-err" style="display:none;color:#ef4444;font-size:10.5px;margin-top:4px;font-weight:600;"></div>'
         + '</div>'
       ) : '';
 
       return '<div id="gv-result-overlay">'
-        + '<div id="gv-result-card" class="gv-rm-pop" style="background:' + c.card + ';border-radius:24px;border:1px solid ' + c.border + ';box-shadow:0 25px 60px rgba(0,0,0,.35);width:100%;max-width:480px;overflow:hidden;color:' + c.text + ';font-family:\'Inter\',ui-sans-serif,system-ui,sans-serif;">'
+        + '<div id="gv-result-card" class="gv-rm-pop" style="background:' + c.card + ';border-radius:20px;border:1px solid ' + c.border + ';box-shadow:0 20px 50px rgba(0,0,0,.35);width:100%;max-width:410px;overflow:hidden;color:' + c.text + ';font-family:\'Inter\',ui-sans-serif,system-ui,sans-serif;">'
 
         // Red Header
-        + '<div style="background:rgba(239,68,68,.07);border-bottom:1px solid rgba(239,68,68,.18);padding:26px 24px 18px;text-align:center;">'
-          + '<div style="position:relative;width:56px;height:56px;margin:0 auto 12px;">'
+        + '<div style="background:rgba(239,68,68,.07);border-bottom:1px solid rgba(239,68,68,.18);padding:16px 18px 12px;text-align:center;">'
+          + '<div style="position:relative;width:42px;height:42px;margin:0 auto 8px;">'
             + '<div class="gv-rm-ring" style="position:absolute;inset:0;border-radius:50%;background:rgba(239,68,68,.25);"></div>'
-            + '<div style="width:56px;height:56px;border-radius:50%;background:#ef4444;box-shadow:0 8px 24px rgba(239,68,68,.35);display:flex;align-items:center;justify-content:center;">'
-              + '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>'
+            + '<div style="width:42px;height:42px;border-radius:50%;background:#ef4444;box-shadow:0 6px 18px rgba(239,68,68,.35);display:flex;align-items:center;justify-content:center;">'
+              + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>'
             + '</div>'
           + '</div>'
-          + '<div style="font-size:17px;font-weight:900;margin-bottom:3px;color:#ef4444;">Verification Unsuccessful</div>'
-          + '<div style="font-size:12px;color:' + c.muted + ';">Identity registry returned an exception report</div>'
-          + '<div style="margin-top:10px;display:inline-flex;align-items:center;background:' + c.card + ';border:1px solid ' + c.border + ';border-radius:99px;padding:4px 12px;font-size:11px;font-weight:700;">' + result.serviceName + '</div>'
+          + '<div style="font-size:15px;font-weight:900;margin-bottom:2px;color:#ef4444;">Verification Unsuccessful</div>'
+          + '<div style="font-size:11px;color:' + c.muted + ';">Identity registry returned an exception report</div>'
+          + '<div style="margin-top:8px;display:inline-flex;align-items:center;background:' + c.card + ';border:1px solid ' + c.border + ';border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:700;">' + result.serviceName + '</div>'
         + '</div>'
 
         // Content
-        + '<div class="gv-rm-slide" style="padding:20px;max-height:75vh;overflow-y:auto;">'
+        + '<div class="gv-rm-slide" style="padding:14px 16px;max-height:70vh;overflow-y:auto;">'
 
           // Official Note Card
-          + '<div style="border-radius:14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);padding:14px 16px;margin-bottom:14px;">'
-            + '<div style="display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#dc2626;margin-bottom:4px;">'
+          + '<div style="border-radius:12px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);padding:10px 12px;margin-bottom:12px;">'
+            + '<div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#dc2626;margin-bottom:3px;">'
               + '<span>⚠️</span> Official Verification Note'
             + '</div>'
-            + '<div style="font-size:12.5px;line-height:1.55;color:' + c.text + ';font-weight:500;">' + (result.note || 'No matching record found for this tracking ID on identity registry.') + '</div>'
+            + '<div style="font-size:11.5px;line-height:1.5;color:' + c.text + ';font-weight:500;word-break:break-word;">' + (result.note || 'No matching record found for this tracking ID on identity registry.') + '</div>'
           + '</div>'
 
           // Financial Ledger
-          + '<div style="border-radius:14px;background:' + c.rowBg + ';border:1px solid ' + c.border + ';padding:14px 16px;margin-bottom:14px;">'
-            + '<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:' + c.muted + ';margin-bottom:8px;">'
+          + '<div style="border-radius:12px;background:' + c.rowBg + ';border:1px solid ' + c.border + ';padding:10px 12px;margin-bottom:12px;">'
+            + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:' + c.muted + ';margin-bottom:6px;">'
               + 'Financial Refund Breakdown'
             + '</div>'
-            + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:3px 0;">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;padding:2px 0;">'
               + '<span style="color:' + c.muted + ';">Service Fee Paid</span>'
               + '<span style="font-weight:600;font-family:monospace;">₦' + Number(result.originalPaid).toLocaleString('en-NG',{minimumFractionDigits:2}) + '</span>'
             + '</div>'
-            + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:3px 0;color:#ef4444;">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;padding:2px 0;color:#ef4444;">'
               + '<span>Registry Processing Fee</span>'
               + '<span style="font-weight:600;font-family:monospace;">-₦' + Number(result.penaltyDeducted).toLocaleString('en-NG',{minimumFractionDigits:2}) + '</span>'
             + '</div>'
-            + '<div style="height:1px;background:' + c.border + ';margin:6px 0;"></div>'
-            + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:3px 0;color:#10b981;">'
+            + '<div style="height:1px;background:' + c.border + ';margin:5px 0;"></div>'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:2px 0;color:#10b981;">'
               + '<span style="font-weight:700;">Refunded to Wallet</span>'
-              + '<span style="font-weight:800;font-family:monospace;background:rgba(16,185,129,.12);padding:2px 8px;border-radius:6px;">+₦' + Number(result.refundAmount).toLocaleString('en-NG',{minimumFractionDigits:2}) + '</span>'
+              + '<span style="font-weight:800;font-family:monospace;background:rgba(16,185,129,.12);padding:2px 6px;border-radius:4px;">+₦' + Number(result.refundAmount).toLocaleString('en-NG',{minimumFractionDigits:2}) + '</span>'
             + '</div>'
-            + '<div style="font-size:10.5px;color:' + c.muted + ';margin-top:8px;line-height:1.45;">'
+            + '<div style="font-size:10px;color:' + c.muted + ';margin-top:6px;line-height:1.4;">'
               + 'ℹ️ A non-refundable ₦100 fee applies to registry searches. The remaining balance was credited directly back to your wallet balance.'
             + '</div>'
           + '</div>'
 
           // Tracking & Session Details
-          + (result.fields.length ? '<div style="background:' + c.rowBg + ';border:1px solid ' + c.border + ';border-radius:12px;padding:0 12px;margin-bottom:14px;">' + fieldRowsHtml + '</div>' : '')
+          + (result.fields.length ? '<div style="background:' + c.rowBg + ';border:1px solid ' + c.border + ';border-radius:10px;padding:0 10px;margin-bottom:12px;">' + fieldRowsHtml + '</div>' : '')
 
           // Smart IPE Upsell
           + ipeBoxHtml
 
-          // Footer: STRICTLY "Close" button only, NEVER "Try Again"
-          + '<div style="display:flex;gap:10px;margin-top:16px;">'
-            + '<button id="gv-rm-close" style="flex:1;height:44px;border-radius:14px;border:1px solid ' + c.border + ';background:transparent;color:' + c.muted + ';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>'
+          // Footer
+          + '<div style="display:flex;gap:8px;margin-top:12px;">'
+            + '<button id="gv-rm-close" style="flex:1;height:38px;border-radius:12px;border:1px solid ' + c.border + ';background:transparent;color:' + c.muted + ';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>'
           + '</div>'
         + '</div>'
       + '</div>'
@@ -4317,50 +4317,50 @@ async function gvDownloadResult(reference) {
 
     // ===== SUCCESS RESULT READY MODAL =====
     var noteHtml = result.note
-      ? '<div class="gv-rm-note"><div class="gv-rm-note-label">Official Verification Note</div><p class="gv-rm-note-text">' + result.note + '</p></div>'
+      ? '<div class="gv-rm-note" style="margin-top:10px;padding:10px;border-radius:10px;"><div class="gv-rm-note-label" style="font-size:9.5px;">Official Verification Note</div><p class="gv-rm-note-text" style="font-size:11.5px;line-height:1.45;">' + result.note + '</p></div>'
       : '';
 
-    var fsize = p.value.length > 12 ? '24px' : '30px';
+    var fsize = p.value.length > 12 ? '18px' : '21px';
     var fmono = p.mono ? 'font-family:monospace;' : '';
 
-        var canDownloadSlip = !result.isFailed && (result.isPersonalization || result.pdfBase64);
+    var canDownloadSlip = !result.isFailed && (result.isPersonalization || result.pdfBase64);
 
-        return '<div id="gv-result-overlay">'
-      + '<div id="gv-result-card" class="gv-rm-pop" style="background:' + c.card + ';border-radius:24px;border:1px solid ' + c.border + ';box-shadow:0 25px 60px rgba(0,0,0,.35);width:100%;max-width:480px;overflow:hidden;color:' + c.text + ';font-family:\'Inter\',ui-sans-serif,system-ui,sans-serif;">'
+    return '<div id="gv-result-overlay">'
+      + '<div id="gv-result-card" class="gv-rm-pop" style="background:' + c.card + ';border-radius:20px;border:1px solid ' + c.border + ';box-shadow:0 20px 50px rgba(0,0,0,.35);width:100%;max-width:410px;overflow:hidden;color:' + c.text + ';font-family:\'Inter\',ui-sans-serif,system-ui,sans-serif;">'
 
-      + '<div style="background:rgba(16,185,129,.07);border-bottom:1px solid ' + c.hdrBdr + ';padding:28px 24px 20px;text-align:center;">'
-        + '<div style="position:relative;width:56px;height:56px;margin:0 auto 12px;">'
+      + '<div style="background:rgba(16,185,129,.07);border-bottom:1px solid ' + c.hdrBdr + ';padding:16px 18px 12px;text-align:center;">'
+        + '<div style="position:relative;width:42px;height:42px;margin:0 auto 8px;">'
           + '<div class="gv-rm-ring" style="position:absolute;inset:0;border-radius:50%;background:rgba(16,185,129,.25);"></div>'
-          + '<div style="width:56px;height:56px;border-radius:50%;background:#10b981;box-shadow:0 8px 24px rgba(16,185,129,.35);display:flex;align-items:center;justify-content:center;">'
-            + '<svg width="26" height="26" viewBox="0 0 26 26" fill="none"><polyline class="gv-rm-check" points="5,13 11,19 21,7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          + '<div style="width:42px;height:42px;border-radius:50%;background:#10b981;box-shadow:0 6px 18px rgba(16,185,129,.35);display:flex;align-items:center;justify-content:center;">'
+            + '<svg width="20" height="20" viewBox="0 0 26 26" fill="none"><polyline class="gv-rm-check" points="5,13 11,19 21,7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
           + '</div>'
         + '</div>'
-        + '<div style="font-size:17px;font-weight:900;margin-bottom:3px;">Result Ready</div>'
-        + '<div style="font-size:12px;color:' + c.muted + ';">Verification processed successfully</div>'
-        + '<div style="margin-top:10px;display:inline-flex;align-items:center;background:' + c.card + ';border:1px solid ' + c.border + ';border-radius:99px;padding:4px 12px;font-size:11px;font-weight:700;">' + result.serviceName + '</div>'
+        + '<div style="font-size:15px;font-weight:900;margin-bottom:2px;">Result Ready</div>'
+        + '<div style="font-size:11px;color:' + c.muted + ';">Verification processed successfully</div>'
+        + '<div style="margin-top:8px;display:inline-flex;align-items:center;background:' + c.card + ';border:1px solid ' + c.border + ';border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:700;">' + result.serviceName + '</div>'
       + '</div>'
 
-      + '<div class="gv-rm-slide" style="padding:20px;max-height:75vh;overflow-y:auto;">'
+      + '<div class="gv-rm-slide" style="padding:14px 16px;max-height:70vh;overflow-y:auto;">'
         + (result.photoHtml || '')
-        + '<div style="border-radius:16px;border:2px solid rgba(16,185,129,.28);background:linear-gradient(135deg,rgba(16,185,129,.06),rgba(16,185,129,.12));padding:16px;margin-bottom:14px;">'
-          + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
-            + '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#059669;">' + p.label + '</span>'
+        + '<div style="border-radius:12px;border:1.5px solid rgba(16,185,129,.28);background:linear-gradient(135deg,rgba(16,185,129,.06),rgba(16,185,129,.12));padding:12px 14px;margin-bottom:12px;">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'
+            + '<span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#059669;">' + p.label + '</span>'
             + '<button id="gv-rm-pcopy" class="gv-rm-copybtn gv-rm-pcopy-btn" data-copy="' + String(p.value).replace(/"/g,'&quot;') + '" style="background:rgba(16,185,129,.15);color:#059669;border:none;">&#x2398; Copy</button>'
           + '</div>'
-          + '<div style="font-size:' + fsize + ';font-weight:900;color:#059669;letter-spacing:' + (p.mono?'.08em':'0') + ';' + fmono + '">' + p.value + '</div>'
+          + '<div style="font-size:' + fsize + ';font-weight:900;color:#059669;letter-spacing:' + (p.mono?'.06em':'0') + ';' + fmono + ';word-break:break-all;">' + p.value + '</div>'
         + '</div>'
 
-        + (result.fields.length ? '<div style="background:' + c.rowBg + ';border:1px solid ' + c.border + ';border-radius:12px;padding:0 12px;margin-bottom:12px;">' + fieldRowsHtml + '</div>' : '')
+        + (result.fields.length ? '<div style="background:' + c.rowBg + ';border:1px solid ' + c.border + ';border-radius:10px;padding:0 10px;margin-bottom:10px;">' + fieldRowsHtml + '</div>' : '')
         + (canDownloadSlip ? (
-            '<button id="gv-rm-download-slip" style="width:100%;height:46px;border-radius:16px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:13.5px;font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:0 4px 16px rgba(16,185,129,.3);display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;">'
-            + '<span style="font-size:17px;">📥</span> Download Official NIN Slip (PDF)'
+            '<button id="gv-rm-download-slip" style="width:100%;height:40px;border-radius:12px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 3px 12px rgba(16,185,129,.3);display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;">'
+            + '<span style="font-size:15px;">📥</span> Download Official NIN Slip (PDF)'
             + '</button>'
           ) : '')
         + noteHtml
 
-        + '<div style="display:flex;gap:10px;margin-top:16px;">'
-          + '<button id="gv-rm-close" style="flex:1;height:44px;border-radius:16px;border:1px solid ' + c.border + ';background:transparent;color:' + c.muted + ';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>'
-          + '<button id="gv-rm-ctacopy" class="gv-rm-copybtn" data-copy="' + String(p.value).replace(/"/g,'&quot;') + '" style="flex:2;height:44px;border-radius:16px;border:none;background:#0050FF;color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,80,255,.25);font-family:inherit;">&#x2398; Copy ' + p.label + '</button>'
+        + '<div style="display:flex;gap:8px;margin-top:12px;">'
+          + '<button id="gv-rm-close" style="flex:1;height:38px;border-radius:12px;border:1px solid ' + c.border + ';background:transparent;color:' + c.muted + ';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>'
+          + '<button id="gv-rm-ctacopy" class="gv-rm-copybtn" data-copy="' + String(p.value).replace(/"/g,'&quot;') + '" style="flex:2;height:38px;border-radius:12px;border:none;background:#0050FF;color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(0,80,255,.25);font-family:inherit;">&#x2398; Copy ' + p.label + '</button>'
         + '</div>'
       + '</div>'
     + '</div>'
@@ -4448,7 +4448,7 @@ async function gvDownloadResult(reference) {
           return;
         }
 
-        var ipePrice = (window.getServicePrice && window.getServicePrice('ipe-clearance-single', null)) || 500;
+        var ipePrice = (window.getServicePrice && (window.getServicePrice('ipe-clearance-single', null) || window.getServicePrice('ipe-clearance', null))) || 500;
         var tid = result.trackingId || '';
 
         closeModal();
