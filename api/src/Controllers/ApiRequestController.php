@@ -791,15 +791,36 @@ class ApiRequestController
                 $pStatus = $statusResult['provider_status'] ?? 'pending';
 
                 if ($statusResult['is_complete']) {
-                    if (in_array($pStatus, ['success', 'completed'], true)) {
-                        $resultJson = json_encode($statusResult['result_data'] ?? []);
+                    if (in_array($pStatus, ['success', 'completed', 'successful'], true)) {
+                        $resultData = $statusResult['result_data'] ?? [];
+                        $serviceSlug = $tx['service_slug'] ?? '';
+                        $resultType  = $tx['result_type'] ?? 'ticket';
+
+                        // If personalization, synthesize high-resolution official NIN slip
+                        if (in_array($serviceSlug, ['personalization', 'nin-personalization'], true) && is_array($resultData)) {
+                            if (empty($resultData['pdf_base64'])) {
+                                require_once __DIR__ . '/../Services/SlipGeneratorService.php';
+                                $slipRes = \Services\SlipGeneratorService::generateNinSlip($resultData);
+                                if ($slipRes['success']) {
+                                    $resultData['pdf_base64']    = $slipRes['pdf_base64'];
+                                    $resultData['file_name']     = $slipRes['filename'];
+                                    $resultData['formatted_nin'] = $slipRes['nin'];
+                                    $resultType = 'pdf_base64';
+                                }
+                            } else {
+                                $resultType = 'pdf_base64';
+                            }
+                        }
+
+                        $resultJson = json_encode($resultData);
                         $upd = $this->db->prepare("
                             UPDATE api_transactions
-                            SET gv_status = 'completed', provider_status = 'completed', result_data = ?, completed_at = NOW()
+                            SET gv_status = 'completed', provider_status = 'completed', result_type = ?, result_data = ?, completed_at = NOW()
                             WHERE id = ?
                         ");
-                        $upd->execute([$resultJson, $tx['id']]);
+                        $upd->execute([$resultType, $resultJson, $tx['id']]);
                         $tx['gv_status']   = 'completed';
+                        $tx['result_type'] = $resultType;
                         $tx['result_data'] = $resultJson;
 
                         $this->auditService->log(

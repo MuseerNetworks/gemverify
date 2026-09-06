@@ -117,16 +117,36 @@ class S8VWebhookController
 
         // 4. Handle State Transitions
         if ($status === 'successful' || $status === 'completed') {
-            $resultData = !empty($payload['data']) ? json_encode($payload['data']) : json_encode($payload);
+            $payloadData = !empty($payload['data']) ? $payload['data'] : $payload;
+            $serviceSlug = $tx['service_slug'] ?? '';
+            $resultType  = $tx['result_type'] ?? 'ticket';
+
+            if (in_array($serviceSlug, ['personalization', 'nin-personalization'], true) && is_array($payloadData)) {
+                if (empty($payloadData['pdf_base64'])) {
+                    require_once __DIR__ . '/../../Services/SlipGeneratorService.php';
+                    $slipRes = \Services\SlipGeneratorService::generateNinSlip($payloadData);
+                    if ($slipRes['success']) {
+                        $payloadData['pdf_base64']    = $slipRes['pdf_base64'];
+                        $payloadData['file_name']     = $slipRes['filename'];
+                        $payloadData['formatted_nin'] = $slipRes['nin'];
+                        $resultType = 'pdf_base64';
+                    }
+                } else {
+                    $resultType = 'pdf_base64';
+                }
+            }
+
+            $resultData = json_encode($payloadData);
 
             $this->db->prepare("
                 UPDATE api_transactions
                 SET gv_status = 'completed',
                     provider_status = 'completed',
+                    result_type = ?,
                     result_data = ?,
                     completed_at = NOW()
                 WHERE id = ?
-            ")->execute([$resultData, $txId]);
+            ")->execute([$resultType, $resultData, $txId]);
 
             $this->auditService->log(
                 'S8V_WEBHOOK_COMPLETED',

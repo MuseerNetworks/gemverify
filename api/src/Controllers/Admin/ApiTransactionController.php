@@ -680,18 +680,38 @@ class ApiTransactionController
 
             if ($isSuccess) {
                 $newGvStatus = 'completed';
-                $resultData  = json_encode($statusResult['result_data'] ?? []);
+                $rawResultData = $statusResult['result_data'] ?? [];
+                $serviceSlug = $tx['service_slug'] ?? '';
+                $resultType  = $tx['result_type'] ?? 'ticket';
+
+                if (in_array($serviceSlug, ['personalization', 'nin-personalization'], true) && is_array($rawResultData)) {
+                    if (empty($rawResultData['pdf_base64'])) {
+                        require_once __DIR__ . '/../../Services/SlipGeneratorService.php';
+                        $slipRes = \Services\SlipGeneratorService::generateNinSlip($rawResultData);
+                        if ($slipRes['success']) {
+                            $rawResultData['pdf_base64']    = $slipRes['pdf_base64'];
+                            $rawResultData['file_name']     = $slipRes['filename'];
+                            $rawResultData['formatted_nin'] = $slipRes['nin'];
+                            $resultType = 'pdf_base64';
+                        }
+                    } else {
+                        $resultType = 'pdf_base64';
+                    }
+                }
+
+                $resultData  = json_encode($rawResultData);
                 $this->db->prepare("
                     UPDATE api_transactions
                     SET gv_status = 'completed',
                         provider_status = 'completed',
                         provider_financial_status = 'charged',
+                        result_type = ?,
                         result_data = ?,
                         synced_at = NOW(),
                         synced_by = ?,
                         completed_at = COALESCE(completed_at, NOW())
                     WHERE id = ?
-                ")->execute([$resultData, 'admin_' . $this->adminId, $tx['id']]);
+                ")->execute([$resultType, $resultData, 'admin_' . $this->adminId, $tx['id']]);
                 $syncMessage = "Synced with {$providerLabel} successfully. Status is now 'completed'.";
 
             } elseif ($pStatus === 'failed') {

@@ -295,11 +295,6 @@ class ApiStatusController
             return;
         }
 
-        if ($tx['result_type'] !== 'pdf_base64') {
-            Response::error('This request does not have a PDF result.', [], 400);
-            return;
-        }
-
         if ($tx['gv_status'] !== 'completed') {
             Response::error('PDF is not available — request status is: ' . $tx['gv_status'], [], 422);
             return;
@@ -307,6 +302,35 @@ class ApiStatusController
 
         if (empty($tx['result_data'])) {
             Response::error('PDF data not found for this request.', [], 404);
+            return;
+        }
+
+        $pdfBase64 = $tx['result_data'];
+        $fileName  = 'NIN_Slip_' . $ref . '.pdf';
+        $decoded   = json_decode($tx['result_data'], true);
+
+        if (is_array($decoded)) {
+            if (!empty($decoded['pdf_base64'])) {
+                $pdfBase64 = $decoded['pdf_base64'];
+                $fileName  = $decoded['file_name'] ?? $fileName;
+            } elseif (in_array($tx['service_slug'] ?? '', ['personalization', 'nin-personalization'], true)) {
+                // Generate NIN slip on-demand if missing
+                require_once __DIR__ . '/../Services/SlipGeneratorService.php';
+                $slipRes = \Services\SlipGeneratorService::generateNinSlip($decoded);
+                if ($slipRes['success']) {
+                    $pdfBase64 = $slipRes['pdf_base64'];
+                    $fileName  = $slipRes['filename'];
+                    $decoded['pdf_base64']    = $pdfBase64;
+                    $decoded['file_name']     = $fileName;
+                    $decoded['formatted_nin'] = $slipRes['nin'];
+                    $this->db->prepare("UPDATE api_transactions SET result_type = 'pdf_base64', result_data = ? WHERE id = ?")
+                             ->execute([json_encode($decoded), $tx['id']]);
+                }
+            }
+        }
+
+        if (empty($pdfBase64) || !is_string($pdfBase64) || (!str_starts_with(trim($pdfBase64), 'data:application/pdf') && !str_starts_with(trim($pdfBase64), 'JVBERi'))) {
+            Response::error('This request does not have a downloadable PDF slip.', [], 400);
             return;
         }
 
@@ -322,7 +346,8 @@ class ApiStatusController
         Response::success([
             'gv_reference' => $ref,
             'service_name' => $tx['service_name'],
-            'pdf_base64'   => $tx['result_data'],
+            'file_name'    => $fileName,
+            'pdf_base64'   => $pdfBase64,
         ]);
     }
 
@@ -398,18 +423,36 @@ class ApiStatusController
 
         if ($statusResult['is_complete'] && !$statusResult['is_failed']) {
             // Provider succeeded — mark completed
-            $resultData = !empty($statusResult['result_data'])
-                ? json_encode($statusResult['result_data'])
-                : null;
+            $rawResultData = $statusResult['result_data'] ?? [];
+            $serviceSlug = $tx['service_slug'] ?? '';
+            $resultType  = $tx['result_type'] ?? 'ticket';
+
+            if (in_array($serviceSlug, ['personalization', 'nin-personalization'], true) && is_array($rawResultData)) {
+                if (empty($rawResultData['pdf_base64'])) {
+                    require_once __DIR__ . '/../Services/SlipGeneratorService.php';
+                    $slipRes = \Services\SlipGeneratorService::generateNinSlip($rawResultData);
+                    if ($slipRes['success']) {
+                        $rawResultData['pdf_base64']    = $slipRes['pdf_base64'];
+                        $rawResultData['file_name']     = $slipRes['filename'];
+                        $rawResultData['formatted_nin'] = $slipRes['nin'];
+                        $resultType = 'pdf_base64';
+                    }
+                } else {
+                    $resultType = 'pdf_base64';
+                }
+            }
+
+            $resultData = !empty($rawResultData) ? json_encode($rawResultData) : null;
 
             $this->db->prepare("
                 UPDATE api_transactions
                 SET gv_status            = 'completed',
                     provider_status      = ?,
+                    result_type          = ?,
                     result_data          = ?,
                     completed_at         = NOW()
                 WHERE id = ?
-            ")->execute([$providerStatus, $resultData, $txId]);
+            ")->execute([$providerStatus, $resultType, $resultData, $txId]);
 
         } elseif ($statusResult['is_failed']) {
             // Provider failed — execute non-refundable processing fee partial refund

@@ -3488,6 +3488,28 @@ async function gvDownloadResult(reference) {
   const token = localStorage.getItem("gv_token");
   if (!token) { if (typeof window.gvShowToast === "function") window.gvShowToast("You must be logged in to download results.", "error"); else alert("You must be logged in to download results."); return; }
   try {
+    // 1. Check API Service PDF endpoint first (e.g. for Personalization NIN Slip)
+    let apiRes = await fetch("../api/api-services/requests/" + reference + "/pdf", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+    if (apiRes.ok) {
+      let apiJson = await apiRes.json().catch(() => ({}));
+      if (apiJson.success && apiJson.data && apiJson.data.pdf_base64) {
+        let pdfData = String(apiJson.data.pdf_base64).trim();
+        if (!pdfData.startsWith("data:")) {
+          pdfData = "data:application/pdf;base64," + pdfData;
+        }
+        let a = document.createElement("a");
+        a.href = pdfData;
+        a.download = apiJson.data.file_name || ("NIN_Slip_" + reference + ".pdf");
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return;
+      }
+    }
+
+    // 2. Fallback to manual request result endpoint
     const res = await fetch("../api/manual/requests/" + reference + "/result", {
       headers: { "Authorization": "Bearer " + token }
     });
@@ -3677,6 +3699,28 @@ async function gvDownloadResult(reference) {
   const token = localStorage.getItem("gv_token");
   if (!token) { if (typeof window.gvShowToast === "function") window.gvShowToast("You must be logged in to download results.", "error"); else alert("You must be logged in to download results."); return; }
   try {
+    // 1. Check API Service PDF endpoint first (e.g. for Personalization NIN Slip)
+    let apiRes = await fetch("../api/api-services/requests/" + reference + "/pdf", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+    if (apiRes.ok) {
+      let apiJson = await apiRes.json().catch(() => ({}));
+      if (apiJson.success && apiJson.data && apiJson.data.pdf_base64) {
+        let pdfData = String(apiJson.data.pdf_base64).trim();
+        if (!pdfData.startsWith("data:")) {
+          pdfData = "data:application/pdf;base64," + pdfData;
+        }
+        let a = document.createElement("a");
+        a.href = pdfData;
+        a.download = apiJson.data.file_name || ("NIN_Slip_" + reference + ".pdf");
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return;
+      }
+    }
+
+    // 2. Fallback to manual request result endpoint
     const res = await fetch("../api/manual/requests/" + reference + "/result", {
       headers: { "Authorization": "Bearer " + token }
     });
@@ -4086,18 +4130,20 @@ async function gvDownloadResult(reference) {
       } else if (slug === 'self-service') {
         primary = {label:'Delinking Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
         if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
-      } else if (slug === 'personalization') {
+      } else if (slug === 'personalization' || slug === 'nin-personalization') {
         var citizenData = (rd && rd.data) ? rd.data : (rd || {});
-        var fullName = [citizenData.firstName || citizenData.firstname, citizenData.middleName || citizenData.middleName, citizenData.lastName || citizenData.lastname].filter(Boolean).join(' ');
+        var fullName = [citizenData.firstName || citizenData.firstname, citizenData.middleName || citizenData.middlename, citizenData.lastName || citizenData.lastname || citizenData.surname].filter(Boolean).join(' ');
         if (fullName) fields.push({label:'Full Name', value: fullName});
-        if (citizenData.idNumber || citizenData.nin) fields.push({label:'National ID (NIN)', value: citizenData.idNumber || citizenData.nin});
+        var rawNin = citizenData.idNumber || citizenData.nin || '';
+        var displayNin = citizenData.formatted_nin || rd.formatted_nin || rawNin;
+        if (rawNin) fields.push({label:'National ID (NIN)', value: displayNin});
         if (citizenData.dateOfBirth || citizenData.dob) fields.push({label:'Date of Birth', value: citizenData.dateOfBirth || citizenData.dob});
         if (citizenData.gender) fields.push({label:'Gender', value: citizenData.gender === 'M' ? 'Male' : (citizenData.gender === 'F' ? 'Female' : citizenData.gender)});
         if (citizenData.tracking_id || trackingId) fields.push({label:'Tracking ID', value: citizenData.tracking_id || trackingId});
         if (citizenData.photo) {
           photoHtml = '<div style="text-align:center;margin-bottom:14px;"><img src="' + citizenData.photo + '" style="width:84px;height:84px;border-radius:18px;border:2px solid #10b981;object-fit:cover;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:inline-block;" /></div>';
         }
-        primary = {label:'Personalization Status', value:(citizenData.status || rd.status || 'COMPLETED').toUpperCase(), mono:false};
+        primary = {label:'National ID (NIN)', value: displayNin || 'COMPLETED', mono:true};
         if (tx && tx.provider_ticket_id) fields.push({label:'Session ID', value: tx.provider_ticket_id});
       } else {
         primary = {label:'Status', value:(rd.status || 'COMPLETED').toUpperCase(), mono:false};
@@ -4106,6 +4152,9 @@ async function gvDownloadResult(reference) {
       if (tx && tx.gv_reference) fields.push({label:'Reference', value: tx.gv_reference});
       if (tx && tx.completed_at) fields.push({label:'Completed At', value: new Date(tx.completed_at).toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})});
     }
+
+    var pdfBase64 = rd.pdf_base64 || (rd.data && rd.data.pdf_base64) || (tx && tx.pdf_base64) || null;
+    var fileName = rd.file_name || (rd.data && rd.data.file_name) || (tx && tx.file_name) || ('NIN_Slip_' + ((tx && tx.gv_reference) || (req && req.reference) || Date.now()) + '.pdf');
 
     var svcName = (req && req.service_name) || (tx && tx.service_name) || slug || 'Personalization';
     return {
@@ -4119,7 +4168,10 @@ async function gvDownloadResult(reference) {
       originalPaid: originalPaid,
       penaltyDeducted: penaltyDeducted,
       refundAmount: refundAmount,
-      photoHtml: photoHtml
+      photoHtml: photoHtml,
+      pdfBase64: pdfBase64,
+      fileName: fileName,
+      reference: (tx && tx.gv_reference) || (req && req.reference) || ''
     };
   }
 
@@ -4266,7 +4318,12 @@ async function gvDownloadResult(reference) {
           + '<div style="font-size:' + fsize + ';font-weight:900;color:#059669;letter-spacing:' + (p.mono?'.08em':'0') + ';' + fmono + '">' + p.value + '</div>'
         + '</div>'
 
-        + (result.fields.length ? '<div style="background:' + c.rowBg + ';border:1px solid ' + c.border + ';border-radius:12px;padding:0 12px;margin-bottom:4px;">' + fieldRowsHtml + '</div>' : '')
+        + (result.fields.length ? '<div style="background:' + c.rowBg + ';border:1px solid ' + c.border + ';border-radius:12px;padding:0 12px;margin-bottom:12px;">' + fieldRowsHtml + '</div>' : '')
+        + (result.pdfBase64 ? (
+            '<button id="gv-rm-download-slip" style="width:100%;height:46px;border-radius:16px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:0 4px 16px rgba(16,185,129,.3);display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;">'
+            + '<span style="font-size:16px;">📥</span> Download Official NIN Slip (PDF)'
+            + '</button>'
+          ) : '')
         + noteHtml
 
         + '<div style="display:flex;gap:10px;margin-top:16px;">'
@@ -4306,6 +4363,29 @@ async function gvDownloadResult(reference) {
     var closeBtn = overlay.querySelector('#gv-rm-close');
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
+
+    // Download NIN Slip button handler
+    var downloadSlipBtn = overlay.querySelector('#gv-rm-download-slip');
+    if (downloadSlipBtn && result.pdfBase64) {
+      downloadSlipBtn.addEventListener('click', function(){
+        try {
+          var cleanPdf = String(result.pdfBase64).trim();
+          if (!cleanPdf.startsWith('data:')) {
+            cleanPdf = 'data:application/pdf;base64,' + cleanPdf;
+          }
+          var link = document.createElement('a');
+          link.href = cleanPdf;
+          link.download = result.fileName || 'NIN_Slip.pdf';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        } catch(err) {
+          if (result.reference) {
+            window.gvDownloadResult(result.reference);
+          }
+        }
+      });
+    }
 
     // IPE submit button handler
     var ipeBtn = overlay.querySelector('#gv-rm-ipe-btn');
