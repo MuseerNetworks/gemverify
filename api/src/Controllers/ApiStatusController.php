@@ -95,6 +95,13 @@ class ApiStatusController
         $whereClause = implode(' AND ', $where);
 
         try {
+            \Helpers\SchemaHelper::ensureProviderColumns($this->db);
+            $txCols = $this->db->query("SHOW COLUMNS FROM api_transactions")->fetchAll(PDO::FETCH_COLUMN);
+            $penaltyCol    = in_array('penalty_deducted', $txCols, true) ? 'at.penalty_deducted' : '0.00 AS penalty_deducted';
+            $refundCol     = in_array('refund_amount', $txCols, true) ? 'at.refund_amount' : '0.00 AS refund_amount';
+            $resultDataCol = in_array('result_data', $txCols, true) ? 'at.result_data' : 'NULL AS result_data';
+            $errCodeCol    = in_array('error_code', $txCols, true) ? 'at.error_code' : 'NULL AS error_code';
+
             // Total count
             $countParams = $params;
             $totalStmt = $this->db->prepare("
@@ -117,13 +124,13 @@ class ApiStatusController
                     at.gv_status,
                     at.provider_status,
                     at.result_type,
-                    at.result_data,
-                    at.penalty_deducted,
-                    at.refund_amount,
+                    {$resultDataCol},
+                    {$penaltyCol},
+                    {$refundCol},
                     at.variant_key,
                     at.input_method,
                     at.input_summary,
-                    at.error_code,
+                    {$errCodeCol},
                     at.error_message,
                     at.provider_ticket_id,
                     at.submitted_at,
@@ -142,11 +149,13 @@ class ApiStatusController
             $stmt->execute($listParams);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Format rows — never expose result_data here
+            // Format rows — return lean result_data
             $items = array_map([$this, 'formatListRow'], $rows);
 
             Response::success([
                 'items'       => $items,
+                'requests'    => $items,
+                'data'        => $items,
                 'total'       => $total,
                 'page'        => $page,
                 'page_size'   => self::PAGE_SIZE,

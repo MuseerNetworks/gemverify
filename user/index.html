@@ -1666,7 +1666,7 @@ function Eu(){let[e,A]=I.useState(!0),[n,l]=I.useState(()=>localStorage.getItem(
         : [];
       let apiList = [];
       if (apiJson.success && apiJson.data) {
-        let rawApi = Array.isArray(apiJson.data) ? apiJson.data : (apiJson.data.data || apiJson.data.requests || []);
+        let rawApi = Array.isArray(apiJson.data) ? apiJson.data : (apiJson.data.items || apiJson.data.requests || apiJson.data.data || []);
         apiList = rawApi.map(function(r) {
           return {
             reference: r.gv_reference || r.reference,
@@ -1693,11 +1693,8 @@ function Eu(){let[e,A]=I.useState(!0),[n,l]=I.useState(()=>localStorage.getItem(
         });
       }
 
-      // Deduplicate by reference: filter hollow api records from manualList so rich apiList records take precedence
-      let filteredManual = manualList.filter(function(m) {
-        return m.request_type !== "api";
-      });
-      let combined = apiList.concat(filteredManual);
+      // Deduplicate by reference: apiList takes precedence for rich result_data, manualList provides any non-duplicate records
+      let combined = apiList.concat(manualList);
       let seen = new Set();
       let uniqueList = [];
       for (let r of combined) {
