@@ -165,12 +165,24 @@ class S8VService implements VerificationProviderInterface
      */
     private function checkPersonalizationStatus(string $ticketId, ?string $trackingId = null): array
     {
+        $cleanTracking = null;
+        if (!empty($trackingId)) {
+            if (preg_match('/(?:tracking[:=]\s*|tracking_id[:=]\s*|^)([a-zA-Z0-9]{10,25})/i', $trackingId, $m)) {
+                $cleanTracking = strtoupper($m[1]);
+            } else {
+                $cleanTracking = strtoupper(trim(preg_replace('/[^A-Za-z0-9]/', '', (string)$trackingId)));
+            }
+            if ($cleanTracking === 'IPE') $cleanTracking = null;
+        }
+
         $payload = [];
         if (!empty($ticketId) && is_numeric($ticketId)) {
             $payload['id'] = (int)$ticketId;
-        } elseif (!empty($trackingId)) {
-            $payload['tracking_id'] = strtoupper(trim((string)$trackingId));
-        } else {
+        }
+        if (!empty($cleanTracking)) {
+            $payload['tracking_id'] = $cleanTracking;
+        }
+        if (empty($payload)) {
             $payload['id'] = $ticketId;
         }
 
@@ -179,6 +191,30 @@ class S8VService implements VerificationProviderInterface
         $data = is_array($res['data'] ?? null) ? $res['data'] : [];
         $rawStatus = (string)($data['status'] ?? $res['status'] ?? '');
         $status = strtolower(trim($rawStatus));
+
+        // Full-payload deep IPE inspection across all keys and raw serialized response
+        $rawAll = json_encode($res, JSON_UNESCAPED_SLASHES) . ' ' . json_encode($data, JSON_UNESCAPED_SLASHES);
+        $citizenData = (isset($data['data']) && is_array($data['data'])) ? $data['data'] : $data;
+
+        $rawMsg = (string)(
+            $data['message'] ?? $data['reason'] ?? $data['comment'] ?? $data['remark'] ?? $data['remarks'] ??
+            $data['action'] ?? $data['response'] ?? $data['note'] ?? $data['error'] ?? $data['description'] ??
+            $citizenData['comment'] ?? $citizenData['remark'] ?? $citizenData['remarks'] ??
+            $citizenData['reason'] ?? $citizenData['action'] ?? $citizenData['message'] ??
+            $res['error_message'] ?? ''
+        );
+
+        $idNumberVal = strtoupper(trim((string)($citizenData['idNumber'] ?? $data['idNumber'] ?? $citizenData['nin'] ?? $data['nin'] ?? '')));
+        $trackingVal = strtoupper(trim((string)($citizenData['tracking_id'] ?? $data['tracking_id'] ?? '')));
+
+        $isIpe = (
+            $idNumberVal === 'IPE' ||
+            $trackingVal === 'IPE' ||
+            preg_match('/\bipe\b/i', $rawMsg) ||
+            preg_match('/clearance/i', $rawMsg) ||
+            preg_match('/\bipe\b/i', $rawAll) ||
+            preg_match('/clearance/i', $rawAll)
+        );
 
         // Check if provider explicitly responded with success == false and an error message
         $isExplicitFailure = (
@@ -201,9 +237,20 @@ class S8VService implements VerificationProviderInterface
             ];
         }
 
+        // Intercept: If S8V returned IPE, it is ALWAYS a failure requiring clearance regardless of HTTP 200 or status text
+        if ($isIpe) {
+            return [
+                'success'         => true,
+                'is_complete'     => true,
+                'is_failed'       => true,
+                'provider_status' => 'failed',
+                'result_data'     => $data,
+                'error_message'   => 'Tracking ID has IPE (Send for clearance).',
+                'error_code'      => 'FAILED_IPE_CLEARANCE_REQUIRED'
+            ];
+        }
+
         if ($status === 'successful' || $status === 'completed' || $status === 'success') {
-            // Citizen demographic record + photo
-            $citizenData = $data['data'] ?? $data;
             return [
                 'success'         => true,
                 'is_complete'     => true,
@@ -216,29 +263,6 @@ class S8VService implements VerificationProviderInterface
         }
 
         if ($status === 'failed' || $status === 'rejected' || $isExplicitFailure) {
-            $rawMsg = (string)($data['message'] ?? $data['reason'] ?? $data['comment'] ?? $data['error'] ?? $data['description'] ?? $res['error_message'] ?? '');
-
-            $isIpe = (
-                strtoupper((string)($data['tracking_id'] ?? '')) === 'IPE' ||
-                strtoupper((string)($data['data']['idNumber'] ?? '')) === 'IPE' ||
-                strtoupper((string)($data['data']['tracking_id'] ?? '')) === 'IPE' ||
-                stripos($rawMsg, 'IPE') !== false ||
-                stripos($rawMsg, 'clearance') !== false ||
-                stripos((string)($data['tracking_id'] ?? ''), 'IPE') !== false
-            );
-
-            if ($isIpe) {
-                return [
-                    'success'         => true,
-                    'is_complete'     => true,
-                    'is_failed'       => true,
-                    'provider_status' => 'failed',
-                    'result_data'     => $data,
-                    'error_message'   => 'Tracking ID has IPE (Send for clearance).',
-                    'error_code'      => 'FAILED_IPE_CLEARANCE_REQUIRED'
-                ];
-            }
-
             // Clean failure reason without fee notices
             $failureReason = !empty($rawMsg) ? $rawMsg : 'No matching record found for this tracking ID on identity registry.';
 

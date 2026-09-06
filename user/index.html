@@ -2274,9 +2274,9 @@ function isAsyncCheckable(r) {
   if (r.request_type === "manual" || (r.reference && String(r.reference).startsWith("REQ-"))) {
     return false;
   }
-  // 2. Exclude final closed states (except completed)
+  // 2. Exclude final closed states
   let status = String(r.status || "").toLowerCase();
-  if (status === "failed" || status === "rejected" || status === "refunded") {
+  if (status === "failed" || status === "rejected" || status === "refunded" || status === "completed") {
     return false;
   }
   // 3. Exclude sync verification services
@@ -4032,6 +4032,7 @@ async function gvDownloadResult(reference) {
 
   function parseResult(tx, req){
     var slug = (tx && tx.service_slug) || (req && req.service_slug) || '';
+    var isPersonalization = (slug === 'personalization' || slug === 'nin-personalization');
 
     var rd = {};
     try {
@@ -4056,27 +4057,56 @@ async function gvDownloadResult(reference) {
       citizenData && citizenData.status
     ].filter(Boolean).map(function(s){ return String(s).toLowerCase().trim(); });
 
+    var isExplicitlyCompleted = statusCandidates.some(function(s){
+      return s === 'completed' || s === 'successful' || s === 'success';
+    });
+
+    var isExplicitlyFailed = statusCandidates.some(function(s){
+      return s === 'failed' || s === 'rejected' || s === 'refunded' || s === 'unsuccessful';
+    });
+
     var note = (tx && (tx.error_message || tx.message)) ||
                (req && (req.error_message || req.message)) ||
                rd.response || rd.note || citizenData.note || '';
 
-    // Deep IPE detection
-    var isIpe = (
-      /\bipe\b|clearance/i.test(note) ||
-      /\bipe\b|clearance/i.test(String((tx && tx.error_code) || '')) ||
-      /\bipe\b|clearance/i.test(String((req && req.error_code) || '')) ||
-      String(citizenData.idNumber || rd.idNumber || '').toUpperCase() === 'IPE' ||
-      String(citizenData.tracking_id || rd.tracking_id || '').toUpperCase() === 'IPE' ||
-      /\bIPE\b/.test(rdStr)
-    );
+    // Deep IPE detection — STRICTLY FOR NIN PERSONALIZATION ONLY!
+    // Never trigger IPE on ipe-clearance, nin-validation, bvn-retrieval, etc.
+    var isIpe = false;
+    if (isPersonalization) {
+      var errCode = String((tx && tx.error_code) || (req && req.error_code) || '');
+      var rawNin = String(citizenData.idNumber || rd.idNumber || citizenData.nin || rd.nin || '').toUpperCase().trim();
+      var rawTid = String(citizenData.tracking_id || rd.tracking_id || '').toUpperCase().trim();
 
-    var isFailed = isIpe || statusCandidates.some(function(s){
-      return s === 'failed' || s === 'rejected' || s === 'refunded' || s === 'unsuccessful';
-    });
+      isIpe = (
+        /\bipe\b/i.test(errCode) ||
+        /\bclearance\b/i.test(errCode) ||
+        /\bipe\b/i.test(note) ||
+        /\bclearance\b/i.test(note) ||
+        rawNin === 'IPE' ||
+        rawTid === 'IPE' ||
+        /\bIPE\b/.test(rdStr)
+      );
+    }
 
-    if (isIpe) {
-      isFailed = true;
-      note = 'Tracking ID has IPE (Send for clearance).';
+    var isFailed = false;
+    if (isPersonalization) {
+      var validNin = /^\d{11}$/.test(String(citizenData.idNumber || rd.idNumber || citizenData.nin || rd.nin || '').trim());
+      if (isIpe) {
+        isFailed = true;
+        note = 'Tracking ID has IPE (Send for clearance).';
+      } else if (validNin && isExplicitlyCompleted) {
+        isFailed = false;
+      } else {
+        isFailed = isExplicitlyFailed;
+      }
+    } else if (slug === 'ipe-clearance' || slug === 'ipe-clearance-single') {
+      if (rd.new_nin || isExplicitlyCompleted) {
+        isFailed = false;
+      } else {
+        isFailed = isExplicitlyFailed;
+      }
+    } else {
+      isFailed = isExplicitlyFailed;
     }
 
     var primary = {label:'Status', value: isFailed ? 'UNSUCCESSFUL' : 'COMPLETED', mono:false};

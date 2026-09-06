@@ -757,11 +757,40 @@ class ApiRequestController
 
         $activeProvider = !empty($tx['provider']) ? strtolower(trim($tx['provider'])) : (!empty($tx['provider_name']) ? strtolower(trim($tx['provider_name'])) : 'techhub');
 
+        $isPersonalization = in_array($tx['service_slug'] ?? '', ['personalization', 'nin-personalization'], true);
+
+        // Retroactive fix: If completed personalization record has IPE in result_data or idNumber
+        if ($isPersonalization && $tx['gv_status'] === 'completed') {
+            $rd = is_array($tx['result_data']) ? $tx['result_data'] : json_decode($tx['result_data'] ?? '', true);
+            $rdAll = json_encode($rd);
+            if (is_array($rd) && (
+                strtoupper((string)($rd['idNumber'] ?? $rd['nin'] ?? '')) === 'IPE' ||
+                strtoupper((string)($rd['data']['idNumber'] ?? '')) === 'IPE' ||
+                strtoupper((string)($rd['tracking_id'] ?? '')) === 'IPE' ||
+                strtoupper((string)($rd['data']['tracking_id'] ?? '')) === 'IPE' ||
+                preg_match('/\bIPE\b/', $rdAll)
+            )) {
+                $penaltyFee   = 100.00;
+                $pricePaid    = (float)($tx['price_paid'] ?? 200.00);
+                $refundAmount = max(0.00, $pricePaid - $penaltyFee);
+                $fullErrorMsg = "Tracking ID has IPE (Send for clearance). ₦100.00 processing fee applied. ₦" . number_format($refundAmount, 2) . " returned to wallet.";
+                $this->db->prepare("
+                    UPDATE api_transactions
+                    SET gv_status = 'failed', provider_status = 'failed', error_code = 'FAILED_IPE_CLEARANCE_REQUIRED',
+                        error_message = ?, penalty_deducted = ?, refund_amount = ?
+                    WHERE id = ?
+                ")->execute([$fullErrorMsg, $penaltyFee, $refundAmount, $tx['id']]);
+                $tx['gv_status']     = 'failed';
+                $tx['error_code']    = 'FAILED_IPE_CLEARANCE_REQUIRED';
+                $tx['error_message'] = $fullErrorMsg;
+            }
+        }
+
         // Check if an S8V failed transaction needs diagnostics/IPE enrichment
-        $needsS8vRefresh = ($activeProvider === 's8v' && !empty($tx['provider_ticket_id']) && $tx['gv_status'] === 'failed' && (empty($tx['result_data']) || empty($tx['error_code']) || stripos($tx['error_message'] ?? '', 'No matching record found') !== false));
+        $needsS8vRefresh = ($activeProvider === 's8v' && !empty($tx['provider_ticket_id']) && $tx['gv_status'] === 'failed' && $isPersonalization && ($tx['error_code'] !== 'FAILED_IPE_CLEARANCE_REQUIRED' || empty($tx['result_data']) || stripos($tx['error_message'] ?? '', 'No matching record found') !== false));
 
         // If already completed Personalization, ensure PDF slip is synthesized if missing
-        if ($tx['gv_status'] === 'completed' && in_array($tx['service_slug'] ?? '', ['personalization', 'nin-personalization'], true)) {
+        if ($tx['gv_status'] === 'completed' && $isPersonalization) {
             $rd = json_decode($tx['result_data'] ?? '', true);
             if (is_array($rd) && empty($rd['pdf_base64'])) {
                 require_once __DIR__ . '/../Services/SlipGeneratorService.php';
@@ -792,11 +821,25 @@ class ApiRequestController
 
         try {
             if ($activeProvider === 's8v') {
+                $trackingIdForCheck = null;
+                if (!empty($tx['input_summary'])) {
+                    if (preg_match('/(?:tracking[:=]\s*|tracking_id[:=]\s*|^)([a-zA-Z0-9]{10,25})/i', $tx['input_summary'], $m)) {
+                        $trackingIdForCheck = $m[1];
+                    }
+                }
+                if (empty($trackingIdForCheck) && !empty($tx['form_data'])) {
+                    $fd = is_array($tx['form_data']) ? $tx['form_data'] : json_decode($tx['form_data'] ?? '', true);
+                    if (is_array($fd)) {
+                        $trackingIdForCheck = $fd['tracking_id'] ?? $fd['tracking'] ?? null;
+                    }
+                }
+                if ($trackingIdForCheck === 'IPE') $trackingIdForCheck = null;
+
                 $statusResult = $this->s8vService->checkAsyncStatus(
                     $tx['service_slug'] ?? 'nin-personalization',
                     $tx['variant_key'] ?? null,
                     $tx['provider_ticket_id'],
-                    $tx['input_summary'] ?? null
+                    $trackingIdForCheck ?: ($tx['input_summary'] ?? null)
                 );
             } else {
                 $statusResult = $this->techHubService->checkAsyncStatus(
@@ -887,7 +930,9 @@ class ApiRequestController
 
                             $userReason   = $statusResult['error_message'] ?? 'No record found on identity registry for this request.';
                             $feeNotice    = $penaltyFee > 0 ? " ₦" . number_format($penaltyFee, 2) . " processing fee applied. ₦" . number_format($refundAmount, 2) . " returned to wallet." : " Full fee refunded to wallet.";
-                            $fullErrorMsg = $userReason . $feeNotice;
+                            $fullErrorMsg = (stripos($userReason, 'processing fee applied') !== false || stripos($userReason, 'returned to wallet') !== false)
+                                ? $userReason
+                                : $userReason . $feeNotice;
                             $errorCode    = $statusResult['error_code'] ?? 'FAILED_RECORD_NOT_FOUND';
                             $resultDataJson = !empty($statusResult['result_data']) ? json_encode($statusResult['result_data']) : null;
 

@@ -116,12 +116,35 @@ class S8VWebhookController
         $txId = (int)$tx['id'];
 
         // 4. Handle State Transitions
-        if ($status === 'successful' || $status === 'completed') {
-            $payloadData = !empty($payload['data']) ? $payload['data'] : $payload;
-            $serviceSlug = $tx['service_slug'] ?? '';
-            $resultType  = $tx['result_type'] ?? 'ticket';
+        $rawAll = json_encode($payload, JSON_UNESCAPED_SLASHES);
+        $payloadData = !empty($payload['data']) ? $payload['data'] : $payload;
+        $serviceSlug = $tx['service_slug'] ?? '';
 
-            if (in_array($serviceSlug, ['personalization', 'nin-personalization'], true) && is_array($payloadData)) {
+        $rawMsg = (string)(
+            $payload['message'] ?? $payload['remark'] ?? $payload['remarks'] ?? $payload['comment'] ??
+            $payload['reason'] ?? $payload['action'] ?? $payload['error'] ?? ''
+        );
+        if (is_array($payloadData)) {
+            $rawMsg .= ' ' . ($payloadData['comment'] ?? $payloadData['remark'] ?? $payloadData['remarks'] ?? $payloadData['reason'] ?? $payloadData['action'] ?? $payloadData['message'] ?? '');
+        }
+
+        $idNumberVal = strtoupper(trim((string)($payloadData['idNumber'] ?? $payload['idNumber'] ?? $payloadData['nin'] ?? $payload['nin'] ?? '')));
+        $trackingVal = strtoupper(trim((string)($payloadData['tracking_id'] ?? $payload['tracking_id'] ?? '')));
+
+        $isPersonalization = in_array($serviceSlug, ['personalization', 'nin-personalization'], true);
+        $isIpe = $isPersonalization && (
+            $idNumberVal === 'IPE' ||
+            $trackingVal === 'IPE' ||
+            preg_match('/\bipe\b/i', $rawMsg) ||
+            preg_match('/clearance/i', $rawMsg) ||
+            preg_match('/\bipe\b/i', $rawAll) ||
+            preg_match('/clearance/i', $rawAll)
+        );
+
+        if (($status === 'successful' || $status === 'completed') && !$isIpe) {
+            $resultType = $tx['result_type'] ?? 'ticket';
+
+            if ($isPersonalization && is_array($payloadData)) {
                 if (empty($payloadData['pdf_base64'])) {
                     require_once __DIR__ . '/../../Services/SlipGeneratorService.php';
                     $slipRes = \Services\SlipGeneratorService::generateNinSlip($payloadData);
@@ -158,10 +181,13 @@ class S8VWebhookController
                 "S8V webhook delivered successful completion for {$tx['gv_reference']}"
             );
 
-        } elseif ($status === 'failed') {
+        } elseif ($status === 'failed' || $isIpe) {
             // Apply failure processing fee and partial refund
             $pricePaid  = (float)($tx['price_paid'] ?? 0.00);
             $penaltyFee = (float)($tx['failure_penalty_fee'] ?? 0.00);
+            if ($penaltyFee <= 0 && $isPersonalization) {
+                $penaltyFee = 100.00;
+            }
             $refundAmount = max(0.00, $pricePaid - $penaltyFee);
 
             if ((int)($tx['refund_issued'] ?? 0) === 0 && $refundAmount > 0) {
@@ -177,12 +203,17 @@ class S8VWebhookController
                 );
             }
 
-            $userReason = $payload['message'] ?? 'No record found on identity registry for this request.';
+            $userReason = $isIpe
+                ? 'Tracking ID has IPE (Send for clearance).'
+                : (!empty(trim($rawMsg)) ? trim($rawMsg) : 'No matching record found for this tracking ID on identity registry.');
+            $errorCode = $isIpe ? 'FAILED_IPE_CLEARANCE_REQUIRED' : 'FAILED_RECORD_NOT_FOUND';
             $feeNotice  = $penaltyFee > 0 ? " ₦" . number_format($penaltyFee, 2) . " processing fee applied. ₦" . number_format($refundAmount, 2) . " returned to wallet." : " Full fee refunded to wallet.";
 
             $txCols = $this->db->query("SHOW COLUMNS FROM api_transactions")->fetchAll(PDO::FETCH_COLUMN);
-            $hasPenaltyCol = in_array('penalty_deducted', $txCols, true);
-            $hasRefundCol  = in_array('refund_amount', $txCols, true);
+            $hasPenaltyCol   = in_array('penalty_deducted', $txCols, true);
+            $hasRefundCol    = in_array('refund_amount', $txCols, true);
+            $hasErrorCodeCol = in_array('error_code', $txCols, true);
+            $hasResultDataCol= in_array('result_data', $txCols, true);
 
             $updateSets = [
                 "gv_status        = 'failed'",
@@ -198,6 +229,14 @@ class S8VWebhookController
             if ($hasRefundCol) {
                 $updateSets[] = "refund_amount = ?";
                 $params[] = $refundAmount;
+            }
+            if ($hasErrorCodeCol) {
+                $updateSets[] = "error_code = ?";
+                $params[] = $errorCode;
+            }
+            if ($hasResultDataCol) {
+                $updateSets[] = "result_data = ?";
+                $params[] = json_encode($payloadData);
             }
 
             $updateSets[] = "error_message    = ?";
@@ -216,8 +255,8 @@ class S8VWebhookController
                 'webhook',
                 null,
                 null,
-                ['status' => 'failed', 'refund' => $refundAmount, 'penalty' => $penaltyFee],
-                "S8V webhook delivered failure for {$tx['gv_reference']}"
+                ['status' => 'failed', 'is_ipe' => $isIpe, 'refund' => $refundAmount, 'penalty' => $penaltyFee],
+                "S8V webhook delivered failure for {$tx['gv_reference']}" . ($isIpe ? ' (IPE Detected)' : '')
             );
         }
 

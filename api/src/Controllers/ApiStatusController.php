@@ -480,8 +480,10 @@ class ApiStatusController
             $feeNotice  = $penaltyFee > 0 ? " ₦" . number_format($penaltyFee, 2) . " processing fee applied. ₦" . number_format($refundAmount, 2) . " returned to wallet." : " Full fee refunded to wallet.";
 
             $txCols = $this->db->query("SHOW COLUMNS FROM api_transactions")->fetchAll(PDO::FETCH_COLUMN);
-            $hasPenaltyCol = in_array('penalty_deducted', $txCols, true);
-            $hasRefundCol  = in_array('refund_amount', $txCols, true);
+            $hasPenaltyCol   = in_array('penalty_deducted', $txCols, true);
+            $hasRefundCol    = in_array('refund_amount', $txCols, true);
+            $hasErrorCodeCol = in_array('error_code', $txCols, true);
+            $hasResultDataCol= in_array('result_data', $txCols, true);
 
             $updateSets = [
                 "gv_status        = 'failed'",
@@ -498,9 +500,20 @@ class ApiStatusController
                 $updateSets[] = "refund_amount = ?";
                 $params[] = $refundAmount;
             }
+            if ($hasErrorCodeCol && !empty($statusResult['error_code'])) {
+                $updateSets[] = "error_code = ?";
+                $params[] = $statusResult['error_code'];
+            }
+            if ($hasResultDataCol && !empty($statusResult['result_data'])) {
+                $updateSets[] = "result_data = ?";
+                $params[] = json_encode($statusResult['result_data']);
+            }
 
             $updateSets[] = "error_message    = ?";
-            $params[] = $userReason . $feeNotice;
+            $fullErrorMsg = (stripos($userReason, 'processing fee applied') !== false || stripos($userReason, 'returned to wallet') !== false)
+                ? $userReason
+                : $userReason . $feeNotice;
+            $params[] = $fullErrorMsg;
 
             $updateSets[] = "completed_at     = NOW()";
 

@@ -5,7 +5,7 @@ use PDO;
 use Exception;
 
 /**
- * SchemaHelper — Self-Healing Database Migration Utility
+ * SchemaHelper - Self-Healing Database Migration Utility
  *
  * Automatically verifies and adds required schema columns at runtime across
  * local, staging, and production environments. Idempotent and fail-safe.
@@ -15,7 +15,7 @@ class SchemaHelper
     private static bool $ensured = false;
 
     /**
-     * Ensure columns required for Multi-Provider Routing and Failure Processing Fee exist.
+     * Ensure columns required for Multi-Provider Routing, Failure Processing Fee, and IPE handling exist.
      *
      * @param PDO|null $db
      */
@@ -66,6 +66,20 @@ class SchemaHelper
                 if (!in_array('refund_amount', $txCols, true)) {
                     $db->exec("ALTER TABLE `api_transactions` ADD COLUMN `refund_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `penalty_deducted`");
                 }
+                if (!in_array('error_code', $txCols, true)) {
+                    $db->exec("ALTER TABLE `api_transactions` ADD COLUMN `error_code` VARCHAR(60) NULL DEFAULT NULL AFTER `error_message`");
+                }
+
+                // 3. Retroactive healing: Heal past personalization records with IPE
+                $db->exec("
+                    UPDATE `api_transactions`
+                    SET `error_code` = 'FAILED_IPE_CLEARANCE_REQUIRED',
+                        `gv_status` = 'failed',
+                        `provider_status` = 'failed'
+                    WHERE (`service_slug` IN ('personalization', 'nin-personalization') OR `service_id` IN (SELECT id FROM services WHERE slug IN ('personalization', 'nin-personalization')))
+                      AND (`error_message` LIKE '%IPE%' OR `error_message` LIKE '%clearance%' OR `result_data` LIKE '%IPE%')
+                      AND (`error_code` IS NULL OR `error_code` != 'FAILED_IPE_CLEARANCE_REQUIRED')
+                ");
             }
 
             self::$ensured = true;
