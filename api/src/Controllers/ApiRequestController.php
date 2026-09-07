@@ -725,13 +725,8 @@ class ApiRequestController
      */
     public function checkStatus(string $reference): void
     {
-        \Helpers\SchemaHelper::ensureProviderColumns($this->db);
-        $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
-        $providerCol = in_array('provider_name', $cols, true) ? 's.provider_name' : "'techhub' AS provider_name";
-        $penaltyCol  = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : "0.00 AS failure_penalty_fee";
-
         $stmt = $this->db->prepare("
-            SELECT t.*, s.name as service_name, s.slug as service_slug, {$providerCol}, {$penaltyCol}
+            SELECT t.*, s.name as service_name, s.slug as service_slug, s.provider_name, s.failure_penalty_fee
             FROM api_transactions t
             LEFT JOIN services s ON s.id = t.service_id
             WHERE t.gv_reference = :ref AND t.user_id = :userId

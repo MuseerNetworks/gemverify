@@ -4538,28 +4538,147 @@ async function gvDownloadResult(reference) {
     setTimeout(function(){ btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; btn.style.border = ''; }, 1800);
   }
 
+  // Global In-Memory Cache for fetched result data (keyed by reference)
+  window.__gvResultCache = window.__gvResultCache || {};
+
   window.gvShowResultModal = async function(tx, req){
     closeModal();
 
-    // Resilient fallback: If result_data is missing/empty, dynamically fetch from status endpoint
     var ref = (tx && (tx.gv_reference || tx.reference)) || (req && (req.gv_reference || req.reference)) || '';
+    
+    // 1. Check in-memory result cache
+    if (ref && window.__gvResultCache[ref]) {
+      var cached = window.__gvResultCache[ref];
+      tx = Object.assign({}, tx, cached);
+      if (req) {
+        req.tx = tx;
+        req.result_data = tx.result_data;
+      }
+    }
+
     var hasResultData = (tx && tx.result_data && (typeof tx.result_data === 'object' ? Object.keys(tx.result_data).length > 0 : tx.result_data.length > 2)) ||
                         (req && req.result_data && (typeof req.result_data === 'object' ? Object.keys(req.result_data).length > 0 : req.result_data.length > 2));
 
     var statusStr = String((tx && (tx.gv_status || tx.status)) || (req && (req.gv_status || req.status)) || '').toLowerCase();
     var isTerminal = statusStr === 'completed' || statusStr === 'failed' || statusStr === 'rejected' || statusStr === 'refunded';
+    var isManual = (req && req.request_type === 'manual') || (tx && tx.request_type === 'manual') || (ref && String(ref).startsWith('REQ-'));
 
-    if (!hasResultData && isTerminal && ref) {
+    // 2. Render initial modal INSTANTLY (0ms latency for user)
+    function mountModal(currTx, currReq) {
+      closeModal();
+      var result = parseResult(currTx, currReq);
+      var d = document.createElement('div');
+      d.innerHTML = buildModal(result);
+      var overlay = d.firstElementChild;
+
+      overlay.querySelectorAll('.gv-rm-copybtn').forEach(function(btn){
+        btn.style.cssText += ';height:26px;padding:0 10px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;';
+        btn.addEventListener('click', function(){ doCopy(this); });
+      });
+      var closeBtn = overlay.querySelector('#gv-rm-close');
+      if (closeBtn) closeBtn.addEventListener('click', closeModal);
+      overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
+
+      // Download NIN Slip button handler
+      var downloadSlipBtn = overlay.querySelector('#gv-rm-download-slip');
+      if (downloadSlipBtn) {
+        downloadSlipBtn.addEventListener('click', async function(){
+          downloadSlipBtn.disabled = true;
+          var origHtml = downloadSlipBtn.innerHTML;
+          downloadSlipBtn.innerHTML = '<span>⏳</span> Downloading NIN Slip...';
+          try {
+            if (result.pdfBase64) {
+              var cleanPdf = String(result.pdfBase64).trim();
+              if (!cleanPdf.startsWith('data:')) {
+                cleanPdf = 'data:application/pdf;base64,' + cleanPdf;
+              }
+              var link = document.createElement('a');
+              link.href = cleanPdf;
+              link.download = result.fileName || ('NIN_Slip_' + (result.reference || Date.now()) + '.pdf');
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+            } else if (result.reference) {
+              await window.gvDownloadResult(result.reference);
+            }
+          } catch(err) {
+            console.error('Download slip error:', err);
+            if (result.reference) {
+              await window.gvDownloadResult(result.reference);
+            }
+          } finally {
+            setTimeout(function(){
+              downloadSlipBtn.disabled = false;
+              downloadSlipBtn.innerHTML = origHtml;
+            }, 1500);
+          }
+        });
+      }
+
+      // IPE submit button handler
+      var ipeBtn = overlay.querySelector('#gv-rm-ipe-btn');
+      if (ipeBtn) {
+        ipeBtn.addEventListener('click', function(){
+          var pinInput = overlay.querySelector('#gv-rm-ipe-pin');
+          var errDiv = overlay.querySelector('#gv-rm-ipe-err');
+          var pinVal = (pinInput ? pinInput.value : '').trim();
+
+          if (pinVal.length !== 4 || !/^\d{4}$/.test(pinVal)) {
+            if (errDiv) {
+              errDiv.textContent = 'Please enter your 4-digit Transaction PIN.';
+              errDiv.style.display = 'block';
+            }
+            return;
+          }
+
+          var ipePrice = (window.getServicePrice && (window.getServicePrice('ipe-clearance-single', null) || window.getServicePrice('ipe-clearance', null))) || 500;
+          var tid = result.trackingId || '';
+
+          closeModal();
+
+          // 1. Pre-fill tracking ID for the IPE page form
+          window.__gvPreFillIpeTrackingId = tid;
+
+          // 2. Switch active page to IPE clearance
+          if (window.__gvSetPage) {
+            window.__gvSetPage('ipe-clearance');
+          }
+
+          // 3. Directly launch the official payment preview modal
+          if (window.__gvOpenPaymentModal) {
+            window.__gvOpenPaymentModal('IPE Clearance — Single', ipePrice, {
+              slug: 'ipe-clearance-single',
+              tracking_id: tid,
+              pin: pinVal
+            });
+          }
+        });
+      }
+
+      document.body.appendChild(overlay);
+
+      document.addEventListener('keydown', function onEsc(e){
+        if (e.key === 'Escape'){ closeModal(); document.removeEventListener('keydown', onEsc); }
+      });
+    }
+
+    // Instantly mount the modal with available data
+    mountModal(tx, req);
+
+    // 3. Non-blocking Background Hydration: Only fetch if result_data is missing on API requests
+    if (!hasResultData && isTerminal && ref && !isManual) {
       try {
         var token = localStorage.getItem('gv_token');
         if (token) {
-          var res = await fetch('../api/api-services/' + encodeURIComponent(ref) + '/status', {
+          fetch('../api/api-services/' + encodeURIComponent(ref) + '/status', {
             headers: { 'Authorization': 'Bearer ' + token }
-          });
-          if (res.ok) {
-            var resJson = await res.json();
+          }).then(function(res){
+            return res.ok ? res.json() : null;
+          }).then(function(resJson){
             if (resJson && resJson.success && resJson.data && resJson.data.tx) {
               var fetchedTx = resJson.data.tx;
+              // Cache in memory
+              window.__gvResultCache[ref] = fetchedTx;
               tx = Object.assign({}, tx, fetchedTx);
               if (req) {
                 req.tx = tx;
@@ -4568,109 +4687,23 @@ async function gvDownloadResult(reference) {
                 req.error_code = tx.error_code;
                 req.error_message = tx.error_message;
               }
+              // Check if modal for this ref is still currently visible, and smoothly update it
+              var currOverlay = document.getElementById('gv-result-overlay');
+              if (currOverlay) {
+                mountModal(tx, req);
+              }
             }
-          }
-        }
-      } catch(e) {
-        console.warn('[GemVerify] Fallback status fetch error:', e);
-      }
-    }
-
-    var result = parseResult(tx, req);
-    var d = document.createElement('div');
-    d.innerHTML = buildModal(result);
-    var overlay = d.firstElementChild;
-
-    /* attach all event listeners AFTER inserting HTML — no inline onclick needed */
-    overlay.querySelectorAll('.gv-rm-copybtn').forEach(function(btn){
-      btn.style.cssText += ';height:26px;padding:0 10px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;';
-      btn.addEventListener('click', function(){ doCopy(this); });
-    });
-    var closeBtn = overlay.querySelector('#gv-rm-close');
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
-
-    // Download NIN Slip button handler
-    var downloadSlipBtn = overlay.querySelector('#gv-rm-download-slip');
-    if (downloadSlipBtn) {
-      downloadSlipBtn.addEventListener('click', async function(){
-        downloadSlipBtn.disabled = true;
-        var origHtml = downloadSlipBtn.innerHTML;
-        downloadSlipBtn.innerHTML = '<span>⏳</span> Downloading NIN Slip...';
-        try {
-          if (result.pdfBase64) {
-            var cleanPdf = String(result.pdfBase64).trim();
-            if (!cleanPdf.startsWith('data:')) {
-              cleanPdf = 'data:application/pdf;base64,' + cleanPdf;
-            }
-            var link = document.createElement('a');
-            link.href = cleanPdf;
-            link.download = result.fileName || ('NIN_Slip_' + (result.reference || Date.now()) + '.pdf');
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-          } else if (result.reference) {
-            await window.gvDownloadResult(result.reference);
-          }
-        } catch(err) {
-          console.error('Download slip error:', err);
-          if (result.reference) {
-            await window.gvDownloadResult(result.reference);
-          }
-        } finally {
-          setTimeout(function(){
-            downloadSlipBtn.disabled = false;
-            downloadSlipBtn.innerHTML = origHtml;
-          }, 1500);
-        }
-      });
-    }
-
-    // IPE submit button handler
-    var ipeBtn = overlay.querySelector('#gv-rm-ipe-btn');
-    if (ipeBtn) {
-      ipeBtn.addEventListener('click', function(){
-        var pinInput = overlay.querySelector('#gv-rm-ipe-pin');
-        var errDiv = overlay.querySelector('#gv-rm-ipe-err');
-        var pinVal = (pinInput ? pinInput.value : '').trim();
-
-        if (pinVal.length !== 4 || !/^\d{4}$/.test(pinVal)) {
-          if (errDiv) {
-            errDiv.textContent = 'Please enter your 4-digit Transaction PIN.';
-            errDiv.style.display = 'block';
-          }
-          return;
-        }
-
-        var ipePrice = (window.getServicePrice && (window.getServicePrice('ipe-clearance-single', null) || window.getServicePrice('ipe-clearance', null))) || 500;
-        var tid = result.trackingId || '';
-
-        closeModal();
-
-        // 1. Pre-fill tracking ID for the IPE page form
-        window.__gvPreFillIpeTrackingId = tid;
-
-        // 2. Switch active page to IPE clearance
-        if (window.__gvSetPage) {
-          window.__gvSetPage('ipe-clearance');
-        }
-
-        // 3. Directly launch the official payment preview modal
-        if (window.__gvOpenPaymentModal) {
-          window.__gvOpenPaymentModal('IPE Clearance — Single', ipePrice, {
-            slug: 'ipe-clearance-single',
-            tracking_id: tid,
-            pin: pinVal
+          }).catch(function(e){
+            console.warn('[GemVerify] Background status fetch error:', e);
           });
         }
-      });
+      } catch(e) {
+        console.warn('[GemVerify] Status fetch error:', e);
+      }
+    } else if (hasResultData && ref) {
+      // Store already available result in memory cache
+      window.__gvResultCache[ref] = tx;
     }
-
-    document.body.appendChild(overlay);
-
-    document.addEventListener('keydown', function onEsc(e){
-      if (e.key === 'Escape'){ closeModal(); document.removeEventListener('keydown', onEsc); }
-    });
   };
 
   /* field row inline styles */
