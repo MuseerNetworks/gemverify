@@ -127,12 +127,18 @@ class ManualRequestController
                 } elseif ($service === 'cac-services' || str_starts_with($service, 'cac-')) {
                     $serviceClause1 = " AND s.slug LIKE 'cac-%'";
                     $serviceClause2 = " AND s.slug LIKE 'cac-%'";
-                } elseif ($service === 'ipe-clearance') {
+                } elseif ($service === 'ipe-clearance' || $service === 'ipe-clearance-single') {
                     $serviceClause1 = " AND s.slug IN ('ipe-clearance', 'ipe-clearance-single')";
                     $serviceClause2 = " AND s.slug IN ('ipe-clearance', 'ipe-clearance-single')";
-                } elseif ($service === 'nin-validation') {
+                } elseif ($service === 'nin-validation' || $service === 'nin-validation-single' || $service === 'nin-validation-bulk') {
                     $serviceClause1 = " AND s.slug IN ('nin-validation', 'nin-validation-single', 'nin-validation-bulk')";
                     $serviceClause2 = " AND s.slug IN ('nin-validation', 'nin-validation-single', 'nin-validation-bulk')";
+                } elseif ($service === 'personalization' || $service === 'nin-personalization') {
+                    $serviceClause1 = " AND s.slug IN ('personalization', 'nin-personalization')";
+                    $serviceClause2 = " AND s.slug IN ('personalization', 'nin-personalization')";
+                } elseif ($service === 'nin-enrollment' || $service === 'nin') {
+                    $serviceClause1 = " AND s.slug IN ('nin-enrollment', 'nin')";
+                    $serviceClause2 = " AND s.slug IN ('nin-enrollment', 'nin')";
                 } else {
                     $serviceClause1 = " AND s.slug = :service1";
                     $serviceClause2 = " AND s.slug = :service2";
@@ -151,7 +157,17 @@ class ManualRequestController
                     s.est_time as est_time, 
                     s.slug as service_slug,
                     r.variant_key,
-                    rfd.form_data as form_data,
+                    COALESCE(
+                        JSON_UNQUOTE(JSON_EXTRACT(rfd.form_data, '$.nin')),
+                        JSON_UNQUOTE(JSON_EXTRACT(rfd.form_data, '$.bvn')),
+                        JSON_UNQUOTE(JSON_EXTRACT(rfd.form_data, '$.tracking_id')),
+                        JSON_UNQUOTE(JSON_EXTRACT(rfd.form_data, '$.jamb_reg_no')),
+                        JSON_UNQUOTE(JSON_EXTRACT(rfd.form_data, '$.rc_number')),
+                        JSON_UNQUOTE(JSON_EXTRACT(rfd.form_data, '$.tin')),
+                        JSON_UNQUOTE(JSON_EXTRACT(rfd.form_data, '$.email')),
+                        JSON_UNQUOTE(JSON_EXTRACT(rfd.form_data, '$.phone')),
+                        JSON_UNQUOTE(JSON_EXTRACT(rfd.form_data, '$.first_name'))
+                    ) as form_identifier,
                     NULL as input_summary,
                     CASE WHEN r.result_file_id IS NOT NULL THEN 1 ELSE 0 END as has_result,
                     'manual' as request_type,
@@ -174,7 +190,7 @@ class ManualRequestController
                     COALESCE(s.est_time, 'Instant') as est_time, 
                     s.slug as service_slug,
                     t.variant_key,
-                    NULL as form_data,
+                    NULL as form_identifier,
                     t.input_summary,
                     CASE WHEN t.result_data IS NOT NULL THEN 1 ELSE 0 END as has_result,
                     'api' as request_type,
@@ -205,6 +221,16 @@ class ManualRequestController
             $stmt->execute();
 
             $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Populate lean form_data object representation so UI _gvIdent continues to work seamlessly
+            foreach ($requests as &$req) {
+                if ($req['request_type'] === 'manual') {
+                    $idVal = $req['form_identifier'] ?? null;
+                    $req['form_data'] = $idVal ? ['ident' => $idVal] : null;
+                }
+                unset($req['form_identifier']);
+            }
+            unset($req);
 
             Response::success($requests);
         } catch (Exception $e) {

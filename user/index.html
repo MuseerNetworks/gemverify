@@ -1537,6 +1537,7 @@ function Eu(){let[e,A]=I.useState(!0),[n,l]=I.useState(()=>localStorage.getItem(
   let [userRequestsLoading, setUserRequestsLoading] = I.useState(false);
   let [userRequestsError, setUserRequestsError] = I.useState(null);
   let reqSeqRef = I.useRef(0);
+  let historyCacheRef = I.useRef({});
   let [virtualAccount, setVirtualAccount] = I.useState(null);
   let [showProfileModal, setShowProfileModal] = I.useState(false);
   let [profileCurrentPin, setProfileCurrentPin] = I.useState("");
@@ -1639,11 +1640,27 @@ function Eu(){let[e,A]=I.useState(!0),[n,l]=I.useState(()=>localStorage.getItem(
     });
   };
 
-  let fetchUserRequests = async (targetSlug) => {
+  let fetchUserRequests = async (targetSlug, force = false) => {
     let token = localStorage.getItem("gv_token");
     if (!token) {
       setUserRequestsLoading(false);
       return;
+    }
+
+    let cacheKey = (targetSlug && targetSlug !== "dashboard") ? targetSlug : "all";
+    let now = Date.now();
+    const CACHE_TTL_MS = 20000; // 20s client-side cache
+
+    // If fresh cache exists and force is false, instantly render from cache
+    if (!force && historyCacheRef.current && historyCacheRef.current[cacheKey]) {
+      let cached = historyCacheRef.current[cacheKey];
+      if (now - cached.timestamp < CACHE_TTL_MS) {
+        setUserRequests(cached.data);
+        renderUserRequestsUI(cached.data);
+        setUserRequestsLoading(false);
+        setUserRequestsError(null);
+        return;
+      }
     }
 
     const seqId = ++reqSeqRef.current;
@@ -1726,6 +1743,12 @@ function Eu(){let[e,A]=I.useState(!0),[n,l]=I.useState(()=>localStorage.getItem(
         return new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0);
       });
 
+      // Update client-side cache
+      historyCacheRef.current[cacheKey] = {
+        data: uniqueList,
+        timestamp: Date.now()
+      };
+
       // Stale response guard: only commit state if this is still the active request sequence
       if (seqId === reqSeqRef.current) {
         setUserRequests(uniqueList);
@@ -1741,7 +1764,7 @@ function Eu(){let[e,A]=I.useState(!0),[n,l]=I.useState(()=>localStorage.getItem(
       }
     }
   };
-  window.__gvFetchUserRequests = fetchUserRequests;
+  window.__gvFetchUserRequests = (slug, force = true) => fetchUserRequests(slug, force);
 
   let [toast, setToast] = I.useState(null);
   let showToast = (msg, type = "success") => {
@@ -2191,7 +2214,7 @@ let K=(F,L,j)=>{setPayError("");E({open:!0,service:F,amount:L,meta:j})};window._
       }
 
       // Always immediately refresh request history after successful submission
-      fetchUserRequests(serviceSlug);
+      fetchUserRequests(serviceSlug, true);
 
       if (meta.type === "gemprint-job") {
         fetchGemPrintData();
@@ -2274,6 +2297,7 @@ function _gvIdent(r) {
   if (r.form_data) {
     try {
       const fd = typeof r.form_data === "string" ? JSON.parse(r.form_data) : r.form_data;
+      if (fd.ident) return fd.ident;
       if (fd.nin) return "NIN: " + fd.nin;
       if (fd.bvn) return "BVN: " + fd.bvn;
       if (fd.tracking_id) return "Tracking: " + fd.tracking_id;

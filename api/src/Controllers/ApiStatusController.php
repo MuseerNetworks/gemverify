@@ -95,13 +95,6 @@ class ApiStatusController
         $whereClause = implode(' AND ', $where);
 
         try {
-            \Helpers\SchemaHelper::ensureProviderColumns($this->db);
-            $txCols = $this->db->query("SHOW COLUMNS FROM api_transactions")->fetchAll(PDO::FETCH_COLUMN);
-            $penaltyCol    = in_array('penalty_deducted', $txCols, true) ? 'at.penalty_deducted' : '0.00 AS penalty_deducted';
-            $refundCol     = in_array('refund_amount', $txCols, true) ? 'at.refund_amount' : '0.00 AS refund_amount';
-            $resultDataCol = in_array('result_data', $txCols, true) ? 'at.result_data' : 'NULL AS result_data';
-            $errCodeCol    = in_array('error_code', $txCols, true) ? 'at.error_code' : 'NULL AS error_code';
-
             // Total count
             $countParams = $params;
             $totalStmt = $this->db->prepare("
@@ -113,7 +106,7 @@ class ApiStatusController
             $totalStmt->execute($countParams);
             $total = (int)$totalStmt->fetchColumn();
 
-            // Paginated results
+            // Paginated results (optimized lean projection)
             $listParams   = $params;
             $listParams[] = self::PAGE_SIZE;
             $listParams[] = $offset;
@@ -124,13 +117,13 @@ class ApiStatusController
                     at.gv_status,
                     at.provider_status,
                     at.result_type,
-                    {$resultDataCol},
-                    {$penaltyCol},
-                    {$refundCol},
+                    at.result_data,
+                    at.penalty_deducted,
+                    at.refund_amount,
                     at.variant_key,
                     at.input_method,
                     at.input_summary,
-                    {$errCodeCol},
+                    at.error_code,
                     at.error_message,
                     at.provider_ticket_id,
                     at.submitted_at,
@@ -371,18 +364,13 @@ class ApiStatusController
      */
     private function findTransaction(string $ref): ?array
     {
-        \Helpers\SchemaHelper::ensureProviderColumns($this->db);
-        $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
-        $penaltyCol  = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : '0.00 AS failure_penalty_fee';
-        $providerCol = in_array('provider_name', $cols, true) ? 's.provider_name' : "'techhub' AS provider_name";
-
         $stmt = $this->db->prepare("
             SELECT
                 at.*,
                 s.name AS service_name,
                 s.slug AS service_slug,
-                {$penaltyCol},
-                {$providerCol},
+                s.failure_penalty_fee,
+                s.provider_name,
                 sp.price AS price_paid
             FROM api_transactions at
             JOIN services s  ON s.id  = at.service_id
@@ -400,18 +388,13 @@ class ApiStatusController
      */
     private function findTransactionById(int $id): ?array
     {
-        \Helpers\SchemaHelper::ensureProviderColumns($this->db);
-        $cols = $this->db->query("SHOW COLUMNS FROM services")->fetchAll(PDO::FETCH_COLUMN);
-        $penaltyCol  = in_array('failure_penalty_fee', $cols, true) ? 's.failure_penalty_fee' : '0.00 AS failure_penalty_fee';
-        $providerCol = in_array('provider_name', $cols, true) ? 's.provider_name' : "'techhub' AS provider_name";
-
         $stmt = $this->db->prepare("
             SELECT
                 at.*,
                 s.name AS service_name,
                 s.slug AS service_slug,
-                {$penaltyCol},
-                {$providerCol},
+                s.failure_penalty_fee,
+                s.provider_name,
                 sp.price AS price_paid
             FROM api_transactions at
             JOIN services s  ON s.id  = at.service_id
@@ -491,43 +474,34 @@ class ApiStatusController
             $userReason = $statusResult['error_message'] ?? 'No record found on identity registry for this request.';
             $feeNotice  = $penaltyFee > 0 ? " ₦" . number_format($penaltyFee, 2) . " processing fee applied. ₦" . number_format($refundAmount, 2) . " returned to wallet." : " Full fee refunded to wallet.";
 
-            $txCols = $this->db->query("SHOW COLUMNS FROM api_transactions")->fetchAll(PDO::FETCH_COLUMN);
-            $hasPenaltyCol   = in_array('penalty_deducted', $txCols, true);
-            $hasRefundCol    = in_array('refund_amount', $txCols, true);
-            $hasErrorCodeCol = in_array('error_code', $txCols, true);
-            $hasResultDataCol= in_array('result_data', $txCols, true);
+            $fullErrorMsg = (stripos($userReason, 'processing fee applied') !== false || stripos($userReason, 'returned to wallet') !== false)
+                ? $userReason
+                : $userReason . $feeNotice;
 
             $updateSets = [
                 "gv_status        = 'failed'",
                 "provider_status  = ?",
                 "refund_issued    = 1",
+                "penalty_deducted = ?",
+                "refund_amount    = ?",
+                "error_message    = ?",
+                "completed_at     = NOW()"
             ];
-            $params = [$providerStatus];
+            $params = [
+                $providerStatus,
+                $penaltyFee,
+                $refundAmount,
+                $fullErrorMsg
+            ];
 
-            if ($hasPenaltyCol) {
-                $updateSets[] = "penalty_deducted = ?";
-                $params[] = $penaltyFee;
-            }
-            if ($hasRefundCol) {
-                $updateSets[] = "refund_amount = ?";
-                $params[] = $refundAmount;
-            }
-            if ($hasErrorCodeCol && !empty($statusResult['error_code'])) {
+            if (!empty($statusResult['error_code'])) {
                 $updateSets[] = "error_code = ?";
                 $params[] = $statusResult['error_code'];
             }
-            if ($hasResultDataCol && !empty($statusResult['result_data'])) {
+            if (!empty($statusResult['result_data'])) {
                 $updateSets[] = "result_data = ?";
                 $params[] = json_encode($statusResult['result_data']);
             }
-
-            $updateSets[] = "error_message    = ?";
-            $fullErrorMsg = (stripos($userReason, 'processing fee applied') !== false || stripos($userReason, 'returned to wallet') !== false)
-                ? $userReason
-                : $userReason . $feeNotice;
-            $params[] = $fullErrorMsg;
-
-            $updateSets[] = "completed_at     = NOW()";
 
             $params[] = $txId;
 
