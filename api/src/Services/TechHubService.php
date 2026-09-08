@@ -295,12 +295,54 @@ class TechHubService
      */
     private function normaliseSyncResult(array $clientResult): array
     {
+        $httpCode = $clientResult['http_code'] ?? 0;
+        $data     = $clientResult['data'] ?? [];
+        $raw      = $clientResult['raw'] ?? '';
+        $errCode  = $clientResult['error_code'] ?? null;
+        $errMsg   = $clientResult['error_message'] ?? null;
+
         if (!$clientResult['success']) {
+            // 1. Check for transport-level failure
+            if ($httpCode === 0 || str_starts_with((string)$errCode, 'CURL_ERROR_')) {
+                $isTimeout = in_array($errCode, ['CURL_ERROR_28'], true);
+                return [
+                    'success'                  => false,
+                    'provider_accepted'        => false,
+                    'provider_charge_state'    => $isTimeout ? 'unknown' : 'not_charged',
+                    'provider_status'          => 'failed',
+                    'safe_to_refund'           => !$isTimeout,
+                    'requires_reconciliation'  => $isTimeout,
+                    'error_message'            => $errMsg ?: 'Connection to provider failed',
+                    'error_code'               => $errCode ?: 'TRANSPORT_ERROR',
+                    'http_code'                => $httpCode,
+                ];
+            }
+
+            // 2. Check for pre-charge / deterministic failure (e.g. invalid NIN, not found, unconfigured, 4xx)
+            $msg = $errMsg ?: ($data['message'] ?? '');
+            $isPreChargeReject = (
+                in_array($httpCode, [400, 401, 403, 404, 422], true) ||
+                stripos($msg, 'insufficient balance') !== false ||
+                stripos($msg, 'invalid') !== false ||
+                stripos($msg, 'not found') !== false ||
+                stripos($msg, 'no record') !== false ||
+                stripos($msg, 'does not exist') !== false ||
+                stripos($msg, 'unauthorized') !== false ||
+                stripos($msg, 'format') !== false ||
+                stripos($msg, 'required') !== false ||
+                stripos($msg, 'error') !== false
+            );
+
             return [
-                'success'       => false,
-                'error_message' => $clientResult['error_message'] ?? 'Provider request failed',
-                'error_code'    => $clientResult['error_code']    ?? null,
-                'http_code'     => $clientResult['http_code'],
+                'success'                  => false,
+                'provider_accepted'        => false,
+                'provider_charge_state'    => $isPreChargeReject ? 'not_charged' : 'unknown',
+                'provider_status'          => 'rejected',
+                'safe_to_refund'           => $isPreChargeReject,
+                'requires_reconciliation'  => !$isPreChargeReject,
+                'error_message'            => $msg ?: 'Provider request failed',
+                'error_code'               => $errCode ?: 'PROVIDER_REJECT',
+                'http_code'                => $httpCode,
             ];
         }
 
@@ -310,21 +352,28 @@ class TechHubService
         if (empty($pdf)) {
             error_log("[TechHub Sync Result] No PDF found in response. Keys: " . json_encode(is_array($data) ? array_keys($data) : gettype($data)));
             
-            // Check if there's an explicit error status in response
-            if (isset($data['status']) && strtolower((string)$data['status']) === 'error') {
-                return [
-                    'success'       => false,
-                    'error_message' => $data['message'] ?? 'Provider returned an error',
-                    'error_code'    => $data['error_code'] ?? 'PROVIDER_ERROR',
-                    'http_code'     => $clientResult['http_code'],
-                ];
-            }
+            $msg  = $data['message'] ?? 'Provider returned no PDF';
+            $code = $data['error_code'] ?? 'NO_PDF_IN_RESPONSE';
+
+            // Check if there's an explicit error status or message in response
+            $isExplicitError = (
+                (isset($data['status']) && strtolower((string)$data['status']) === 'error') ||
+                stripos($msg, 'not found') !== false ||
+                stripos($msg, 'invalid') !== false ||
+                stripos($msg, 'failed') !== false ||
+                stripos($msg, 'error') !== false
+            );
 
             return [
-                'success'       => false,
-                'error_message' => $data['message'] ?? 'Provider returned success but no PDF',
-                'error_code'    => 'NO_PDF_IN_RESPONSE',
-                'http_code'     => $clientResult['http_code'],
+                'success'                  => false,
+                'provider_accepted'        => false,
+                'provider_charge_state'    => $isExplicitError ? 'not_charged' : 'unknown',
+                'provider_status'          => 'failed',
+                'safe_to_refund'           => $isExplicitError,
+                'requires_reconciliation'  => !$isExplicitError,
+                'error_message'            => $msg,
+                'error_code'               => $code,
+                'http_code'                => $clientResult['http_code'],
             ];
         }
 
@@ -339,14 +388,19 @@ class TechHubService
         }
 
         return [
-            'success'         => true,
-            'pdf_base64'      => $pdf,
-            'filename'        => $fileName,
-            'user_data'       => $data['user_data'] ?? $data['data'] ?? $data,
-            'message'         => $data['message']   ?? 'PDF generated successfully',
-            'provider_txn_id' => $data['transaction_id'] ?? $data['reference'] ?? null,
-            'error_message'   => null,
-            'error_code'      => null,
+            'success'                  => true,
+            'provider_accepted'        => true,
+            'provider_charge_state'    => 'charged',
+            'safe_to_refund'           => false,
+            'requires_reconciliation'  => false,
+            'pdf_base64'               => $pdf,
+            'filename'                 => $fileName,
+            'user_data'                => $data['user_data'] ?? $data['data'] ?? $data,
+            'message'                  => $data['message']   ?? 'PDF generated successfully',
+            'provider_txn_id'          => $data['transaction_id'] ?? $data['reference'] ?? null,
+            'error_message'            => null,
+            'error_code'               => null,
+            'http_code'                => $clientResult['http_code'],
         ];
     }
 

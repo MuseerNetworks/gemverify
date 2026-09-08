@@ -588,7 +588,7 @@ class ApiTransactionController
             }
 
             // 1. Guard against synchronous slip services (NIN/BVN Verification)
-            if (($tx['result_type'] ?? '') === 'pdf_base64') {
+            if (($tx['result_type'] ?? '') === 'pdf_base64' || in_array($tx['service_slug'] ?? '', ['nin-verification', 'bvn-verification'], true)) {
                 if (!empty($tx['has_result'])) {
                     Response::success([
                         'gv_reference' => $ref,
@@ -597,10 +597,14 @@ class ApiTransactionController
                     ]);
                     return;
                 } else {
+                    require_once __DIR__ . '/../../Services/ReconciliationService.php';
+                    $reconService = new \Services\ReconciliationService($this->db);
+                    $res = $reconService->reconcileRecord($tx, 'admin_' . $this->adminId, 0);
                     Response::success([
                         'gv_reference' => $ref,
-                        'gv_status'    => $tx['gv_status'],
-                        'message'      => 'This is a synchronous slip generator. No remote ticket exists to poll. Use Reconcile or Refund if needed.',
+                        'gv_status'    => ($res['action'] === 'refunded' ? 'refunded' : $tx['gv_status']),
+                        'message'      => $res['message'] ?? 'Reconciled slip verification.',
+                        'reconcile'    => $res,
                     ]);
                     return;
                 }
@@ -619,6 +623,18 @@ class ApiTransactionController
             }
 
             if (!$ticketId) {
+                if ($tx['gv_status'] === 'reconciliation_required') {
+                    require_once __DIR__ . '/../../Services/ReconciliationService.php';
+                    $reconService = new \Services\ReconciliationService($this->db);
+                    $res = $reconService->reconcileRecord($tx, 'admin_' . $this->adminId, 0);
+                    Response::success([
+                        'gv_reference' => $ref,
+                        'gv_status'    => ($res['action'] === 'refunded' ? 'refunded' : $tx['gv_status']),
+                        'message'      => $res['message'] ?? 'Reconciled transaction without ticket.',
+                        'reconcile'    => $res,
+                    ]);
+                    return;
+                }
                 Response::error("Cannot sync: No {$providerLabel} ticket or tracking reference associated with this transaction. You can attach a Ticket ID in Details.", [], 422);
                 return;
             }
@@ -1005,6 +1021,41 @@ class ApiTransactionController
         } catch (Exception $e) {
             if ($this->db->inTransaction()) $this->db->rollBack();
             Response::error('Failed to reconcile transaction: ' . $e->getMessage(), [], 500);
+        }
+    }
+
+    /**
+     * POST /admin/api-transactions/reconcile-all
+     *
+     * Automatically sweeps and reconciles all transactions in 'reconciliation_required',
+     * unrefunded 'failed', or timed out 'processing'.
+     */
+    public function batchReconcileAll(): void
+    {
+        try {
+            require_once __DIR__ . '/../../Services/ReconciliationService.php';
+            $service = new \Services\ReconciliationService($this->db);
+            $report = $service->runBatch([
+                'limit'              => 100,
+                'sla_minutes'        => 15,
+                'actor'              => 'admin_' . $this->adminId,
+                'include_processing' => true,
+            ]);
+
+            Response::success([
+                'summary' => [
+                    'total_found'   => $report['total_found'],
+                    'refunded'      => $report['refunded'],
+                    'completed'     => $report['completed'],
+                    'still_pending' => $report['still_pending'],
+                    'skipped'       => $report['skipped'],
+                    'errors'        => $report['errors'],
+                ],
+                'message' => "Reconciliation complete: {$report['refunded']} auto-refunded, {$report['completed']} completed, {$report['still_pending']} pending.",
+                'details' => $report['items'],
+            ]);
+        } catch (\Throwable $e) {
+            Response::error('Batch reconciliation failed: ' . $e->getMessage(), [], 500);
         }
     }
 

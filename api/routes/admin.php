@@ -84,6 +84,10 @@ addRoute('GET',   '/admin/requests/{reference}/refund',     function ($p) { (new
 // ── API Transactions (TechHub service requests) ─────────────────────────────
 addRoute('GET',   '/admin/api-transactions',                function ()    { (new ApiTransactionController())->listTransactions(); });
 addRoute('GET',   '/admin/api-transactions/stats',          function ()    { (new ApiTransactionController())->getStats(); });
+addRoute('POST',  '/admin/api-transactions/reconcile-all',  function ()    {
+    \Middleware\AdminMiddleware::requireRole('admin');
+    (new ApiTransactionController())->batchReconcileAll();
+});
 addRoute('GET',   '/admin/api-transactions/{ref}',          function ($p)  { (new ApiTransactionController())->getDetail($p['ref']); });
 addRoute('PATCH', '/admin/api-transactions/{ref}/status',   function ($p)  {
     \Middleware\AdminMiddleware::requireRole('admin');

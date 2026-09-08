@@ -608,7 +608,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 </section>
 
 
-<section id="page-api-transactions" class="page"><div class="heading"><div><h1>API Transactions</h1><p>TechHub-powered service requests — NIN, BVN, Self-Service, Personalization, IPE.</p></div><div style="display:flex;gap:8px;align-items:center"><button id="btn-batch-refund" onclick="batchRefundFailed()" style="height:36px;padding:0 14px;font-size:13px;border-radius:8px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;font-weight:600" title="Refund all failed/stuck transactions with no refund issued">⚠ Refund All Failed</button><select id="atxn-filter-status" onchange="fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px"><option value="">All Statuses</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select><input id="atxn-search" type="text" placeholder="Search ref / ticket…" onkeydown="if(event.key==='Enter')fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;width:200px"><button class="primary" onclick="fetchApiTransactions(1)" style="height:36px;padding:0 14px;font-size:13px">🔄 Refresh</button></div></div><div id="atxn-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div><div class="card"><table id="atxn-table"><thead><tr><th>GV Reference</th><th>User</th><th>Service</th><th>Variant</th><th>Method</th><th>Status</th><th>Provider</th><th>Amount</th><th>Submitted</th><th>Actions</th></tr></thead><tbody id="atxn-body"><tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr></tbody></table></div><div id="atxn-pagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px"></div>
+<section id="page-api-transactions" class="page"><div class="heading"><div><h1>API Transactions</h1><p>TechHub-powered service requests — NIN, BVN, Self-Service, Personalization, IPE.</p></div><div style="display:flex;gap:8px;align-items:center"><button id="btn-batch-reconcile" onclick="batchReconcileAll()" style="height:36px;padding:0 14px;font-size:13px;border-radius:8px;border:1px solid #3b82f6;color:#3b82f6;background:rgba(59,130,246,0.08);cursor:pointer;font-weight:600" title="Automatically sweep and reconcile all pending, stuck, and reconciliation-required transactions">⚡ Auto-Reconcile All</button><button id="btn-batch-refund" onclick="batchRefundFailed()" style="height:36px;padding:0 14px;font-size:13px;border-radius:8px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;font-weight:600" title="Refund all failed/stuck transactions with no refund issued">⚠ Refund All Failed</button><select id="atxn-filter-status" onchange="fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px"><option value="">All Statuses</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="failed">Failed</option><option value="refunded">Refunded</option><option value="reconciliation_required">⚠️ Reconcile</option></select><input id="atxn-search" type="text" placeholder="Search ref / ticket…" onkeydown="if(event.key==='Enter')fetchApiTransactions(1)" style="height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;width:200px"><button class="primary" onclick="fetchApiTransactions(1)" style="height:36px;padding:0 14px;font-size:13px">🔄 Refresh</button></div></div><div id="atxn-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div><div class="card"><table id="atxn-table"><thead><tr><th>GV Reference</th><th>User</th><th>Service</th><th>Variant</th><th>Method</th><th>Status</th><th>Provider</th><th>Amount</th><th>Submitted</th><th>Actions</th></tr></thead><tbody id="atxn-body"><tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr></tbody></table></div><div id="atxn-pagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px"></div>
 
 <!-- API Transaction Detail Modal -->
 <div id="atxn-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
@@ -1475,6 +1475,35 @@ function syncAtxnWithProvider(ref) {
     }).catch(function(e){
       alert('Network error during sync: ' + e.message);
     });
+}
+
+function batchReconcileAll() {
+  if (!confirm('This will automatically sweep and reconcile all transactions in "reconciliation_required", unrefunded failures, and expired SLA requests with providers.\n\nAre you sure you want to run auto-reconciliation?')) return;
+  var btn = document.getElementById('btn-batch-reconcile');
+  if (btn) { btn.disabled = true; btn.textContent = 'Reconciling\u2026'; }
+  if (typeof gvShowToast === 'function') gvShowToast('Running auto-reconciliation engine…', 'info');
+  gvAdminFetch('../api/admin/api-transactions/reconcile-all', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }).then(function(raw){ return raw.json(); }).then(function(json){
+    if (json.success) {
+      var d = json.data || json;
+      var msg = d.message || 'Auto-reconciliation complete.';
+      if (typeof gvShowToast === 'function') {
+        gvShowToast('\u2713 ' + msg, 'success');
+      } else {
+        alert('\u2713 ' + msg);
+      }
+      fetchApiTransactions(1);
+      if (typeof loadStats === 'function') loadStats();
+    } else {
+      alert('Reconciliation error: ' + (json.message || 'Unknown error'));
+    }
+  }).catch(function(e){
+    alert('Network error during reconciliation: ' + e.message);
+  }).finally(function(){
+    if (btn) { btn.disabled = false; btn.textContent = '\u26a1 Auto-Reconcile All'; }
+  });
 }
 
 function batchRefundFailed() {
