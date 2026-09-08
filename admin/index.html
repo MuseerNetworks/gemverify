@@ -1341,7 +1341,7 @@ function viewAtxnDetail(ref) {
     var errorRow = tx.error_code ? '<div style="grid-column:1/-1"><strong>Error</strong><br><span style="color:#ef4444">[' + tx.error_code + '] ' + (tx.error_message||'') + '</span></div>' : '';
     var summaryRow = tx.input_summary ? '<div style="grid-column:1/-1"><strong>Input Summary (masked)</strong><br><code style="font-size:11px;opacity:.8">' + tx.input_summary + '</code></div>' : '';
     var resultRow  = tx.has_result ? '<div style="grid-column:1/-1"><span style="color:#22c55e">\u2713 Result data available</span></div>' : '';
-    var refundBtn  = (!tx.refund_issued && (tx.gv_status==='failed'||tx.gv_status==='pending'||tx.gv_status==='processing'))
+    var refundBtn  = (!tx.refund_issued && (tx.gv_status==='failed'||tx.gv_status==='pending'||tx.gv_status==='processing'||tx.gv_status==='reconciliation_required'))
       ? '<div style="margin-top:16px;display:flex;justify-content:flex-end"><button onclick="openAtxnRefundModal(\'' + tx.gv_reference + '\',\'' + ((tx.user && tx.user.business_name)||'').replace(/'/g,"\\'") + '\',' + (tx.price_paid||0) + ')" style="padding:8px 18px;border-radius:8px;border:1px solid #ef4444;color:#ef4444;background:none;cursor:pointer;font-weight:600">⚠ Issue Refund</button></div>'
       : '';
     content.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">'

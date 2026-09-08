@@ -391,10 +391,10 @@ class ApiTransactionController
                 return;
             }
 
-            // Only failed or stuck transactions should be refunded
-            if (!in_array($tx['gv_status'], ['failed', 'pending', 'processing'], true)) {
+            // Only failed, stuck, or reconciliation-flagged transactions should be refunded
+            if (!in_array($tx['gv_status'], ['failed', 'pending', 'processing', 'reconciliation_required'], true)) {
                 Response::error(
-                    'Refund only applies to failed/pending/processing transactions. Current status: ' . $tx['gv_status'],
+                    'Refund only applies to failed/pending/processing/reconciliation_required transactions. Current status: ' . $tx['gv_status'],
                     [], 422
                 );
                 return;
@@ -476,7 +476,7 @@ class ApiTransactionController
                 FROM api_transactions at
                 LEFT JOIN service_pricing sp ON sp.id = at.pricing_id
                 LEFT JOIN transactions   t  ON t.id  = at.transaction_id
-                WHERE at.gv_status IN ('failed', 'pending', 'processing')
+                WHERE at.gv_status IN ('failed', 'pending', 'processing', 'reconciliation_required')
                   AND at.refund_issued = 0
             ");
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
