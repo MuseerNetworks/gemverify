@@ -101,6 +101,13 @@ define('S8V_API_TOKEN',       getenv('S8V_API_TOKEN') ?: '');
 define('S8V_WEBHOOK_SECRET',  getenv('S8V_WEBHOOK_SECRET') ?: '');
 define('S8V_TIMEOUT',         (int)(getenv('S8V_TIMEOUT') ?: 30));
 
+// ── RecordDocs Identity & Job Provider Configuration ─────────────────────────
+// These values come exclusively from .env — never hardcoded, never exposed to frontend.
+define('RECORDDOCS_BASE_URL',       rtrim(getenv('RECORDDOCS_BASE_URL') ?: 'https://api-service.recorddocs.net/api/v1', '/'));
+define('RECORDDOCS_API_KEY',        getenv('RECORDDOCS_API_KEY') ?: '');
+define('RECORDDOCS_WEBHOOK_SECRET', getenv('RECORDDOCS_WEBHOOK_SECRET') ?: '');
+define('RECORDDOCS_TIMEOUT',        (int)(getenv('RECORDDOCS_TIMEOUT') ?: 30));
+
 
 
 

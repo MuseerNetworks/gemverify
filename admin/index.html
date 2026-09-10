@@ -2918,6 +2918,7 @@ function openService(id){
     <option value="manual" ${s.type==='Manual'?'selected':''}>Manual Admin Processing (Operator Queue)</option>
     <option value="s8v" ${(s.type!=='Manual' && s.provider_name==='s8v')?'selected':''}>S8V.ng Gateway (Automated API)</option>
     <option value="techhub" ${(s.type!=='Manual' && s.provider_name==='techhub')?'selected':''}>TechHub Gateway (Automated API)</option>
+    <option value="recorddocs" ${(s.type!=='Manual' && s.provider_name==='recorddocs')?'selected':''}>RecordDocs Gateway (Automated API)</option>
   `;
 
   document.getElementById('modalTitle').textContent='Edit Service';
@@ -3350,26 +3351,35 @@ async function refreshProviderBalances(){
       if (tableBody && Array.isArray(data.providers)) {
         tableBody.innerHTML = data.providers.map(p => {
           // Determine status pill colour
-          var pillClass = p.status === 'Active' ? 'green' : (p.status === 'High Load' ? 'amber' : 'red');
-          // Build extra job-count columns if present
+          var pillClass = p.status === 'Active' ? 'green' : (p.status === 'High Load' || p.status === 'Low Balance' ? 'amber' : 'red');
+          // Build job-count info: RecordDocs shows NIN/BVN units; TechHub shows completed/pending/failed
           var jobInfo = '';
-          if (p.jobs_completed !== undefined) {
+          if (p.nin_balance !== undefined) {
+            // RecordDocs provider — show quota units
+            jobInfo = `<span style="font-size:11px;color:var(--muted)">
+              🪪 NIN: ${p.nin_balance} units &nbsp;
+              🏦 BVN: ${p.bvn_balance} units
+            </span>`;
+          } else if (p.jobs_completed !== null && p.jobs_completed !== undefined) {
             jobInfo = `<span style="font-size:11px;color:var(--muted)">
               ✓ ${p.jobs_completed} done &nbsp;
               ⏳ ${p.jobs_pending} pending &nbsp;
               ✗ ${p.jobs_failed} failed
             </span>`;
           }
-          var spendLabel = p.spend_total !== undefined
-            ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">Pending: ${money(p.spend_pending || 0)}</div>`
-            : '';
+          var balanceLabel = p.nin_balance !== undefined
+            ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">Job float: ${p.currency || 'NGN'} ${money(p.job_balance || 0)}</div>`
+            : (p.spend_total !== undefined
+                ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">Pending: ${money(p.spend_pending || 0)}</div>`
+                : '');
+          var errorBadge = p.error ? `<div style="font-size:10px;color:#ef4444;margin-top:2px">⚠ ${p.error}</div>` : '';
           return `
           <tr>
-            <td><b>${p.name}</b>${p.note ? `<br><span style="font-size:10px;opacity:.6">${p.note}</span>` : ''}</td>
+            <td><b>${p.name}</b>${p.note ? `<br><span style="font-size:10px;opacity:.6">${p.note}</span>` : ''}${errorBadge}</td>
             <td><small>${p.category}</small></td>
             <td>
               <strong style="color:#16a34a">${money(p.spend_total !== undefined ? p.spend_total : p.available_balance)}</strong>
-              ${spendLabel}
+              ${balanceLabel}
             </td>
             <td>${jobInfo}</td>
             <td><span class="pill ${pillClass}">${p.status}</span></td>
@@ -3378,9 +3388,9 @@ async function refreshProviderBalances(){
         `;
         }).join('');
       }
-      // Update column headers to reflect new data
+      // Update column headers
       const thead = document.querySelector('#providerTable thead tr');
-      if (thead) thead.innerHTML = '<th>Provider</th><th>Category</th><th>Total Spend</th><th>Jobs</th><th>Status</th><th>Last Sync</th>';
+      if (thead) thead.innerHTML = '<th>Provider</th><th>Category</th><th>Balance / Spend</th><th>Units / Jobs</th><th>Status</th><th>Last Sync</th>';
     } else {
       alert('Failed to refresh provider balances: ' + (res?.message || 'Unknown error'));
     }

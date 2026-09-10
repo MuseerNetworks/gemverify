@@ -13,15 +13,17 @@ class ReconciliationService
     private AuditService $auditService;
     private TechHubService $techHubService;
     private S8VService $s8vService;
+    private \Services\RecordDocsService $recordDocsService;
     private static ?array $cachedColumns = null;
 
     public function __construct(?PDO $db = null)
     {
-        $this->db             = $db ?: \db();
-        $this->walletService  = new WalletService($this->db);
-        $this->auditService   = new AuditService($this->db);
-        $this->techHubService = new TechHubService();
-        $this->s8vService     = new S8VService();
+        $this->db               = $db ?: \db();
+        $this->walletService    = new WalletService($this->db);
+        $this->auditService     = new AuditService($this->db);
+        $this->techHubService   = new TechHubService();
+        $this->s8vService       = new S8VService();
+        $this->recordDocsService = new \Services\RecordDocsService();
     }
 
     /**
@@ -224,7 +226,11 @@ class ReconciliationService
         $resultType  = $tx['result_type'] ?? '';
         $currentGv   = $tx['gv_status'];
         $activeProvider = !empty($tx['provider']) ? strtolower(trim($tx['provider'])) : (!empty($tx['provider_name']) ? strtolower(trim($tx['provider_name'])) : 'techhub');
-        $providerLabel  = ($activeProvider === 's8v') ? 'S8V.ng' : 'TechHub';
+        $providerLabel  = match ($activeProvider) {
+            's8v'         => 'S8V.ng',
+            'recorddocs'  => 'RecordDocs',
+            default       => 'TechHub',
+        };
 
         // ── IDEMPOTENCY SAFETY GUARDS ───────────────────────────────────────
         if ($currentGv === 'refunded' && !empty($tx['refund_issued'])) {
@@ -288,6 +294,8 @@ class ReconciliationService
             try {
                 if ($activeProvider === 's8v') {
                     $statusResult = $this->s8vService->checkAsyncStatus($serviceSlug, $variantKey, $ticketId, $tx['input_summary'] ?? null);
+                } elseif ($activeProvider === 'recorddocs') {
+                    $statusResult = $this->recordDocsService->checkAsyncStatus($serviceSlug, $variantKey, $ticketId);
                 } else {
                     $statusResult = $this->techHubService->checkAsyncStatus($serviceSlug, $variantKey, $ticketId);
                 }

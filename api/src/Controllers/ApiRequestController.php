@@ -34,6 +34,7 @@ use Services\FileStorageService;
 use Services\LocalStorageDriver;
 use Services\TechHubService;
 use Services\S8VService;
+use Services\RecordDocsService;
 use Services\InsufficientBalanceException;
 use Exceptions\InsufficientBalanceException as LegacyInsufficientBalanceException;
 use Exceptions\DuplicateTransactionException;
@@ -49,6 +50,7 @@ class ApiRequestController
     private NotificationService $notificationService;
     private TechHubService $techHubService;
     private S8VService $s8vService;
+    private RecordDocsService $recordDocsService;
     private int $userId;
 
 
@@ -94,6 +96,7 @@ class ApiRequestController
         $this->notificationService = new NotificationService($this->db);
         $this->techHubService      = new TechHubService();
         $this->s8vService          = new S8VService();
+        $this->recordDocsService   = new RecordDocsService();
         $this->userId              = \Middleware\AuthMiddleware::getUserId();
     }
 
@@ -207,6 +210,12 @@ class ApiRequestController
                 Response::error('Service configuration error: ' . $mappingCheck['error'], [], 422);
                 return;
             }
+        } elseif ($activeProvider === 'recorddocs') {
+            $mappingCheck = $this->recordDocsService->validateMapping($serviceSlug, $variantKey, $inputMethod);
+            if (!$mappingCheck['valid']) {
+                Response::error('Service configuration error: ' . $mappingCheck['error'], [], 422);
+                return;
+            }
         }
 
         // ── 6. Pricing check ──────────────────────────────────────────────
@@ -241,7 +250,13 @@ class ApiRequestController
         }
 
         // ── 10. Determine result type ──────────────────────────────────────
-        $resultType = ($activeProvider === 's8v') ? 'ticket' : $this->techHubService->getResultType($serviceSlug);
+        if ($activeProvider === 's8v') {
+            $resultType = 'ticket';
+        } elseif ($activeProvider === 'recorddocs') {
+            $resultType = in_array($serviceSlug, ['nin-verification', 'bvn-verification'], true) ? 'pdf_base64' : 'ticket';
+        } else {
+            $resultType = $this->techHubService->getResultType($serviceSlug);
+        }
 
         // ── 11. Begin DB transaction ───────────────────────────────────────
         try {
@@ -259,13 +274,18 @@ class ApiRequestController
 
             // ── 13. Create api_transactions row (pending) ──────────────────
             $gvReference   = $this->generateGvReference();
-            $inputSummary  = ($activeProvider === 's8v')
-                ? "service={$serviceSlug}" . (!empty($formData['tracking_id']) ? " | Tracking:{$formData['tracking_id']}" : (!empty($formData['nin']) ? " | NIN:{$formData['nin']}" : ''))
-                : $this->techHubService->buildInputSummary($serviceSlug, $inputMethod, $formData);
-
-            $endpoint = ($activeProvider === 's8v')
-                ? 'https://www.s8v.ng/api/' . $serviceSlug
-                : $this->techHubService->resolveEndpoint($serviceSlug, $variantKey, $inputMethod);
+            if ($activeProvider === 's8v') {
+                $inputSummary = "service={$serviceSlug}" . (!empty($formData['tracking_id']) ? " | Tracking:{$formData['tracking_id']}" : (!empty($formData['nin']) ? " | NIN:{$formData['nin']}" : ''));
+                $endpoint     = 'https://www.s8v.ng/api/' . $serviceSlug;
+            } elseif ($activeProvider === 'recorddocs') {
+                $trackingId   = $formData['tracking_id'] ?? $formData['trackingId'] ?? null;
+                $ninVal       = $formData['nin'] ?? null;
+                $inputSummary = "service={$serviceSlug}" . ($trackingId ? " | Tracking:{$trackingId}" : ($ninVal ? " | NIN:{$ninVal}" : ''));
+                $endpoint     = 'https://api-service.recorddocs.net/api/v1';
+            } else {
+                $inputSummary = $this->techHubService->buildInputSummary($serviceSlug, $inputMethod, $formData);
+                $endpoint     = $this->techHubService->resolveEndpoint($serviceSlug, $variantKey, $inputMethod);
+            }
 
             $insertStmt = $this->db->prepare("
                 INSERT INTO api_transactions
@@ -302,6 +322,16 @@ class ApiRequestController
                 $providerResult = $this->s8vService->submitAsync(
                     $serviceSlug, $variantKey, $formData
                 );
+            } elseif ($activeProvider === 'recorddocs') {
+                if ($resultType === 'pdf_base64') {
+                    $providerResult = $this->recordDocsService->submitSync(
+                        $serviceSlug, $variantKey, $inputMethod, $formData
+                    );
+                } else {
+                    $providerResult = $this->recordDocsService->submitAsync(
+                        $serviceSlug, $variantKey, $formData
+                    );
+                }
             } else {
                 if ($resultType === 'pdf_base64') {
                     $providerResult = $this->techHubService->submitSync(
@@ -327,7 +357,11 @@ class ApiRequestController
 
             if ($providerAccepted) {
                 // ── CASE A: PROVIDER ACCEPTED REQUEST ──────────────────────────────
-                if ($resultType === 'pdf_base64') {
+                if ($resultType === 'pdf_base64' || !empty($providerResult['pdf_base64'])) {
+                    $storedResult = !empty($providerResult['pdf_base64'])
+                        ? $providerResult['pdf_base64']
+                        : json_encode($providerResult['user_data'] ?? []);
+
                     $this->db->prepare("
                         UPDATE api_transactions
                         SET gv_status = 'completed',
@@ -340,7 +374,7 @@ class ApiRequestController
                             completed_at = NOW()
                         WHERE id = ?
                     ")->execute([
-                        $providerResult['pdf_base64'],
+                        $storedResult,
                         $providerTxnId,
                         $ticketId,
                         $apiTxId,
@@ -364,7 +398,7 @@ class ApiRequestController
                 }
 
                 $this->auditService->log(
-                    'API_REQUEST_' . strtoupper($resultType === 'pdf_base64' ? 'COMPLETED' : 'PROCESSING'),
+                    'API_REQUEST_' . strtoupper(($resultType === 'pdf_base64' || !empty($providerResult['pdf_base64'])) ? 'COMPLETED' : 'PROCESSING'),
                     $apiTxId,
                     'user',
                     $this->userId,
@@ -375,7 +409,7 @@ class ApiRequestController
 
                 $balanceAfter = $this->walletService->getBalance($this->userId);
 
-                if ($resultType === 'pdf_base64') {
+                if ($resultType === 'pdf_base64' && !empty($providerResult['pdf_base64'])) {
                     $ts = time();
                     $ident = preg_replace('/\D/', '', (string)($formData['nin'] ?? $formData['bvn'] ?? $formData['phone'] ?? $formData['number'] ?? ''));
                     if (empty($ident)) $ident = substr($gvReference, -8);
@@ -392,8 +426,20 @@ class ApiRequestController
                         'price_paid'          => $price,
                         'wallet_balance_after'=> $balanceAfter,
                         'pdf_base64'          => $providerResult['pdf_base64'],
+                        'user_data'           => $providerResult['user_data'] ?? null,
                         'file_name'           => $computedFileName,
-                        'message'             => 'PDF generated successfully.',
+                        'message'             => $providerResult['message'] ?? 'PDF generated successfully.',
+                    ]);
+                } elseif (!empty($providerResult['user_data'])) {
+                    Response::success([
+                        'gv_reference'        => $gvReference,
+                        'status'              => 'completed',
+                        'service_name'        => $serviceName,
+                        'variant'             => $variantKey,
+                        'price_paid'          => $price,
+                        'wallet_balance_after'=> $balanceAfter,
+                        'user_data'           => $providerResult['user_data'],
+                        'message'             => $providerResult['message'] ?? 'Identity verified successfully.',
                     ]);
                 } else {
                     Response::success([

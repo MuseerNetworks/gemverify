@@ -29,6 +29,7 @@ use Services\AuditService;
 use Services\WalletService;
 use Services\TechHubService;
 use Services\S8VService;
+use Services\RecordDocsService;
 use PDO;
 use Exception;
 
@@ -39,6 +40,7 @@ class ApiTransactionController
     private WalletService $walletService;
     private TechHubService $techHubService;
     private S8VService $s8vService;
+    private RecordDocsService $recordDocsService;
     private int $adminId;
 
     private const PAGE_SIZE = 25;
@@ -48,12 +50,13 @@ class ApiTransactionController
 
     public function __construct()
     {
-        $this->db             = db();
-        $this->auditService   = new AuditService($this->db);
-        $this->walletService  = new WalletService($this->db);
-        $this->techHubService = new TechHubService();
-        $this->s8vService     = new S8VService();
-        $this->adminId        = (int)($_SERVER['ADMIN_ID'] ?? 1);
+        $this->db               = db();
+        $this->auditService     = new AuditService($this->db);
+        $this->walletService    = new WalletService($this->db);
+        $this->techHubService   = new TechHubService();
+        $this->s8vService       = new S8VService();
+        $this->recordDocsService = new RecordDocsService();
+        $this->adminId          = (int)($_SERVER['ADMIN_ID'] ?? 1);
     }
 
     // ── Endpoints ─────────────────────────────────────────────────────────────
@@ -611,7 +614,11 @@ class ApiTransactionController
             }
 
             $activeProvider = !empty($tx['provider']) ? strtolower(trim($tx['provider'])) : (!empty($tx['provider_name']) ? strtolower(trim($tx['provider_name'])) : 'techhub');
-            $providerLabel  = ($activeProvider === 's8v') ? 'S8V.ng' : 'TechHub';
+            $providerLabel  = match ($activeProvider) {
+                's8v'         => 'S8V.ng',
+                'recorddocs'  => 'RecordDocs',
+                default       => 'TechHub',
+            };
 
             $ticketId = !empty($tx['provider_ticket_id']) ? trim($tx['provider_ticket_id']) : null;
 
@@ -644,6 +651,8 @@ class ApiTransactionController
 
             if ($activeProvider === 's8v') {
                 $statusResult = $this->s8vService->checkAsyncStatus($serviceSlug, $variantKey, $ticketId, $tx['input_summary'] ?? null);
+            } elseif ($activeProvider === 'recorddocs') {
+                $statusResult = $this->recordDocsService->checkAsyncStatus($serviceSlug, $variantKey, $ticketId);
             } else {
                 $statusResult = $this->techHubService->checkAsyncStatus($serviceSlug, $variantKey, $ticketId);
             }

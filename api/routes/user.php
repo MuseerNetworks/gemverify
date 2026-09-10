@@ -61,4 +61,8 @@ addRoute('GET',  '/user/wallet/topup/{ref}',                      function ($p) 
 addRoute('POST', '/webhooks/s8v',                                 function ()    { (new \Controllers\Webhooks\S8VWebhookController())->handle(); });
 addRoute('POST', '/api/webhooks/s8v',                             function ()    { (new \Controllers\Webhooks\S8VWebhookController())->handle(); });
 
+// RecordDocs Webhook Route
+addRoute('POST', '/webhooks/recorddocs',                          function ()    { (new \Controllers\Webhooks\RecordDocsWebhookController())->handle(); });
+addRoute('POST', '/api/webhooks/recorddocs',                      function ()    { (new \Controllers\Webhooks\RecordDocsWebhookController())->handle(); });
+
 
