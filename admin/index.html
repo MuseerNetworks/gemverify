@@ -939,44 +939,52 @@ body.dark-mode .chart-tab.active{background:#1e293b;color:#60a5fa}
 
 <section id="page-provider-balance" class="page">
   <div class="heading">
-    <div><h1>Providers Balance</h1><p>Monitor available balances across verification and service providers.</p></div>
-    <button class="primary" onclick="refreshProviderBalances()">Refresh Balances</button>
+    <div><h1>Providers Balance</h1><p>Monitor available balances and track wallet top-ups across verification providers.</p></div>
+    <div style="display:flex;gap:8px">
+      <button class="secondary" onclick="openRecordTopUpModal()" style="font-weight:700">+ Record Top-Up</button>
+      <button class="primary" onclick="refreshProviderBalances()">Refresh Balances</button>
+    </div>
   </div>
 
   <div class="grid4">
     <div class="stat"><small>Total Providers</small><strong id="provPageTotal">0</strong><span class="delta">Active gateway integrations</span></div>
-    <div class="stat"><small>Total Provider Balance</small><strong id="providerTotal">₦0</strong><span class="delta">Across configured providers</span></div>
+    <div class="stat"><small>Total Provider Balance</small><strong id="providerTotal">₦0</strong><span class="delta">Combined available funds</span></div>
     <div class="stat"><small>Low Balance Alerts</small><strong id="provPageAlerts">0</strong><span style="font-size:10px;color:var(--muted);font-weight:800">Operational alerts</span></div>
     <div class="stat"><small>Last Sync</small><strong id="provPageSync" style="font-size:18px">—</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Provider balances sync</span></div>
   </div>
 
-  
-<div id="provider-operational-summary" class="card" style="margin-top:16px">
-  <div class="card-head">
-    <div><h3>Provider Operational Summary</h3><span>Connect provider APIs to populate live balance data</span></div>
-    <button class="primary" onclick="refreshProviderBalances()">Refresh Balances</button>
-  </div>
-  <div style="padding:16px 20px;color:var(--muted);font-size:13px">
-    Provider balance integration is pending. Configure provider API credentials in the backend to enable live balance monitoring.
-  </div>
-</div>
-
-<div class="card" style="margin-top:16px">
+  <div class="card" style="margin-top:16px">
     <div class="card-head">
-      <div><h3>Provider Accounts</h3><span>Balance, status and operational health</span></div>
+      <div><h3>Provider Accounts</h3><span>Ledger-tracked float (Top-Up minus Spend) and live quotas</span></div>
       <input id="providerSearch" oninput="filterProviders()" placeholder="Search provider..." style="padding:9px 12px;border:1px solid var(--line);border-radius:10px">
     </div>
     <table id="providerTable">
-      <thead><tr><th>Provider</th><th>Services</th><th>Available Balance</th><th>Threshold</th><th>Status</th><th>Last Sync</th><th>Action</th></tr></thead>
+      <thead><tr><th>Provider</th><th>Category</th><th>Topped Up</th><th>Total Spent</th><th>Available Balance</th><th>Units / Jobs</th><th>Status</th><th>Last Sync</th><th>Action</th></tr></thead>
       <tbody>
-        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">API-Based Provider accounts integration pending provider configuration.</td></tr>
+        <tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">Loading provider balances...</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="card" style="margin-top:16px">
+    <div class="card-head">
+      <div><h3>Top-Up History</h3><span>Audit log of manual wallet credit purchases</span></div>
+      <button class="secondary" style="font-size:12px;padding:6px 12px" onclick="loadTopUpHistory(1)">Refresh History</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Provider</th><th>Amount</th><th>Reference / Receipt</th><th>Note</th><th>Recorded By</th></tr>
+      </thead>
+      <tbody id="topupHistoryBody">
+        <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading top-up history...</td></tr>
+      </tbody>
+    </table>
+    <div id="topupPagination" style="display:flex;justify-content:center;gap:8px;margin-top:14px;padding-bottom:10px"></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
     <div class="card-head"><div><h3>Provider Balance Alerts</h3><span>Prevent failed transactions caused by insufficient provider funds.</span></div></div>
-    <div class="queue">
+    <div class="queue" id="providerAlertsQueue">
       <div class="q"><div><b>No Active Provider Alerts</b><small>All provider accounts are operating normally.</small></div><span class="pill green">Healthy</span></div>
     </div>
   </div>
@@ -2349,7 +2357,7 @@ async function go(page,btn){
   if(page === "refunds") loadRefunds();
   if(page === "api-transactions") { if(typeof fetchApiTransactions==="function") fetchApiTransactions(1); if(typeof fetchApiTxnStats==="function") fetchApiTxnStats(); }
   if(page === "services") fetchAdminServices();
-  if(page === "provider-balance") refreshProviderBalances();
+  if(page === "provider-balance") { refreshProviderBalances(); loadTopUpHistory(1); }
   if(page === "wallet-funding") fetchWalletTopups(1);
   if(page === "admin-profile") { gvInitProfileUI(); gvLoadAdminList(); }
   if(page === "users") fetchAdminUsers(1, 'all');
@@ -3809,7 +3817,12 @@ async function refreshProviderBalances(){
     const res = await raw.json();
     if (res && res.success && res.data) {
       const data = res.data;
-      if (totalEl) totalEl.textContent = money(data.total_balance || 0);
+      const formattedTotal = money(data.total_balance || 0);
+      if (totalEl) totalEl.textContent = formattedTotal;
+
+      // Also update dashboard sidebar stat if element exists
+      const dashStat = document.getElementById('providerBalanceStat');
+      if (dashStat) dashStat.textContent = formattedTotal;
 
       const totalProviders = Array.isArray(data.providers) ? data.providers.length : 0;
       const ptEl = document.getElementById('provPageTotal');
@@ -3827,47 +3840,80 @@ async function refreshProviderBalances(){
       const tableBody = document.querySelector('#providerTable tbody');
       if (tableBody && Array.isArray(data.providers)) {
         tableBody.innerHTML = data.providers.map(p => {
-          // Determine status pill colour
           var pillClass = p.status === 'Active' ? 'green' : (p.status === 'High Load' || p.status === 'Low Balance' ? 'amber' : 'red');
-          // Build job-count info: RecordDocs shows NIN/BVN units; TechHub shows completed/pending/failed
+
           var jobInfo = '';
           if (p.nin_balance !== undefined) {
-            // RecordDocs provider — show quota units
             jobInfo = `<span style="font-size:11px;color:var(--muted)">
-              🪪 NIN: ${p.nin_balance} units &nbsp;
+              🪪 NIN: ${p.nin_balance} units<br>
               🏦 BVN: ${p.bvn_balance} units
             </span>`;
           } else if (p.jobs_completed !== null && p.jobs_completed !== undefined) {
             jobInfo = `<span style="font-size:11px;color:var(--muted)">
-              ✓ ${p.jobs_completed} done &nbsp;
-              ⏳ ${p.jobs_pending} pending &nbsp;
-              ✗ ${p.jobs_failed} failed
+              ✓ ${p.jobs_completed} done<br>
+              ⏳ ${p.jobs_pending} pending / ✗ ${p.jobs_failed} failed
             </span>`;
           }
-          var balanceLabel = p.nin_balance !== undefined
-            ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">Job float: ${p.currency || 'NGN'} ${money(p.job_balance || 0)}</div>`
-            : (p.spend_total !== undefined
-                ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">Pending: ${money(p.spend_pending || 0)}</div>`
-                : '');
+
+          var toppedUpStr = p.topup_total !== null && p.topup_total !== undefined
+            ? money(p.topup_total)
+            : '<span style="color:var(--muted)">Live Quota</span>';
+
+          var spentStr = p.spend_total !== null && p.spend_total !== undefined
+            ? money(p.spend_total)
+            : '<span style="color:var(--muted)">—</span>';
+
+          var availStr = p.available_balance !== null && p.available_balance !== undefined
+            ? `<strong style="color:#16a34a;font-size:14px">${money(p.available_balance)}</strong>`
+            : '<span style="color:var(--muted);font-style:italic">Not topped up</span>';
+
           var errorBadge = p.error ? `<div style="font-size:10px;color:#ef4444;margin-top:2px">⚠ ${p.error}</div>` : '';
+
+          var pJson = JSON.stringify(p).replace(/"/g, '&quot;');
+
           return `
           <tr>
-            <td><b>${p.name}</b>${p.note ? `<br><span style="font-size:10px;opacity:.6">${p.note}</span>` : ''}${errorBadge}</td>
-            <td><small>${p.category}</small></td>
             <td>
-              <strong style="color:#16a34a">${money(p.spend_total !== undefined ? p.spend_total : p.available_balance)}</strong>
-              ${balanceLabel}
+              <b>${p.name}</b>
+              ${p.note ? `<br><span style="font-size:10px;opacity:.7">${p.note}</span>` : ''}
+              ${errorBadge}
             </td>
+            <td><small>${p.category}</small></td>
+            <td><strong>${toppedUpStr}</strong></td>
+            <td><span style="color:#dc2626;font-weight:600">${spentStr}</span></td>
+            <td>${availStr}</td>
             <td>${jobInfo}</td>
             <td><span class="pill ${pillClass}">${p.status}</span></td>
             <td><small>${p.last_sync}</small></td>
-          </tr>
-        `;
+            <td>
+              <div style="display:flex;gap:6px">
+                <button class="secondary" style="font-size:11px;padding:4px 8px" onclick="openRecordTopUpModal('${p.provider_key || ''}')">+ Top-Up</button>
+                <button class="secondary" style="font-size:11px;padding:4px 8px" onclick="viewProviderDetails(${pJson})">Details</button>
+              </div>
+            </td>
+          </tr>`;
         }).join('');
       }
-      // Update column headers
-      const thead = document.querySelector('#providerTable thead tr');
-      if (thead) thead.innerHTML = '<th>Provider</th><th>Category</th><th>Balance / Spend</th><th>Units / Jobs</th><th>Status</th><th>Last Sync</th>';
+
+      // Update Alerts queue
+      const alertsQueue = document.getElementById('providerAlertsQueue');
+      if (alertsQueue && Array.isArray(data.providers)) {
+        const activeAlerts = data.providers.filter(p => p.status === 'Low Balance' || p.status === 'Check Config');
+        if (activeAlerts.length > 0) {
+          alertsQueue.innerHTML = activeAlerts.map(p => `
+            <div class="q">
+              <div>
+                <b>${p.name} — ${p.status}</b>
+                <small>${p.note || 'Provider balance or configuration needs attention.'}</small>
+              </div>
+              <span class="pill ${p.status === 'Low Balance' ? 'amber' : 'red'}">${p.status}</span>
+            </div>
+          `).join('');
+        } else {
+          alertsQueue.innerHTML = `<div class="q"><div><b>No Active Provider Alerts</b><small>All provider accounts are operating normally.</small></div><span class="pill green">Healthy</span></div>`;
+        }
+      }
+
     } else {
       alert('Failed to refresh provider balances: ' + (res?.message || 'Unknown error'));
     }
@@ -3882,19 +3928,153 @@ function filterProviders(){
     row.style.display=row.textContent.toLowerCase().includes(q)?'':'none';
   });
 }
-function viewProvider(name){
-  document.getElementById('modalTitle').textContent=name+' — Provider Balance';
-  document.getElementById('modalBody').innerHTML=`
-    <div class="grid4" style="grid-template-columns:1fr 1fr">
-      <div class="stat"><small>Available Balance</small><strong>₦0</strong></div>
-      <div class="stat"><small>Status</small><strong style="font-size:18px">Healthy</strong></div>
+
+function viewProviderDetails(p){
+  document.getElementById('modalTitle').textContent = p.name + ' — Breakdown';
+  var availText = p.available_balance !== null && p.available_balance !== undefined ? money(p.available_balance) : 'Not Configured';
+  var topupText = p.topup_total !== null && p.topup_total !== undefined ? money(p.topup_total) : 'N/A (API live)';
+  var spendText = p.spend_total !== null && p.spend_total !== undefined ? money(p.spend_total) : 'N/A (API live)';
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="grid4" style="grid-template-columns:1fr 1fr;gap:12px">
+      <div class="stat"><small>Available Balance</small><strong style="color:#16a34a">${availText}</strong></div>
+      <div class="stat"><small>Status</small><strong style="font-size:16px">${p.status}</strong></div>
+      <div class="stat"><small>Total Topped Up</small><strong>${topupText}</strong></div>
+      <div class="stat"><small>Completed Spend</small><strong style="color:#dc2626">${spendText}</strong></div>
     </div>
-    <div style="margin-top:14px;padding:13px;border:1px solid var(--line);border-radius:12px">
-      <b>Operational Controls</b>
-      <p style="font-size:10px;color:var(--muted)">Provider balance should be read from the provider's authenticated API. Admin should not manually edit the live provider balance.</p>
+    <div style="margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:12px">
+      <b>Balance Methodology:</b>
+      <p style="margin:4px 0 0;color:var(--muted)">${p.note || 'Available balance tracks cumulative ledger top-ups minus completed spend.'}</p>
     </div>`;
-  document.getElementById('modalFoot').innerHTML='<button class="secondary" onclick="closeModal()">Close</button>';
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="secondary" onclick="closeModal()">Close</button>
+    <button class="primary" onclick="closeModal(); openRecordTopUpModal('${p.provider_key || ''}')">+ Record Top-Up</button>
+  `;
   document.getElementById('modal').classList.add('show');
+}
+
+function openRecordTopUpModal(preselectProvider){
+  document.getElementById('modalTitle').textContent = 'Record Provider Wallet Top-Up';
+  document.getElementById('modalBody').innerHTML = `
+    <form id="recordTopUpForm" onsubmit="submitRecordTopUp(event)" style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Provider Account</label>
+        <select id="topupProviderSelect" required style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)">
+          <option value="techhub" ${preselectProvider === 'techhub' ? 'selected' : ''}>TechHub Verification API</option>
+          <option value="s8v" ${preselectProvider === 's8v' ? 'selected' : ''}>S8V.ng Identity API</option>
+          <option value="recorddocs" ${preselectProvider === 'recorddocs' ? 'selected' : ''}>RecordDocs Identity API</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Top-Up Amount (₦ NGN)</label>
+        <input type="number" id="topupAmountInput" min="1" step="0.01" required placeholder="e.g. 50000" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Reference / Receipt No. (Optional)</label>
+        <input type="text" id="topupReferenceInput" placeholder="e.g. TH-BANK-REF-99201" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Internal Note (Optional)</label>
+        <textarea id="topupNoteInput" rows="2" placeholder="e.g. Bank transfer to TechHub account for monthly verification float." style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;box-sizing:border-box"></textarea>
+      </div>
+      <div id="topupModalError" style="display:none;color:#ef4444;font-size:12px"></div>
+    </form>
+  `;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="secondary" onclick="closeModal()">Cancel</button>
+    <button class="primary" onclick="submitRecordTopUp()">Save Top-Up</button>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+async function submitRecordTopUp(event){
+  if (event) event.preventDefault();
+  const provEl = document.getElementById('topupProviderSelect');
+  const amtEl  = document.getElementById('topupAmountInput');
+  const refEl  = document.getElementById('topupReferenceInput');
+  const noteEl = document.getElementById('topupNoteInput');
+  const errEl  = document.getElementById('topupModalError');
+
+  if (!provEl || !amtEl) return;
+  const amount = parseFloat(amtEl.value);
+  if (!amount || amount <= 0) {
+    if (errEl) { errEl.textContent = 'Please enter a valid amount greater than zero.'; errEl.style.display = 'block'; }
+    return;
+  }
+
+  try {
+    document.getElementById('modalFoot').innerHTML = '<button class="secondary" disabled style="opacity:0.5">Recording...</button>';
+    const raw = await gvAdminFetch('../api/admin/provider-topups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: provEl.value,
+        amount: amount,
+        reference: refEl ? refEl.value.trim() : '',
+        note: noteEl ? noteEl.value.trim() : ''
+      })
+    });
+    const res = await raw.json();
+    closeModal();
+
+    if (res && res.success) {
+      alert('✓ Wallet Top-Up Recorded Successfully!\n\nProvider: ' + provEl.value.toUpperCase() + '\nAmount: ' + money(amount));
+      refreshProviderBalances();
+      loadTopUpHistory(1);
+    } else {
+      alert('Failed to record top-up: ' + (res?.message || 'Unknown error'));
+    }
+  } catch(e) {
+    closeModal();
+    alert('Connection error: ' + e.message);
+  }
+}
+
+async function loadTopUpHistory(page){
+  page = page || 1;
+  const tbody = document.getElementById('topupHistoryBody');
+  const pagEl = document.getElementById('topupPagination');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--muted)">Loading history...</td></tr>';
+
+  try {
+    const raw = await gvAdminFetch('../api/admin/provider-topups?page=' + page + '&per_page=15');
+    const res = await raw.json();
+    if (res && res.success && res.data) {
+      const items = res.data.items || [];
+      if (items.length === 0) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">No top-ups recorded yet. Click "+ Record Top-Up" to log credit purchases.</td></tr>';
+        if (pagEl) pagEl.innerHTML = '';
+        return;
+      }
+
+      if (tbody) {
+        tbody.innerHTML = items.map(item => `
+          <tr>
+            <td><small>${item.topped_up_at || '—'}</small></td>
+            <td><b>${(item.provider || '').toUpperCase()}</b></td>
+            <td><strong style="color:#16a34a">${money(item.amount || 0)}</strong></td>
+            <td><span style="font-family:monospace;font-size:12px">${item.reference || '—'}</span></td>
+            <td><small style="color:var(--muted)">${item.note || '—'}</small></td>
+            <td><small>${item.recorded_by_name || 'Admin'}</small></td>
+          </tr>
+        `).join('');
+      }
+
+      if (pagEl && res.data.total_pages > 1) {
+        let pagHtml = '';
+        for (let p = 1; p <= res.data.total_pages; p++) {
+          pagHtml += `<button class="${p === page ? 'primary' : 'secondary'}" style="padding:4px 10px;font-size:12px" onclick="loadTopUpHistory(${p})">${p}</button>`;
+        }
+        pagEl.innerHTML = pagHtml;
+      } else if (pagEl) {
+        pagEl.innerHTML = '';
+      }
+    } else {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:18px;color:#ef4444">Failed to load top-up history.</td></tr>';
+    }
+  } catch(e) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:18px;color:#ef4444">Error connecting to server.</td></tr>';
+  }
 }
 
 

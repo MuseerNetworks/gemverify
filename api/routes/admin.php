@@ -160,8 +160,10 @@ addRoute('POST', '/admin/wallet/topups/{ref}/credit',             function ($p) 
 // ── Analytics Chart Data (Admin Dashboard) ──────────────────────────────────
 addRoute('GET',  '/admin/analytics/chart',               function ()    { (new \Controllers\Admin\AnalyticsController())->getChartData(); });
 
-// ── Provider Balances (Admin) ────────────────────────────────────────────────
+// ── Provider Balances & Top-Ups (Admin) ──────────────────────────────────────
 addRoute('GET',  '/admin/provider-balances',                     function ()    { (new \Controllers\Admin\ProviderBalanceController())->getBalances(); });
+addRoute('GET',  '/admin/provider-topups',                       function ()    { (new \Controllers\Admin\ProviderBalanceController())->getTopUpHistory(); });
+addRoute('POST', '/admin/provider-topups',                       function ()    { (new \Controllers\Admin\ProviderBalanceController())->recordTopUp(); });
 
 
 // ── Admin Withdrawals (KatPay Payouts) ───────────────────────────────────────
