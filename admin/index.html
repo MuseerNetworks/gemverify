@@ -575,11 +575,86 @@ body.dark-mode .chart-tab.active{background:#1e293b;color:#60a5fa}
 </section>
 
 <section id="page-requests" class="page">
- <div class="heading"><div><h1>Manual Requests</h1><p>Process externally completed jobs and upload results for users.</p></div></div>
- <div class="card"><div class="card-head"><h3>Processing Queue</h3><span>Pending → Processing → Completed</span></div>
- <table><thead><tr><th>Reference</th><th>Customer</th><th>Service</th><th>Payment</th><th>Status</th><th>Action</th></tr></thead><tbody>
- <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">No requests currently submitted. Fresh installation state.</td></tr>
- </tbody></table></div>
+  <div class="heading">
+    <div>
+      <h1>Operations Hub</h1>
+      <p>Universal verification queue across manual operations, automated gateways, and GemPrint orders.</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="secondary" onclick="renderRequestsHub(1)">↻ Refresh</button>
+    </div>
+  </div>
+
+  <!-- ── 4 Hub Mode Tabs ── -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--line);padding-bottom:12px;flex-wrap:wrap">
+    <button class="chart-tab active" id="hubTabAll" onclick="switchHubMode('all', this)" style="padding:8px 18px;font-size:13px">All Verifications</button>
+    <button class="chart-tab" id="hubTabManual" onclick="switchHubMode('manual', this)" style="padding:8px 18px;font-size:13px">Manual Queue <span id="hubBadgeManual" class="pill amber" style="margin-left:6px;font-size:10px;padding:2px 6px">0</span></button>
+    <button class="chart-tab" id="hubTabApi" onclick="switchHubMode('api', this)" style="padding:8px 18px;font-size:13px">Automated Gateways</button>
+    <button class="chart-tab" id="hubTabGemPrint" onclick="switchHubMode('gemprint', this)" style="padding:8px 18px;font-size:13px">GemPrint Orders</button>
+  </div>
+
+  <!-- ── Universal Smart Filter Bar ── -->
+  <div class="card" style="margin-bottom:16px;padding:14px 18px">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <input id="hubSearchInput" type="text" placeholder="Search by Reference, Customer Name, Phone, or Input..." 
+             style="flex:1;min-width:240px;padding:9px 14px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:var(--card);color:var(--text)"
+             oninput="onHubSearch(this.value)">
+      
+      <select id="hubServiceFilter" onchange="applyHubFilters()" style="padding:9px 14px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:var(--card);color:var(--text)">
+        <option value="">All Services</option>
+        <option value="nin">NIN Services</option>
+        <option value="bvn">BVN Services</option>
+        <option value="jamb">JAMB Services</option>
+        <option value="cac">CAC Services</option>
+        <option value="tin">TIN Registration</option>
+        <option value="attestation">Attestation</option>
+      </select>
+
+      <select id="hubStatusFilter" onchange="applyHubFilters()" style="padding:9px 14px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:var(--card);color:var(--text)">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending / Submitted</option>
+        <option value="processing">Processing</option>
+        <option value="completed">Completed</option>
+        <option value="rejected">Rejected / Failed</option>
+      </select>
+
+      <select id="hubProviderFilter" onchange="applyHubFilters()" style="padding:9px 14px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:var(--card);color:var(--text)">
+        <option value="">All Gateways</option>
+        <option value="techhub">TechHub</option>
+        <option value="s8v">S8V.ng</option>
+        <option value="recorddocs">RecordDocs</option>
+        <option value="manual">Manual Admin Desk</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ── Dynamic Table Container ── -->
+  <div class="card">
+    <div class="card-head">
+      <h3 id="hubTableTitle">Live Operational Stream</h3>
+      <span id="hubCountLabel" style="color:var(--muted);font-size:13px">Loading...</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead id="hubThead">
+          <tr>
+            <th>Reference</th>
+            <th>Customer</th>
+            <th>Service</th>
+            <th>Gateway</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="hubTbody">
+          <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading queue...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="hubPagination" style="display:flex;justify-content:center;gap:8px;padding:16px;border-top:1px solid var(--line)"></div>
+  </div>
 </section>
 
 <section id="page-users" class="page">
@@ -731,126 +806,7 @@ body.dark-mode .chart-tab.active{background:#1e293b;color:#60a5fa}
   </div>
 </section>
 
-<section id="page-nin-validation" class="page">
-  <div class="heading"><div><h1>NIN Validation</h1><p>NIN Validation manual processing queue.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>NIN Validation Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No NIN Validation requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-nin-ipe" class="page">
-  <div class="heading"><div><h1>IPE Modification</h1><p>IPE Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>IPE Modification Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No IPE Modification requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-nin-personalisation" class="page">
-  <div class="heading"><div><h1>Personalisation</h1><p>NIN Personalisation requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>Personalisation Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Personalisation requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-nin-modification" class="page">
-  <div class="heading"><div><h1>NIN Modification</h1><p>NIN Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>NIN Modification Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No NIN Modification requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-nin-dob" class="page">
-  <div class="heading"><div><h1>DOB > 5 Years</h1><p>DOB correction requests beyond five years.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>DOB > 5 Years Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No DOB > 5 Years requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-nin-delinking" class="page">
-  <div class="heading"><div><h1>Self-Service Delinking</h1><p>Self-Service Delinking requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>Self-Service Delinking Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Self-Service Delinking requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-bvn-license" class="page">
-  <div class="heading"><div><h1>BVN License Creation</h1><p>BVN License Creation requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>BVN License Creation Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No BVN License Creation requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-bvn-nonappearance" class="page">
-  <div class="heading"><div><h1>BVN Non-Appearance</h1><p>BVN Non-Appearance requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>BVN Non-Appearance Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No BVN Non-Appearance requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-bvn-risk" class="page">
-  <div class="heading"><div><h1>Central Risk Management</h1><p>Central Risk Management requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>Central Risk Management Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No Central Risk Management requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-bvn-modification" class="page">
-  <div class="heading"><div><h1>BVN Modification</h1><p>BVN Modification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>BVN Modification Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No BVN Modification requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-jamb-all" class="page">
-  <div class="heading"><div><h1>JAMB All Requests</h1><p>All JAMB service requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>JAMB All Requests Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-jamb-result" class="page">
-  <div class="heading"><div><h1>JAMB Original Result</h1><p>Original Result requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>JAMB Original Result Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Original Result requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-jamb-slip" class="page">
-  <div class="heading"><div><h1>JAMB Exam Slip</h1><p>Exam Slip requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>JAMB Exam Slip Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Exam Slip requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-jamb-admission" class="page">
-  <div class="heading"><div><h1>JAMB Admission Letter</h1><p>Admission Letter requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>JAMB Admission Letter Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Admission Letter requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-jamb-reprints" class="page">
-  <div class="heading"><div><h1>JAMB Re-Prints</h1><p>JAMB re-print requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>JAMB Re-Prints Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No JAMB Re-Prints requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-cac-business" class="page">
-  <div class="heading"><div><h1>CAC Business Name</h1><p>Business Name Registration requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>CAC Business Name Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No CAC Business Name requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-cac-ltd" class="page">
-  <div class="heading"><div><h1>CAC LTD Setup</h1><p>Company LTD Setup requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>CAC LTD Setup Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No CAC LTD Setup requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-cac-verification" class="page">
-  <div class="heading"><div><h1>CAC Verification</h1><p>Business Verification requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>CAC Verification Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No CAC Verification requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-tin" class="page">
-  <div class="heading"><div><h1>TIN Registration</h1><p>TIN Registration requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>TIN Registration Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No TIN Registration requests currently queued.</td></tr></tbody></table></div>
-</section>
-<section id="page-attestation" class="page">
-  <div class="heading"><div><h1>NIN Attestation</h1><p>NIN Attestation requests.</p></div><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div>
-  <div class="card"><div class="card-head"><h3>NIN Attestation Queue</h3><span>Admin controlled</span></div>
-  <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
-  <tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No NIN Attestation requests currently queued.</td></tr></tbody></table></div>
-</section>
+<!-- Redundant single-service sections consolidated into #page-requests Operations Hub -->
 <section id="page-products" class="page">
   <div class="heading"><div><h1>GemPrint Products</h1><p>Printing materials products catalogue.</p></div>
   <div class="flex gap-2"><button class="primary" onclick="openAddProductModal()">+ Add Product</button><button class="secondary" onclick="go('dashboard')">← Dashboard</button></div></div>
@@ -2008,6 +1964,185 @@ async function renderLiveQueue(pageNumber) {
 }
 window.gvAdminPages = window.gvAdminPages || {};
 
+// ── Unified Operations Hub Engine (Phase 3) ──────────────────────────────────
+let _hubCurrentMode    = 'all';
+let _hubCurrentPage    = 1;
+let _hubSearchTimer    = null;
+
+function switchHubMode(mode, btn) {
+  _hubCurrentMode = mode;
+  _hubCurrentPage = 1;
+  document.querySelectorAll('#page-requests .chart-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderRequestsHub(1);
+}
+
+function onHubSearch(val) {
+  clearTimeout(_hubSearchTimer);
+  _hubSearchTimer = setTimeout(() => {
+    _hubCurrentPage = 1;
+    renderRequestsHub(1);
+  }, 300);
+}
+
+function applyHubFilters() {
+  _hubCurrentPage = 1;
+  renderRequestsHub(1);
+}
+
+async function renderRequestsHub(pageNumber) {
+  pageNumber = pageNumber || _hubCurrentPage || 1;
+  _hubCurrentPage = pageNumber;
+
+  const tbody = document.getElementById('hubTbody');
+  const countLabel = document.getElementById('hubCountLabel');
+  const pagination = document.getElementById('hubPagination');
+  const manualBadge = document.getElementById('hubBadgeManual');
+
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading operational records…</td></tr>';
+
+  const search   = (document.getElementById('hubSearchInput')?.value || '').trim();
+  const service  = document.getElementById('hubServiceFilter')?.value || '';
+  const status   = document.getElementById('hubStatusFilter')?.value || '';
+  const provider = document.getElementById('hubProviderFilter')?.value || '';
+
+  try {
+    if (_hubCurrentMode === 'api') {
+      // Load from api_transactions endpoint
+      let url = `../api/admin/api-transactions?page=${pageNumber}&per_page=12`;
+      if (status) url += `&status=${encodeURIComponent(status)}`;
+      if (provider && provider !== 'manual') url += `&provider=${encodeURIComponent(provider)}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+
+      const res = await gvAdminFetch(url);
+      const json = await res.json();
+      if (!json.success || !json.data) throw new Error(json.message || 'Failed to fetch API transactions');
+
+      const list = json.data.transactions || [];
+      const pg   = json.data.pagination || {};
+      const total = pg.total_records || list.length;
+      if (countLabel) countLabel.textContent = `${total.toLocaleString()} automated transactions`;
+
+      renderHubTableRows(list, 'api');
+      renderHubPagination(pg.total_pages || 1, pageNumber);
+      return;
+    }
+
+    if (_hubCurrentMode === 'gemprint') {
+      // Show orders table structure
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Loading GemPrint orders…</td></tr>';
+      fetchGemPrintAdminData();
+      return;
+    }
+
+    // Default: 'all' or 'manual' mode
+    let url = `../api/admin/requests?per_page=12&page=${pageNumber}`;
+    if (_hubCurrentMode === 'manual') url += '&request_type=manual';
+    if (status) url += `&status=${encodeURIComponent(status)}`;
+    if (service) url += `&service_slug=${encodeURIComponent(service)}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+
+    const res = await gvAdminFetch(url);
+    const json = await res.json();
+    if (!json.success || !json.data) throw new Error(json.message || 'Failed to fetch requests');
+
+    const list = json.data.requests || [];
+    const pg   = json.data.pagination || {};
+    const total = pg.total_requests || list.length;
+    if (countLabel) countLabel.textContent = `${total.toLocaleString()} total verifications`;
+
+    // Update manual badge if available
+    const pendingCount = list.filter(r => r.status === 'submitted' || r.status === 'pending').length;
+    if (manualBadge && _hubCurrentMode === 'all') manualBadge.textContent = pendingCount;
+
+    renderHubTableRows(list, 'request');
+    renderHubPagination(pg.total_pages || 1, pageNumber);
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:#ef4444">Error loading data: ${e.message}</td></tr>`;
+  }
+}
+
+function renderHubTableRows(list, type) {
+  const tbody = document.getElementById('hubTbody');
+  if (!tbody) return;
+
+  if (!list || list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--muted)">No operations found matching current filters.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    const isApi = type === 'api' || !!item.provider;
+    const ref   = item.reference || '—';
+    const user  = item.business_name || item.user_name || (item.user && item.user.business_name) || item.email || ('User #' + (item.user_id || ''));
+    const serv  = item.service_name || (item.service && item.service.name) || item.service_slug || 'Verification';
+    
+    // Gateway label
+    let gw = item.provider || 'manual';
+    let gwPill = (gw === 'techhub') ? '<span class="pill blue" style="font-size:10px">TechHub</span>'
+               : (gw === 's8v') ? '<span class="pill green" style="font-size:10px">S8V.ng</span>'
+               : (gw === 'recorddocs') ? '<span class="pill purple" style="font-size:10px">RecordDocs</span>'
+               : '<span class="pill amber" style="font-size:10px">Manual</span>';
+
+    // Amount
+    const amtVal = item.price || item.price_paid || item.amount || 0;
+    const amt = '₦' + parseFloat(amtVal).toLocaleString('en-NG', { minimumFractionDigits: 2 });
+
+    // Status pill
+    const st = (item.gv_status || item.status || 'pending').toLowerCase();
+    const stPill = (st === 'completed' || st === 'success') ? '<span class="pill green">Completed</span>'
+                 : (st === 'processing') ? '<span class="pill blue">Processing</span>'
+                 : (st === 'failed' || st === 'rejected') ? '<span class="pill red">Failed</span>'
+                 : '<span class="pill amber">Pending</span>';
+
+    // Date
+    const dt = item.created_at ? new Date(item.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+
+    // Quick Action button
+    let actionBtn = '';
+    if (isApi) {
+      actionBtn = `<button class="secondary" style="padding:4px 10px;font-size:11px" onclick="openAtxnModal('${ref}')">Inspect</button>`;
+    } else {
+      actionBtn = `<button class="primary" style="padding:4px 10px;font-size:11px" onclick="openRequest('${ref}','${gvEscapeHtml(serv)}')">Open</button>`;
+    }
+
+    return `
+      <tr>
+        <td style="font-family:monospace;font-size:12px;font-weight:700">${ref}</td>
+        <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px" title="${gvEscapeHtml(user)}">${gvEscapeHtml(user)}</td>
+        <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px" title="${gvEscapeHtml(serv)}">${gvEscapeHtml(serv)}</td>
+        <td>${gwPill}</td>
+        <td style="font-weight:700">${amt}</td>
+        <td>${stPill}</td>
+        <td style="font-size:12px;color:var(--muted)">${dt}</td>
+        <td>${actionBtn}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderHubPagination(totalPages, currentPage) {
+  const paginEl = document.getElementById('hubPagination');
+  if (!paginEl) return;
+
+  if (totalPages <= 1) {
+    paginEl.innerHTML = '';
+    paginEl.style.display = 'none';
+    return;
+  }
+
+  const prevDis = currentPage === 1 ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+  const nextDis = currentPage >= totalPages ? 'disabled style="opacity:.45;cursor:not-allowed"' : '';
+
+  paginEl.innerHTML = `
+    <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderRequestsHub(${Math.max(1, currentPage - 1)})" ${prevDis}>← Prev</button>
+    <span style="font-size:12px;color:var(--muted);padding:0 6px">Page ${currentPage} of ${totalPages}</span>
+    <button class="secondary" style="padding:5px 14px;font-size:12px;border-radius:7px" onclick="renderRequestsHub(${Math.min(totalPages, currentPage + 1)})" ${nextDis}>Next →</button>
+  `;
+  paginEl.style.display = 'flex';
+}
+
 async function renderRequestsQueue(page, statusFilter, pageNumber, serviceSlug) {
   statusFilter = statusFilter || '';
   pageNumber   = pageNumber   || 1;
@@ -2132,9 +2267,9 @@ async function go(page,btn){
 
   // Fetch queue data dynamically on navigation
   if(page === "dashboard") refreshDashboardFull();
-  if(page === "requests") await renderRequestsQueue("requests");
+  if(page === "requests") { _hubCurrentMode = 'all'; renderRequestsHub(1); }
+  if(page === "pending") { go('requests'); switchHubMode('manual'); return; }
   if(page === "products" || page === "orders" || page === "print-jobs" || page === "inventory" || page === "gemprint" || page === "settings") fetchGemPrintAdminData();
-  if(page === "pending") await renderRequestsQueue("pending", "submitted");
   if(page === "processing") await renderRequestsQueue("processing", "processing");
   if(page === "completed") await renderRequestsQueue("completed", "completed");
 
