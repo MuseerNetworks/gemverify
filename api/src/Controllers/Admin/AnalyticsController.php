@@ -90,7 +90,7 @@ class AnalyticsController
                     SELECT COUNT(*) AS cnt, COALESCE(SUM(sp.price),0) AS rev
                     FROM api_transactions at
                     LEFT JOIN service_pricing sp ON sp.id = at.pricing_id
-                    WHERE at.gv_status='completed' AND DATE(at.created_at)=:start
+                    WHERE at.gv_status='completed' AND DATE(at.submitted_at)=:start
                 ");
                 $stmt->execute([':start' => $start]);
             } else {
@@ -98,7 +98,7 @@ class AnalyticsController
                     SELECT COUNT(*) AS cnt, COALESCE(SUM(sp.price),0) AS rev
                     FROM api_transactions at
                     LEFT JOIN service_pricing sp ON sp.id = at.pricing_id
-                    WHERE at.gv_status='completed' AND at.created_at BETWEEN :start AND :end
+                    WHERE at.gv_status='completed' AND at.submitted_at BETWEEN :start AND :end
                 ");
                 $stmt->execute([':start' => $start, ':end' => $end]);
             }
@@ -155,11 +155,11 @@ class AnalyticsController
                         COUNT(*) AS total,
                         COUNT(CASE WHEN gv_status='completed' THEN 1 END) AS completed,
                         AVG(CASE
-                            WHEN gv_status='completed' AND synced_at IS NOT NULL
-                            THEN TIMESTAMPDIFF(SECOND, created_at, synced_at)
+                            WHEN gv_status='completed' AND COALESCE(completed_at, synced_at) IS NOT NULL
+                            THEN TIMESTAMPDIFF(SECOND, submitted_at, COALESCE(completed_at, synced_at))
                         END) AS avg_secs
                     FROM api_transactions
-                    WHERE provider=:provider AND created_at>=:since
+                    WHERE provider=:provider AND submitted_at>=:since
                 ");
                 $stmt->execute([':provider' => $slug, ':since' => $since]);
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -170,9 +170,9 @@ class AnalyticsController
                 if ($row['avg_secs'] !== null) $avgLatency = round((float)$row['avg_secs'], 1);
             }
 
-            $status = 'unknown';
-            if ($successRate !== null) {
-                $status = $successRate >= 95 ? 'healthy' : ($successRate >= 80 ? 'degraded' : 'critical');
+            $status = 'healthy';
+            if ($total > 0) {
+                $status = ($successRate !== null && $successRate >= 95) ? 'healthy' : (($successRate !== null && $successRate >= 80) ? 'degraded' : 'critical');
             }
 
             $entry = compact('slug', 'label', 'status', 'successRate', 'avgLatency', 'total', 'completed');
@@ -181,11 +181,12 @@ class AnalyticsController
             $entry['total_24h']    = $total;
             $entry['completed_24h']= $completed;
 
-            // Augment RecordDocs with live balance
+            // Augment RecordDocs with live balance (protected with fast 2s timeout)
             if ($slug === 'recorddocs') {
                 try {
-                    $rdBal = (new RecordDocsService())->getBalances();
-                    if ($rdBal['success']) {
+                    $rdClient = new \Providers\RecordDocsClient(null, null, 2);
+                    $rdBal    = (new RecordDocsService($rdClient))->getBalances();
+                    if (!empty($rdBal['success'])) {
                         $entry['nin_balance'] = (float)($rdBal['nin_balance'] ?? 0);
                         $entry['bvn_balance'] = (float)($rdBal['bvn_balance'] ?? 0);
                         $entry['job_balance'] = (float)($rdBal['job_balance'] ?? 0);
@@ -218,7 +219,7 @@ class AnalyticsController
                     COALESCE(SUM(CASE WHEN gv_status='refunded' THEN sp.price ELSE 0 END),0) AS refunded
                 FROM api_transactions at
                 LEFT JOIN service_pricing sp ON sp.id=at.pricing_id
-                WHERE at.created_at BETWEEN :s AND :e
+                WHERE at.submitted_at BETWEEN :s AND :e
             ");
             $stmt->execute([':s' => $todayStart, ':e' => $todayEnd]);
             $row     = $stmt->fetch(PDO::FETCH_ASSOC);

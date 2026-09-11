@@ -1699,7 +1699,16 @@ async function loadDashboardAnalytics(range) {
   try {
     const res  = await gvAdminFetch('../api/admin/analytics/chart?range=' + range);
     const json = await res.json();
-    if (!json.success || !json.data) return;
+    if (!json.success || !json.data) {
+      const radarEl = document.getElementById('providerRadarList');
+      if (radarEl && radarEl.textContent.includes('Loading')) {
+        radarEl.innerHTML = `<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">
+          ⚠ Analytics unavailable — ${json.message || 'Server error'}<br>
+          <button class="secondary" style="margin-top:10px;padding:5px 14px;font-size:12px" onclick="loadDashboardAnalytics('${range}')">Retry</button>
+        </div>`;
+      }
+      return;
+    }
 
     const data = json.data;
     renderApexLiveChart(data.revenue);
@@ -1707,6 +1716,13 @@ async function loadDashboardAnalytics(range) {
     updateDashboardHeroKpis(data);
   } catch (e) {
     console.warn('[loadDashboardAnalytics]', e);
+    const radarEl = document.getElementById('providerRadarList');
+    if (radarEl && radarEl.textContent.includes('Loading')) {
+      radarEl.innerHTML = `<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">
+        ⚠ Could not reach analytics service<br>
+        <button class="secondary" style="margin-top:10px;padding:5px 14px;font-size:12px" onclick="loadDashboardAnalytics('${range}')">Retry</button>
+      </div>`;
+    }
   }
 }
 
@@ -2047,13 +2063,14 @@ async function renderRequestsHub(pageNumber) {
       const json = await res.json();
       if (!json.success || !json.data) throw new Error(json.message || 'Failed to fetch API transactions');
 
-      const list = json.data.transactions || [];
+      const list = json.data.items || json.data.transactions || [];
       const pg   = json.data.pagination || {};
-      const total = pg.total_records || list.length;
+      const total = json.data.total ?? pg.total_records ?? list.length;
+      const totalPages = json.data.total_pages ?? pg.total_pages ?? Math.ceil(total / 12) ?? 1;
       if (countLabel) countLabel.textContent = `${total.toLocaleString()} automated transactions`;
 
       renderHubTableRows(list, 'api');
-      renderHubPagination(pg.total_pages || 1, pageNumber);
+      renderHubPagination(totalPages, pageNumber);
       return;
     }
 
@@ -2075,17 +2092,18 @@ async function renderRequestsHub(pageNumber) {
     const json = await res.json();
     if (!json.success || !json.data) throw new Error(json.message || 'Failed to fetch requests');
 
-    const list = json.data.requests || [];
+    const list = json.data.requests || json.data.items || [];
     const pg   = json.data.pagination || {};
-    const total = pg.total_requests || list.length;
+    const total = pg.total_requests ?? json.data.total ?? list.length;
+    const totalPages = pg.total_pages ?? json.data.total_pages ?? Math.ceil(total / 12) ?? 1;
     if (countLabel) countLabel.textContent = `${total.toLocaleString()} total verifications`;
 
     // Update manual badge if available
-    const pendingCount = list.filter(r => r.status === 'submitted' || r.status === 'pending').length;
+    const pendingCount = list.filter(r => (r.status === 'submitted' || r.status === 'pending' || r.gv_status === 'pending')).length;
     if (manualBadge && _hubCurrentMode === 'all') manualBadge.textContent = pendingCount;
 
     renderHubTableRows(list, 'request');
-    renderHubPagination(pg.total_pages || 1, pageNumber);
+    renderHubPagination(totalPages, pageNumber);
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:#ef4444">Error loading data: ${e.message}</td></tr>`;
   }
@@ -2102,9 +2120,9 @@ function renderHubTableRows(list, type) {
 
   tbody.innerHTML = list.map(item => {
     const isApi = type === 'api' || !!item.provider;
-    const ref   = item.reference || '—';
-    const user  = item.business_name || item.user_name || (item.user && item.user.business_name) || item.email || ('User #' + (item.user_id || ''));
-    const serv  = item.service_name || (item.service && item.service.name) || item.service_slug || 'Verification';
+    const ref   = item.gv_reference || item.reference || ('#' + (item.id || '—'));
+    const user  = item.business_name || (item.user && item.user.business_name) || item.user_name || (item.user && item.user.name) || item.email || ('User #' + (item.user_id || ''));
+    const serv  = (item.service && item.service.name) || item.service_name || item.service_slug || 'Verification';
     
     // Gateway label
     let gw = item.provider || 'manual';
@@ -2114,7 +2132,7 @@ function renderHubTableRows(list, type) {
                : '<span class="pill amber" style="font-size:10px">Manual</span>';
 
     // Amount
-    const amtVal = item.price || item.price_paid || item.amount || 0;
+    const amtVal = item.price_paid ?? item.price ?? item.amount ?? 0;
     const amt = '₦' + parseFloat(amtVal).toLocaleString('en-NG', { minimumFractionDigits: 2 });
 
     // Status pill
@@ -2124,8 +2142,9 @@ function renderHubTableRows(list, type) {
                  : (st === 'failed' || st === 'rejected') ? '<span class="pill red">Failed</span>'
                  : '<span class="pill amber">Pending</span>';
 
-    // Date
-    const dt = item.created_at ? new Date(item.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+    // Date (submitted_at or created_at)
+    const rawDt = item.submitted_at || item.created_at;
+    const dt = rawDt ? new Date(rawDt).toLocaleDateString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
 
     // Quick Action button
     let actionBtn = '';
