@@ -260,6 +260,48 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 @keyframes gv-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .animate-spin { animation: gv-spin 0.75s linear infinite !important; display: inline-block !important; vertical-align: middle; }
 .gv-spinner { width: 14px; height: 14px; display: inline-block; vertical-align: middle; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: gv-spin 0.75s linear infinite; }
+
+/* ── Modern Dashboard & ApexCharts Enhancements ── */
+.kpi-hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.kpi-hero-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;position:relative;box-shadow:var(--shadow);transition:transform .18s,box-shadow .18s;overflow:hidden}
+.kpi-hero-card:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(15,23,42,.08)}
+.kpi-hero-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.kpi-hero-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.kpi-hero-icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:18px}
+.kpi-hero-val{font-size:28px;font-weight:900;letter-spacing:-.02em;margin-bottom:4px;color:var(--text)}
+.kpi-hero-foot{display:flex;align-items:center;justify-content:space-between;font-size:12px}
+.kpi-sparkline{width:110px;height:38px}
+
+.dash-main-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:20px}
+.chart-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+.chart-tabs{display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:10px}
+.chart-tab{padding:6px 14px;font-size:12px;font-weight:700;border:none;background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;transition:all .15s}
+.chart-tab.active{background:#fff;color:var(--blue);box-shadow:0 2px 6px rgba(0,0,0,.06)}
+body.dark-mode .chart-tab.active{background:#1e293b;color:#60a5fa}
+
+.provider-radar-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+.provider-item{padding:14px;border-radius:14px;border:1px solid var(--line);margin-bottom:12px;background:var(--bg);transition:all .15s}
+.provider-item:last-child{margin-bottom:0}
+.provider-item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.provider-item-title{font-weight:800;font-size:14px}
+.provider-metrics{display:flex;gap:14px;font-size:12px;color:var(--muted)}
+.health-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.health-dot.healthy{background:#16a34a;box-shadow:0 0 6px rgba(22,163,74,.5)}
+.health-dot.degraded{background:#d97706;box-shadow:0 0 6px rgba(217,119,6,.5)}
+.health-dot.critical{background:#dc2626;box-shadow:0 0 6px rgba(220,38,38,.5)}
+
+.action-center{background:linear-gradient(135deg,#0a1931,#123b79);border-radius:18px;padding:22px;color:#fff;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.action-center-left{display:flex;align-items:center;gap:16px}
+.action-center-badge{width:46px;height:46px;background:rgba(255,255,255,.15);border-radius:14px;display:grid;place-items:center;font-size:22px}
+.action-center-title{font-size:16px;font-weight:800;margin-bottom:4px}
+.action-center-sub{font-size:13px;color:#c9d6e9}
+.action-center-btn{background:#fff;color:var(--navy);font-weight:800;border:none;padding:11px 22px;border-radius:12px;cursor:pointer;transition:transform .15s}
+.action-center-btn:hover{transform:scale(1.02)}
+
+@media(max-width:1024px){
+  .kpi-hero-grid{grid-template-columns:1fr}
+  .dash-main-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -310,124 +352,58 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 <aside id="side" class="side">
   <div class="brand"><img src="../assets/img/auth-shield.png" style="width:38px;height:38px;object-fit:contain;border-radius:12px;" alt="GemVerify"><div><b>GemVerify</b><small>ADMIN PORTAL</small></div></div>
   <nav class="nav">
+    <!-- 1. DASHBOARD -->
     <div class="nav-group open">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">OVERVIEW<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button class="active" data-page="dashboard" onclick="go('dashboard',this)">▦　Dashboard</button>
-    <button data-page="analytics" onclick="go('analytics',this)">◔　Analytics</button>
-    </div>
-    </div>
-
-    <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">OPERATIONS<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button data-page="requests" onclick="go('requests',this)">◫　Manual Requests</button>
-    <button data-page="pending" onclick="go('pending',this)">◷　Pending Requests</button>
-    <button data-page="processing" onclick="go('processing',this)">◌　Processing</button>
-    <button data-page="completed" onclick="go('completed',this)">✓　Completed</button>
-    <button data-page="rejected" onclick="go('rejected',this)">⊘　Rejected</button>
-    <button data-page="api-transactions" onclick="go('api-transactions',this)">⚡　API Transactions</button>
-    </div>
+      <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">OVERVIEW<span class="nav-caret">▾</span></div>
+      <div class="nav-sub">
+        <button class="active" data-page="dashboard" onclick="go('dashboard',this)">▦　Dashboard</button>
+        <button data-page="analytics" onclick="go('analytics',this)">◔　Live Analytics</button>
+      </div>
     </div>
 
+    <!-- 2. REQUESTS & OPERATIONS -->
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">NIN SERVICES<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button data-page="nin-validation" onclick="go('nin-validation',this)">N　Validation</button>
-    <button data-page="nin-ipe" onclick="go('nin-ipe',this)">N　IPE Modification</button>
-    <button data-page="nin-personalisation" onclick="go('nin-personalisation',this)">N　Personalisation</button>
-    <button data-page="nin-modification" onclick="go('nin-modification',this)">N　Modification</button>
-    <button data-page="nin-dob" onclick="go('nin-dob',this)">N　DOB &gt; 5 Years</button>
-    <button data-page="nin-delinking" onclick="go('nin-delinking',this)">N　Self-Service Delinking</button>
-    </div>
+      <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">OPERATIONS<span class="nav-caret">▾</span></div>
+      <div class="nav-sub">
+        <button data-page="requests" onclick="go('requests',this)">◫　All Requests Hub</button>
+        <button data-page="pending" onclick="go('pending',this)">◷　Manual Queue</button>
+        <button data-page="api-transactions" onclick="go('api-transactions',this)">⚡　API Gateways</button>
+        <button data-page="orders" onclick="go('orders',this)">▣　GemPrint Orders</button>
+      </div>
     </div>
 
+    <!-- 3. FINANCE & TREASURY -->
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">BVN SERVICES<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button data-page="bvn-license" onclick="go('bvn-license',this)">B　License Creation</button>
-    <button data-page="bvn-nonappearance" onclick="go('bvn-nonappearance',this)">B　Non-Appearance</button>
-    <button data-page="bvn-risk" onclick="go('bvn-risk',this)">B　Central Risk Management</button>
-    <button data-page="bvn-modification" onclick="go('bvn-modification',this)">B　Modification</button>
-    </div>
+      <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">FINANCE & TREASURY<span class="nav-caret">▾</span></div>
+      <div class="nav-sub">
+        <button data-page="provider-balance" onclick="go('provider-balance',this)">◉　Provider Float & Health</button>
+        <button data-page="wallet-funding" onclick="go('wallet-funding',this)">＋　Customer Deposits</button>
+        <button data-page="refunds" onclick="go('refunds',this)">↩　Refunds Ledger</button>
+        <button data-page="profit" onclick="go('profit',this)">↗　Profit & Withdrawals</button>
+        <button data-page="transactions" onclick="go('transactions',this)">₦　Audit Ledger</button>
+      </div>
     </div>
 
+    <!-- 4. USERS & AGENTS -->
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">JAMB<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button data-page="jamb-all" onclick="go('jamb-all',this)">J　All Requests</button>
-    <button data-page="jamb-result" onclick="go('jamb-result',this)">J　Original Result</button>
-    <button data-page="jamb-slip" onclick="go('jamb-slip',this)">J　Exam Slip</button>
-    <button data-page="jamb-admission" onclick="go('jamb-admission',this)">J　Admission Letter</button>
-    <button data-page="jamb-reprints" onclick="go('jamb-reprints',this)">J　Re-Prints</button>
-    </div>
+      <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">USERS & AGENTS<span class="nav-caret">▾</span></div>
+      <div class="nav-sub">
+        <button data-page="users" onclick="go('users',this)">♙　Customer Directory</button>
+        <button data-page="active-users" onclick="go('active-users',this)">●　Active Today</button>
+        <button data-page="suspended-users" onclick="go('suspended-users',this)">⊘　Suspended Accounts</button>
+      </div>
     </div>
 
+    <!-- 5. PLATFORM SETTINGS -->
     <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">CAC<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button data-page="cac-business" onclick="go('cac-business',this)">C　Business Name</button>
-    <button data-page="cac-ltd" onclick="go('cac-ltd',this)">C　LTD Setup</button>
-    <button data-page="cac-verification" onclick="go('cac-verification',this)">C　Verification</button>
-    </div>
-    </div>
-
-    <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">TIN<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button data-page="tin" onclick="go('tin',this)">T　Registration</button>
-    </div>
-    </div>
-
-    <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">ATTESTATION<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button data-page="attestation" onclick="go('attestation',this)">A　NIN Attestation</button>
-    </div>
-    </div>
-
-    <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">GEMPRINT<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button data-page="products" onclick="go('products',this)">▤　Products</button>
-    <button data-page="orders" onclick="go('orders',this)">▣　Orders</button>
-    <button data-page="print-jobs" onclick="go('print-jobs',this)">▥　Print Jobs</button>
-    <button data-page="inventory" onclick="go('inventory',this)">▤　Inventory</button>
-    </div>
-    </div>
-
-    <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">FINANCE<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button data-page="revenue" onclick="go('revenue',this)">₦　Revenue</button>
-    <button data-page="provider-balance" onclick="go('provider-balance',this)">◉　Providers Balance</button>
-    <button data-page="profit" onclick="go('profit',this)">↗　Profit & Withdrawals</button>
-    <button data-page="transactions" onclick="go('transactions',this)">₦　Transactions</button>
-    <button data-page="wallet-funding" onclick="go('wallet-funding',this)">＋　Wallet Funding</button>
-    <button data-page="refunds" onclick="go('refunds',this)">↩　Refunds</button>
-    </div>
-    </div>
-
-    <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">USERS<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button data-page="users" onclick="go('users',this)">♙　All Users</button>
-    <button data-page="active-users" onclick="go('active-users',this)">●　Active</button>
-    <button data-page="suspended-users" onclick="go('suspended-users',this)">⊘　Suspended</button>
-    </div>
-    </div>
-
-    <div class="nav-group">
-    <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">SYSTEM<span class="nav-caret">▾</span></div>
-    <div class="nav-sub">
-    <button data-page="notifications" onclick="go('notifications',this)">♧　Notifications</button>
-    <button data-page="admins" onclick="go('admins',this)">♙　Admin Users</button>
-    <button data-page="roles" onclick="go('roles',this)">◈　Roles &amp; Permissions</button>
-    <button data-page="services" onclick="go('services',this)">⚙　Services &amp; Pricing</button>
-    <button data-page="audit" onclick="go('audit',this)">◷　Audit Logs</button>
-    <button data-page="settings" onclick="go('settings',this)">⚙　Settings</button>
-    <button class="danger" onclick="logout()">↪　Logout</button>
-    </div>
+      <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">PLATFORM<span class="nav-caret">▾</span></div>
+      <div class="nav-sub">
+        <button data-page="services" onclick="go('services',this)">⚙　Services & Pricing</button>
+        <button data-page="admins" onclick="go('admins',this)">♙　Admin Staff</button>
+        <button data-page="audit" onclick="go('audit',this)">◷　Audit Logs</button>
+        <button data-page="settings" onclick="go('settings',this)">⚙　General Settings</button>
+        <button class="danger" onclick="logout()">↪　Logout</button>
+      </div>
     </div>
   </nav>
   <div class="admin-mini"><div class="user-chip" id="sidebarAdminChip" onclick="go('admin-profile',this)" title="Admin Profile" style="cursor:pointer"><div class="avatar" style="background:#dbeafe;color:var(--blue)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div><div><b id="sidebarAdminName">Administrator</b><small id="sidebarAdminRole">Loading...</small></div></div></div>
@@ -441,71 +417,150 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 
 <div class="content">
 <section id="page-dashboard" class="page active">
-  <div class="heading"><div><h1 id="dashGreeting">Good morning, Admin</h1><p>Here's what is happening across GemVerify today.</p></div><button class="primary" onclick="go('requests')">View Manual Queue</button></div>
-  <div class="grid4">
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Registered Accounts" onclick="openKpiPage('registered-accounts')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('registered-accounts')"><div class="stat-top"><small>Registered Accounts</small><div class="ico">♙</div></div><strong id="statRegUsers">0</strong><span class="delta">Live accounts</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Active Today" onclick="openKpiPage('active-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('active-today')"><div class="stat-top"><small>Active Today</small><div class="ico">●</div></div><strong id="statActiveUsers">0</strong><span class="delta">Active sessions</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Wallet Liability" onclick="openKpiPage('wallet-liability')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('wallet-liability')"><div class="stat-top"><small>Wallet Liability</small><div class="ico">₦</div></div><strong id="statWalletLiability">₦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Customer funds</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Revenue Today" onclick="openKpiPage('revenue-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('revenue-today')"><div class="stat-top"><small>Revenue Today</small><div class="ico">₦</div></div><strong id="statRevenue">₦0</strong><span class="delta">Today's gross revenue</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Total Revenue" onclick="openKpiPage('total-revenue')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('total-revenue')"><div class="stat-top"><small>Total Revenue</small><div class="ico">₦</div></div><strong id="statTotalRevenue">₦0</strong><span class="delta">All-time gross revenue</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Profit Today" onclick="openKpiPage('profit-today')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('profit-today')"><div class="stat-top"><small>Profit Today</small><div class="ico">↗</div></div><strong id="statProfit">₦0</strong><span class="delta">Today's net profit</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Total Profit" onclick="openKpiPage('total-profit')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('total-profit')"><div class="stat-top"><small>Total Profit</small><div class="ico">↗</div></div><strong id="statTotalProfit">₦0</strong><span class="delta">All-time net profit</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Successful Txn" onclick="openKpiPage('successful-txn')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('successful-txn')"><div class="stat-top"><small>Successful Txn</small><div class="ico">✓</div></div><strong id="statCompleted">0</strong><span class="delta">Completed requests</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Failed Txns" onclick="openKpiPage('failed-txns')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('failed-txns')"><div class="stat-top"><small>Failed Txns</small><div class="ico">×</div></div><strong id="statRejected">0</strong><span style="font-size:10px;color:var(--red);font-weight:800">Rejected & cancelled</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Withdrawable Profit" onclick="openKpiPage('withdrawable-profit')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('withdrawable-profit')"><div class="stat-top"><small>Withdrawable Profit</small><div class="ico">↗</div></div><strong id="withdrawableStat">₦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Settled company funds</span></div>
-    <div class="stat kpi-clickable" tabindex="0" role="button" aria-label="Open Providers Balance" onclick="openKpiPage('provider-balance')" onkeydown="if(event.key==='Enter'||event.key===' ')openKpiPage('provider-balance')"><div class="stat-top"><small>Providers Balance</small><div class="ico">◉</div></div><strong id="providerBalanceStat">₦0</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Configured provider balances</span></div>
-  </div>
-  <div class="card" style="margin-top:16px">
-    <div class="card-head">
-      <div><h3>Financial Control Center</h3><span>Separate customer liability from company revenue and withdrawable profit.</span></div>
-      <button class="primary" onclick="openWithdraw()">Withdraw Profit</button>
+  <div class="heading">
+    <div>
+      <h1 id="dashGreeting">Operations Dashboard</h1>
+      <p>Real-time analytics, provider health, and operational velocity across GemVerify.</p>
     </div>
-    <div class="fin-grid" style="padding:18px">
-      <div class="fin-card" style="padding:15px;border:1px solid var(--line);border-radius:14px;background:#f8fafc">
-        <small style="color:var(--muted);font-weight:800">CUSTOMER WALLET LIABILITY</small>
-        <div id="finCustomerLiability" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">₦0</div>
-        <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Must never be withdrawable as company profit.</p>
-      </div>
-      <div class="fin-card" style="padding:15px;border:1px solid var(--line);border-radius:14px;background:#f8fafc">
-        <small style="color:var(--muted);font-weight:800">REVENUE TODAY</small>
-        <div id="finRevenueToday" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">₦0</div>
-        <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Gross amount charged for successful services.</p>
-      </div>
-      <div class="fin-card" style="padding:15px;border:1px solid var(--line);border-radius:14px;background:#f8fafc">
-        <small style="color:var(--muted);font-weight:800">WITHDRAWABLE PROFIT</small>
-        <div id="withdrawablePanel" class="fin-amount" style="font-size:20px;font-weight:900;margin-top:7px">₦0</div>
-        <p style="font-size:10px;color:var(--muted);margin:5px 0 0">Only settled, non-customer funds can be withdrawn.</p>
-      </div>
+    <div style="display:flex;gap:10px">
+      <button class="secondary" onclick="refreshDashboardFull()" title="Refresh live telemetry">↻ Refresh</button>
+      <button class="primary" onclick="go('requests')">Open Requests Hub</button>
     </div>
   </div>
-  
-<div id="provider-intelligence-card" class="card" style="margin-top:16px;cursor:pointer" onclick="go('provider-balance')" tabindex="0" role="button" aria-label="Open provider intelligence" onkeydown="if(event.key==='Enter'||event.key===' ')go('provider-balance')">
-  <div class="card-head">
-    <div><h3>Provider Intelligence</h3><span>Click to inspect provider health, balances and operational coverage</span></div>
-    <span class="pill blue">Open Providers</span>
-  </div>
-  <div class="grid4" style="padding:16px">
-    <div class="stat"><small>Total Providers</small><strong id="provIntelTotal">0</strong></div>
-    <div class="stat"><small>Low-balance Alerts</small><strong id="provIntelAlerts">0</strong></div>
-    <div class="stat"><small>Provider Status</small><strong id="provIntelStatus" style="font-size:18px">Healthy</strong></div>
-    <div class="stat"><small>Last Sync</small><strong id="provIntelSync" style="font-size:18px">—</strong></div>
-  </div>
-</div>
 
-<div class="cols">
-    <div class="card" id="dash-queue-card"><div class="card-head"><h3>Manual Processing Queue</h3><span>Latest requests</span></div>
-      <table><thead><tr><th>Reference</th><th>User</th><th>Service</th><th>Status</th><th></th></tr></thead>
-      <tbody id="dash-queue-tbody">
-        <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No requests currently submitted. Fresh installation state.</td></tr>
-      </tbody></table>
+  <!-- ── 3 Hero KPI Cards ── -->
+  <div class="kpi-hero-grid">
+    <!-- Card 1: Revenue Velocity -->
+    <div class="kpi-hero-card" tabindex="0" role="button" onclick="go('revenue')">
+      <div class="kpi-hero-top">
+        <span class="kpi-hero-title">Revenue (24h)</span>
+        <div class="kpi-hero-icon" style="background:#eff6ff;color:#2563eb">₦</div>
+      </div>
+      <div class="kpi-hero-val" id="kpiHeroRev">₦0.00</div>
+      <div class="kpi-hero-foot">
+        <span style="color:#16a34a;font-weight:700" id="kpiHeroRevDelta">Gross settled</span>
+        <div id="sparklineRev" class="kpi-sparkline"></div>
+      </div>
+    </div>
+
+    <!-- Card 2: Operations Volume -->
+    <div class="kpi-hero-card" tabindex="0" role="button" onclick="go('requests')">
+      <div class="kpi-hero-top">
+        <span class="kpi-hero-title">Verifications Completed</span>
+        <div class="kpi-hero-icon" style="background:#f0fdf4;color:#16a34a">✓</div>
+      </div>
+      <div class="kpi-hero-val" id="kpiHeroVol">0</div>
+      <div class="kpi-hero-foot">
+        <span style="color:var(--muted);font-weight:600" id="kpiHeroVolSub">Across all gateways</span>
+        <div id="sparklineVol" class="kpi-sparkline"></div>
+      </div>
+    </div>
+
+    <!-- Card 3: Pending Operations -->
+    <div class="kpi-hero-card" tabindex="0" role="button" onclick="go('pending')">
+      <div class="kpi-hero-top">
+        <span class="kpi-hero-title">Pending In Queue</span>
+        <div class="kpi-hero-icon" style="background:#fffbeb;color:#d97706">⏳</div>
+      </div>
+      <div class="kpi-hero-val" id="kpiHeroPending" style="color:#d97706">0</div>
+      <div class="kpi-hero-foot">
+        <span style="color:var(--muted);font-size:11px" id="kpiHeroPendingNote">Requires action</span>
+        <span class="pill amber" style="font-size:11px">Live Queue</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Needs Attention Action Center (Smart Banner) ── -->
+  <div class="action-center" id="dashActionCenter">
+    <div class="action-center-left">
+      <div class="action-center-badge">⚡</div>
+      <div>
+        <div class="action-center-title" id="actionCenterTitle">Platform Operations Running Smoothly</div>
+        <div class="action-center-sub" id="actionCenterSub">All API gateways and manual verification queues are operating within optimal latency.</div>
+      </div>
+    </div>
+    <button class="action-center-btn" id="actionCenterBtn" onclick="go('requests')">View Requests Hub</button>
+  </div>
+
+  <!-- ── Main Analytical Grid: Dual-Axis Area Chart + Provider Radar ── -->
+  <div class="dash-main-grid">
+    <!-- Left: Dual-Axis ApexChart -->
+    <div class="chart-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <h3 style="margin:0 0 4px">Revenue & Verification Velocity</h3>
+          <span style="font-size:12px;color:var(--muted)">Dual-axis volume tracking vs financial settlement</span>
+        </div>
+        <div class="chart-tabs">
+          <button class="chart-tab active" onclick="switchChartRange('24h', this)">24H</button>
+          <button class="chart-tab" onclick="switchChartRange('7d', this)">7D</button>
+          <button class="chart-tab" onclick="switchChartRange('30d', this)">30D</button>
+        </div>
+      </div>
+      <div id="apexLiveChart" style="min-height:290px"></div>
+    </div>
+
+    <!-- Right: Provider Health & Latency Radar -->
+    <div class="provider-radar-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <h3 style="margin:0 0 4px">Provider Health</h3>
+          <span style="font-size:12px;color:var(--muted)">Rolling 24h success & latency</span>
+        </div>
+        <button class="secondary" style="font-size:11px;padding:4px 8px" onclick="go('provider-balance')">Float Balances →</button>
+      </div>
+      <div id="providerRadarList">
+        <div style="padding:20px;text-align:center;color:var(--muted)">Loading provider metrics...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Manual Requests Quick Queue & Workload Breakdown ── -->
+  <div class="cols">
+    <div class="card" id="dash-queue-card">
+      <div class="card-head">
+        <h3>Manual Queue Stream</h3>
+        <span>Recent unassigned submissions</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Reference</th>
+            <th>Customer</th>
+            <th>Service</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dash-queue-tbody">
+          <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">Loading queue...</td></tr>
+        </tbody>
+      </table>
       <div id="dash-queue-pagination" style="display:none;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap"></div>
     </div>
-    <div class="card"><div class="card-head"><h3>Workload by Service</h3><span>Live status</span></div>
-      <div class="queue">
-        <div class="q"><div><b>NIN Services</b><small>Validation · IPE · Modification</small></div><strong>0</strong></div>
-        <div class="q"><div><b>JAMB</b><small>Results · Slips · Admission</small></div><strong>0</strong></div>
-        <div class="q"><div><b>CAC</b><small>Registration · Verification</small></div><strong>0</strong></div>
-        <div class="q"><div><b>BVN</b><small>Manual BVN operations</small></div><strong>0</strong></div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Financial Snapshot</h3>
+        <span>Settled vs customer liabilities</span>
+      </div>
+      <div class="queue" style="padding:16px">
+        <div class="q" style="cursor:pointer" onclick="go('wallet-funding')">
+          <div><b>Customer Wallet Liability</b><small>Total customer funds held</small></div>
+          <strong id="statWalletLiability">₦0</strong>
+        </div>
+        <div class="q" style="cursor:pointer" onclick="go('profit')">
+          <div><b>Withdrawable Net Profit</b><small>Safe company profit</small></div>
+          <strong id="withdrawableStat" style="color:#16a34a">₦0</strong>
+        </div>
+        <div class="q" style="cursor:pointer" onclick="go('provider-balance')">
+          <div><b>Provider Floats</b><small>Configured gateway credit</small></div>
+          <strong id="providerBalanceStat">₦0</strong>
+        </div>
+        <div class="q" style="cursor:pointer" onclick="go('users')">
+          <div><b>Total Registered Users</b><small>Registered agents & clients</small></div>
+          <strong id="statRegUsers">0</strong>
+        </div>
       </div>
     </div>
   </div>
@@ -920,10 +975,10 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
   </div>
 
   <div class="grid4">
-    <div class="stat"><small>Total Providers</small><strong>0</strong><span class="delta">Configured providers</span></div>
-    <div class="stat"><small>Total Provider Balance</small><strong id="providerTotal">₦0</strong><span class="delta">Across all configured providers</span></div>
-    <div class="stat"><small>Low Balance Alerts</small><strong>0</strong><span style="font-size:10px;color:var(--muted);font-weight:800">No alerts</span></div>
-    <div class="stat"><small>Last Sync</small><strong style="font-size:18px">—</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Provider balances sync</span></div>
+    <div class="stat"><small>Total Providers</small><strong id="provPageTotal">0</strong><span class="delta">Active gateway integrations</span></div>
+    <div class="stat"><small>Total Provider Balance</small><strong id="providerTotal">₦0</strong><span class="delta">Across configured providers</span></div>
+    <div class="stat"><small>Low Balance Alerts</small><strong id="provPageAlerts">0</strong><span style="font-size:10px;color:var(--muted);font-weight:800">Operational alerts</span></div>
+    <div class="stat"><small>Last Sync</small><strong id="provPageSync" style="font-size:18px">—</strong><span style="font-size:10px;color:var(--muted);font-weight:700">Provider balances sync</span></div>
   </div>
 
   
@@ -1075,6 +1130,7 @@ body.dark-mode div[style*="#fff7e6"]{background:#2a220f!important;color:#fbbf7a!
 
 <div id="modal" class="modal"><div class="modal-box"><div class="modal-head"><h3 id="modalTitle">Edit</h3><button class="secondary" onclick="closeModal()">✕</button></div><div id="modalBody" class="modal-body"></div><div id="modalFoot" class="modal-foot"></div></div></div>
 
+<script src="apexcharts.min.js"></script>
 <script>
   // ── First-Admin Setup Boot Check ──────────────────────────────────────────
   let __gvSetupMode = false;
@@ -1636,6 +1692,221 @@ async function login(){
   }
 }
 
+// ── Live ApexCharts & Telemetry Engine ───────────────────────────────────────
+let _apexMainChart = null;
+let _apexSparkRev  = null;
+let _apexSparkVol  = null;
+let _currentChartRange = '24h';
+
+async function refreshDashboardFull() {
+  await fetchDashboardData();
+  await loadDashboardAnalytics(_currentChartRange);
+}
+
+async function switchChartRange(range, btn) {
+  _currentChartRange = range;
+  document.querySelectorAll('.chart-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  await loadDashboardAnalytics(range);
+}
+
+async function loadDashboardAnalytics(range) {
+  range = range || _currentChartRange || '24h';
+  try {
+    const res  = await gvAdminFetch('../api/admin/analytics/chart?range=' + range);
+    const json = await res.json();
+    if (!json.success || !json.data) return;
+
+    const data = json.data;
+    renderApexLiveChart(data.revenue);
+    renderProviderRadar(data.health);
+    updateDashboardHeroKpis(data);
+  } catch (e) {
+    console.warn('[loadDashboardAnalytics]', e);
+  }
+}
+
+function updateDashboardHeroKpis(data) {
+  const summary = data.summary || {};
+  const rev = summary.revenue_today || 0;
+  const vol = summary.completed_today || 0;
+  const pend = summary.pending_total || 0;
+
+  const revEl = document.getElementById('kpiHeroRev');
+  if (revEl) revEl.textContent = money(rev);
+
+  const volEl = document.getElementById('kpiHeroVol');
+  if (volEl) volEl.textContent = vol.toLocaleString();
+
+  const pendEl = document.getElementById('kpiHeroPending');
+  if (pendEl) pendEl.textContent = pend.toLocaleString();
+
+  // Action Center Banner dynamic update
+  const acTitle = document.getElementById('actionCenterTitle');
+  const acSub   = document.getElementById('actionCenterSub');
+  const acBtn   = document.getElementById('actionCenterBtn');
+  const acBox   = document.getElementById('dashActionCenter');
+
+  if (pend > 0) {
+    if (acTitle) acTitle.textContent = `${pend} Verification${pend > 1 ? 's' : ''} Awaiting Manual Attention`;
+    if (acSub) acSub.textContent = 'Manual requests or pending gateway syncs require administrator review.';
+    if (acBtn) { acBtn.textContent = 'Open Queue (' + pend + ')'; acBtn.onclick = () => go('pending'); }
+    if (acBox) acBox.style.background = 'linear-gradient(135deg,#92400e,#b45309)';
+  } else {
+    if (acTitle) acTitle.textContent = 'Platform Operations Running Smoothly';
+    if (acSub) acSub.textContent = 'All API gateways and manual verification queues are operating within optimal latency.';
+    if (acBtn) { acBtn.textContent = 'View Requests Hub'; acBtn.onclick = () => go('requests'); }
+    if (acBox) acBox.style.background = 'linear-gradient(135deg,#0a1931,#123b79)';
+  }
+
+  // Render micro sparklines if series has data
+  if (data.revenue && Array.isArray(data.revenue.revenue)) {
+    renderMicroSparklines(data.revenue.revenue, data.revenue.volume);
+  }
+}
+
+function renderApexLiveChart(revData) {
+  if (typeof ApexCharts === 'undefined') return;
+  const chartEl = document.getElementById('apexLiveChart');
+  if (!chartEl) return;
+
+  const isDark = document.body.classList.contains('dark-mode');
+  const categories = revData.labels || [];
+  const revenueSeries = revData.revenue || [];
+  const volumeSeries = revData.volume || [];
+
+  const options = {
+    series: [
+      { name: 'Revenue (₦)', type: 'area', data: revenueSeries },
+      { name: 'Completed Jobs', type: 'line', data: volumeSeries }
+    ],
+    chart: {
+      height: 290,
+      type: 'line',
+      toolbar: { show: false },
+      animations: { enabled: true, easing: 'easeinout', speed: 600 },
+      background: 'transparent'
+    },
+    colors: ['#0b5cff', '#10b981'],
+    stroke: { curve: 'smooth', width: [2.5, 2] },
+    fill: {
+      type: ['gradient', 'solid'],
+      gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 95, 100] }
+    },
+    labels: categories,
+    xaxis: {
+      categories: categories,
+      labels: {
+        rotate: 0,
+        style: { colors: isDark ? '#94a3b8' : '#64748b', fontSize: '11px' }
+      },
+      axisBorder: { show: false },
+      axisTicks: { show: false }
+    },
+    yaxis: [
+      {
+        title: { text: 'Revenue (₦)', style: { color: isDark ? '#94a3b8' : '#64748b', fontSize: '11px' } },
+        labels: {
+          style: { colors: isDark ? '#94a3b8' : '#64748b', fontSize: '11px' },
+          formatter: val => '₦' + Number(val || 0).toLocaleString('en-NG')
+        }
+      },
+      {
+        opposite: true,
+        title: { text: 'Jobs Done', style: { color: isDark ? '#94a3b8' : '#64748b', fontSize: '11px' } },
+        labels: {
+          style: { colors: isDark ? '#94a3b8' : '#64748b', fontSize: '11px' },
+          formatter: val => Math.round(val)
+        }
+      }
+    ],
+    theme: { mode: isDark ? 'dark' : 'light' },
+    grid: { borderColor: isDark ? '#1e293b' : '#f1f5f9' },
+    tooltip: {
+      theme: isDark ? 'dark' : 'light',
+      y: {
+        formatter: (val, opts) => opts.seriesIndex === 0 ? money(val) : val + ' jobs'
+      }
+    },
+    legend: { position: 'top', horizontalAlign: 'right', labels: { colors: isDark ? '#e2e8f0' : '#334155' } }
+  };
+
+  if (_apexMainChart) {
+    _apexMainChart.updateOptions(options);
+  } else {
+    chartEl.innerHTML = '';
+    _apexMainChart = new ApexCharts(chartEl, options);
+    _apexMainChart.render();
+  }
+}
+
+function renderMicroSparklines(revSeries, volSeries) {
+  if (typeof ApexCharts === 'undefined') return;
+
+  const sparkRevEl = document.getElementById('sparklineRev');
+  if (sparkRevEl && revSeries.length > 0) {
+    const opts = {
+      series: [{ data: revSeries.slice(-10) }],
+      chart: { type: 'area', width: 110, height: 38, sparkline: { enabled: true } },
+      stroke: { curve: 'smooth', width: 2 },
+      fill: { opacity: 0.3 },
+      colors: ['#2563eb'],
+      tooltip: { enabled: false }
+    };
+    if (_apexSparkRev) { _apexSparkRev.updateOptions(opts); }
+    else { sparkRevEl.innerHTML = ''; _apexSparkRev = new ApexCharts(sparkRevEl, opts); _apexSparkRev.render(); }
+  }
+
+  const sparkVolEl = document.getElementById('sparklineVol');
+  if (sparkVolEl && volSeries.length > 0) {
+    const opts2 = {
+      series: [{ data: volSeries.slice(-10) }],
+      chart: { type: 'area', width: 110, height: 38, sparkline: { enabled: true } },
+      stroke: { curve: 'smooth', width: 2 },
+      fill: { opacity: 0.3 },
+      colors: ['#16a34a'],
+      tooltip: { enabled: false }
+    };
+    if (_apexSparkVol) { _apexSparkVol.updateOptions(opts2); }
+    else { sparkVolEl.innerHTML = ''; _apexSparkVol = new ApexCharts(sparkVolEl, opts2); _apexSparkVol.render(); }
+  }
+}
+
+function renderProviderRadar(health) {
+  const radarEl = document.getElementById('providerRadarList');
+  if (!radarEl || !Array.isArray(health)) return;
+
+  radarEl.innerHTML = health.map(p => {
+    const dotClass = p.status === 'healthy' ? 'healthy' : (p.status === 'degraded' ? 'degraded' : 'critical');
+    const sr = (p.success_rate !== null && p.success_rate !== undefined) ? `${p.success_rate}%` : 'N/A';
+    const lat = (p.avg_latency !== null && p.avg_latency !== undefined) ? `${p.avg_latency}s` : '—';
+    
+    var extraBal = '';
+    if (p.nin_balance !== undefined) {
+      extraBal = `<div style="font-size:11px;color:var(--muted);margin-top:4px">NIN: <b>${p.nin_balance}</b> · BVN: <b>${p.bvn_balance}</b></div>`;
+    }
+
+    return `
+      <div class="provider-item">
+        <div class="provider-item-head">
+          <div class="provider-item-title">
+            <span class="health-dot ${dotClass}"></span>${p.label}
+          </div>
+          <span class="pill ${p.status === 'healthy' ? 'green' : (p.status === 'degraded' ? 'amber' : 'red')}" style="font-size:10px;text-transform:uppercase">
+            ${p.status}
+          </span>
+        </div>
+        <div class="provider-metrics">
+          <span>Success: <b>${sr}</b></span>
+          <span>Latency: <b>${lat}</b></span>
+          <span>24h Vol: <b>${p.total_24h || 0}</b></span>
+        </div>
+        ${extraBal}
+      </div>
+    `;
+  }).join('');
+}
+
 async function fetchDashboardData(){
   const token = localStorage.getItem('gv_admin_token');
   if(!token) return;
@@ -1668,6 +1939,8 @@ async function fetchDashboardData(){
       if(document.getElementById('withdrawablePage')) document.getElementById('withdrawablePage').textContent = money(data.withdrawable_profit || 0);
       if(document.getElementById('profitCustomerLiability')) document.getElementById('profitCustomerLiability').textContent = money(data.total_wallet_liability || 0);
       renderLiveQueue();
+      // Auto-load live chart and provider telemetry
+      loadDashboardAnalytics();
     }
   } catch(e){}
 }
@@ -1858,6 +2131,7 @@ async function go(page,btn){
  window.scrollTo(0,0);
 
   // Fetch queue data dynamically on navigation
+  if(page === "dashboard") refreshDashboardFull();
   if(page === "requests") await renderRequestsQueue("requests");
   if(page === "products" || page === "orders" || page === "print-jobs" || page === "inventory" || page === "gemprint" || page === "settings") fetchGemPrintAdminData();
   if(page === "pending") await renderRequestsQueue("pending", "submitted");
@@ -1893,6 +2167,7 @@ async function go(page,btn){
   if(page === "refunds") loadRefunds();
   if(page === "api-transactions") { if(typeof fetchApiTransactions==="function") fetchApiTransactions(1); if(typeof fetchApiTxnStats==="function") fetchApiTxnStats(); }
   if(page === "services") fetchAdminServices();
+  if(page === "provider-balance") refreshProviderBalances();
   if(page === "wallet-funding") fetchWalletTopups(1);
   if(page === "admin-profile") { gvInitProfileUI(); gvLoadAdminList(); }
   if(page === "users") fetchAdminUsers(1, 'all');
@@ -3346,6 +3621,19 @@ async function refreshProviderBalances(){
     if (res && res.success && res.data) {
       const data = res.data;
       if (totalEl) totalEl.textContent = money(data.total_balance || 0);
+
+      const totalProviders = Array.isArray(data.providers) ? data.providers.length : 0;
+      const ptEl = document.getElementById('provPageTotal');
+      if (ptEl) ptEl.textContent = totalProviders;
+
+      const lowAlerts = Array.isArray(data.providers)
+        ? data.providers.filter(p => p.status === 'Low Balance' || p.status === 'Check Config').length
+        : 0;
+      const paEl = document.getElementById('provPageAlerts');
+      if (paEl) paEl.textContent = lowAlerts;
+
+      const psEl = document.getElementById('provPageSync');
+      if (psEl) psEl.textContent = (data.providers && data.providers[0] && data.providers[0].last_sync) || new Date().toLocaleTimeString();
 
       const tableBody = document.querySelector('#providerTable tbody');
       if (tableBody && Array.isArray(data.providers)) {
