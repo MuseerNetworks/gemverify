@@ -157,8 +157,12 @@ addRoute('GET',  '/admin/wallet/topups',                          function ()   
 addRoute('GET',  '/admin/wallet/topups/{ref}',                    function ($p)  { (new \Controllers\Admin\WalletAdminController())->getTopUp($p['ref']); });
 addRoute('POST', '/admin/wallet/topups/{ref}/credit',             function ($p)  { (new \Controllers\Admin\WalletAdminController())->manualCredit($p['ref']); });
 
+// ── Analytics Chart Data (Admin Dashboard) ──────────────────────────────────
+addRoute('GET',  '/admin/analytics/chart',               function ()    { (new \Controllers\Admin\AnalyticsController())->getChartData(); });
+
 // ── Provider Balances (Admin) ────────────────────────────────────────────────
 addRoute('GET',  '/admin/provider-balances',                     function ()    { (new \Controllers\Admin\ProviderBalanceController())->getBalances(); });
+
 
 // ── Admin Withdrawals (KatPay Payouts) ───────────────────────────────────────
 addRoute('GET',  '/admin/banks',                                 function ()    { (new \Controllers\Admin\WithdrawalController())->getBanks(); });

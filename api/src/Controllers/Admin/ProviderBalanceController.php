@@ -52,9 +52,10 @@ class ProviderBalanceController {
             $techHubNote   = 'api_transactions table missing on this environment.';
 
             if ($tableExists) {
-                $stmtSpend = $this->db->query("
+                // ── TechHub: only completed jobs, exclude failed/refunded to show real spend
+                $stmtTH = $this->db->query("
                     SELECT
-                        COALESCE(SUM(CASE WHEN at.gv_status IN ('completed','failed','refunded')
+                        COALESCE(SUM(CASE WHEN at.gv_status = 'completed'
                                          THEN COALESCE(sp.price, 0) ELSE 0 END), 0) AS spend_total,
                         COALESCE(SUM(CASE WHEN at.gv_status IN ('pending','processing')
                                          THEN COALESCE(sp.price, 0) ELSE 0 END), 0) AS spend_pending,
@@ -64,31 +65,56 @@ class ProviderBalanceController {
                         COUNT(*) AS jobs_total
                     FROM api_transactions at
                     LEFT JOIN service_pricing sp ON sp.id = at.pricing_id
-                    WHERE at.provider != 'recorddocs' OR at.provider IS NULL
+                    WHERE at.provider = 'techhub' OR at.provider IS NULL
                 ");
-                $row = $stmtSpend->fetch(PDO::FETCH_ASSOC);
+                $rowTH = $stmtTH->fetch(PDO::FETCH_ASSOC);
 
-                $spendTotal    = (float)($row['spend_total']   ?? 0);
-                $spendPending  = (float)($row['spend_pending']  ?? 0);
-                $jobsCompleted = (int)($row['jobs_completed']   ?? 0);
-                $jobsPending   = (int)($row['jobs_pending']     ?? 0);
-                $jobsFailed    = (int)($row['jobs_failed']      ?? 0);
-                $jobsTotal     = (int)($row['jobs_total']       ?? 0);
+                $spendTotal    = (float)($rowTH['spend_total']   ?? 0);
+                $spendPending  = (float)($rowTH['spend_pending']  ?? 0);
+                $jobsCompleted = (int)($rowTH['jobs_completed']   ?? 0);
+                $jobsPending   = (int)($rowTH['jobs_pending']     ?? 0);
+                $jobsFailed    = (int)($rowTH['jobs_failed']      ?? 0);
+                $jobsTotal     = (int)($rowTH['jobs_total']       ?? 0);
 
-                if ($jobsFailed > 0 && $spendTotal === 0.0) {
+                if ($spendTotal === 0.0 && $jobsFailed > 0) {
                     $techHubStatus = 'Check Config';
                 } elseif ($jobsPending > 50) {
                     $techHubStatus = 'High Load';
                 } else {
                     $techHubStatus = 'Active';
                 }
-                $techHubNote = 'Spend calculated from GemVerify records. TechHub does not expose a live balance API.';
+                $techHubNote = 'Spend reflects completed jobs only. Failed/refunded jobs are excluded. TechHub has no live balance API.';
+
+                // ── S8V: separate spend row
+                $stmtS8V = $this->db->query("
+                    SELECT
+                        COALESCE(SUM(CASE WHEN at.gv_status = 'completed'
+                                         THEN COALESCE(sp.price, 0) ELSE 0 END), 0) AS spend_total,
+                        COALESCE(SUM(CASE WHEN at.gv_status IN ('pending','processing')
+                                         THEN COALESCE(sp.price, 0) ELSE 0 END), 0) AS spend_pending,
+                        COUNT(CASE WHEN at.gv_status = 'completed' THEN 1 END)       AS jobs_completed,
+                        COUNT(CASE WHEN at.gv_status IN ('pending','processing') THEN 1 END) AS jobs_pending,
+                        COUNT(CASE WHEN at.gv_status IN ('failed','refunded') THEN 1 END)    AS jobs_failed,
+                        COUNT(*) AS jobs_total
+                    FROM api_transactions at
+                    LEFT JOIN service_pricing sp ON sp.id = at.pricing_id
+                    WHERE at.provider = 's8v'
+                ");
+                $rowS8V = $stmtS8V->fetch(PDO::FETCH_ASSOC);
+                $s8vSpend     = (float)($rowS8V['spend_total']   ?? 0);
+                $s8vPending   = (float)($rowS8V['spend_pending']  ?? 0);
+                $s8vCompleted = (int)($rowS8V['jobs_completed']   ?? 0);
+                $s8vPend      = (int)($rowS8V['jobs_pending']     ?? 0);
+                $s8vFailed    = (int)($rowS8V['jobs_failed']      ?? 0);
+                $s8vTotal     = (int)($rowS8V['jobs_total']       ?? 0);
+
+                $s8vStatus = ($s8vPend > 20) ? 'High Load' : (($s8vFailed > 0 && $s8vSpend === 0.0) ? 'Check Config' : 'Active');
             }
 
             $providers = [
                 [
                     'name'              => 'TechHub Verification API',
-                    'category'          => 'Automated Identity Verification (NIN/BVN)',
+                    'category'          => 'NIN / BVN Automated Identity Verification',
                     'available_balance' => $spendTotal,
                     'spend_total'       => $spendTotal,
                     'spend_pending'     => $spendPending,
@@ -101,7 +127,23 @@ class ProviderBalanceController {
                     'last_sync'         => $nowStr,
                     'error'             => $tableExists ? null : $techHubNote,
                     'note'              => $techHubNote,
-                ]
+                ],
+                [
+                    'name'              => 'S8V.ng Identity API',
+                    'category'          => 'NIN Personalisation & IPE Clearance',
+                    'available_balance' => $s8vSpend,
+                    'spend_total'       => $s8vSpend,
+                    'spend_pending'     => $s8vPending,
+                    'jobs_completed'    => $s8vCompleted,
+                    'jobs_pending'      => $s8vPend,
+                    'jobs_failed'       => $s8vFailed,
+                    'jobs_total'        => $s8vTotal,
+                    'threshold'         => 2000.0,
+                    'status'            => $s8vStatus,
+                    'last_sync'         => $nowStr,
+                    'error'             => null,
+                    'note'              => 'Spend reflects completed jobs only. S8V returns HTTP 402 when wallet is empty.',
+                ],
             ];
 
             // ── RecordDocs live balances ──────────────────────────────────────
