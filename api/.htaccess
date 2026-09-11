@@ -19,6 +19,9 @@ SetEnvIf X-KatPay-Signature "(.*)" HTTP_X_KATPAY_SIGNATURE=$1
 SetEnvIf X-KatPay-Timestamp "(.*)" HTTP_X_KATPAY_TIMESTAMP=$1
 SetEnvIf X-KatPay-Delivery-ID "(.*)" HTTP_X_KATPAY_DELIVERY_ID=$1
 SetEnvIf X-KatPay-Event "(.*)" HTTP_X_KATPAY_EVENT=$1
+SetEnvIf X-Rd-Signature "(.*)" HTTP_X_RD_SIGNATURE=$1
+SetEnvIf X-Rd-Timestamp "(.*)" HTTP_X_RD_TIMESTAMP=$1
+
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

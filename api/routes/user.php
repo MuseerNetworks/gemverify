@@ -62,7 +62,10 @@ addRoute('POST', '/webhooks/s8v',                                 function ()   
 addRoute('POST', '/api/webhooks/s8v',                             function ()    { (new \Controllers\Webhooks\S8VWebhookController())->handle(); });
 
 // RecordDocs Webhook Route
+addRoute('GET',  '/webhooks/recorddocs',                          function ()    { (new \Controllers\Webhooks\RecordDocsWebhookController())->ping(); });
+addRoute('GET',  '/api/webhooks/recorddocs',                      function ()    { (new \Controllers\Webhooks\RecordDocsWebhookController())->ping(); });
 addRoute('POST', '/webhooks/recorddocs',                          function ()    { (new \Controllers\Webhooks\RecordDocsWebhookController())->handle(); });
 addRoute('POST', '/api/webhooks/recorddocs',                      function ()    { (new \Controllers\Webhooks\RecordDocsWebhookController())->handle(); });
+
 
 

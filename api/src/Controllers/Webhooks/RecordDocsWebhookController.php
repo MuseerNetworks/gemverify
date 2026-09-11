@@ -32,12 +32,27 @@ class RecordDocsWebhookController
         $this->auditService  = new AuditService($this->db);
     }
 
+    /**
+     * GET ping/health check for dashboard endpoint verification.
+     */
+    public function ping(): void
+    {
+        Response::success(['status' => 'active', 'message' => 'RecordDocs webhook endpoint is reachable']);
+    }
+
     public function handle(): void
     {
         $rawBody   = file_get_contents('php://input') ?: '';
-        $headers   = getallheaders();
-        $signature = $headers['x-rd-signature'] ?? $headers['X-Rd-Signature'] ?? $headers['X-RD-SIGNATURE'] ?? null;
-        $timestamp = $headers['x-rd-timestamp'] ?? $headers['X-Rd-Timestamp'] ?? $headers['X-RD-TIMESTAMP'] ?? null;
+
+        // If dashboard sent an empty verification probe
+        if (trim($rawBody) === '') {
+            Response::success(['status' => 'active', 'message' => 'Webhook listener active']);
+            return;
+        }
+
+        $headers   = function_exists('getallheaders') ? getallheaders() : [];
+        $signature = $headers['x-rd-signature'] ?? $headers['X-Rd-Signature'] ?? $headers['X-RD-SIGNATURE'] ?? $_SERVER['HTTP_X_RD_SIGNATURE'] ?? null;
+        $timestamp = $headers['x-rd-timestamp'] ?? $headers['X-Rd-Timestamp'] ?? $headers['X-RD-TIMESTAMP'] ?? $_SERVER['HTTP_X_RD_TIMESTAMP'] ?? null;
 
         $secret = defined('RECORDDOCS_WEBHOOK_SECRET') ? trim((string)RECORDDOCS_WEBHOOK_SECRET) : '';
 
