@@ -94,6 +94,12 @@ define('KATPAY_CALLBACK_URL', getenv('KATPAY_CALLBACK_URL') ?: '');
 define('KATPAY_MIN_TOPUP',    (float)(getenv('KATPAY_MIN_TOPUP') ?: 100));
 define('KATPAY_BANK_CODES',   getenv('KATPAY_BANK_CODES')   ?: 'PALMPAY,OPAY');
 
+// ── ZenithPay webhook discovery configuration ───────────────────────────────
+// The receiver is intentionally logging-only until the provider's real webhook
+// payload and settlement lifecycle have been captured and reviewed.
+define('ZENITHPAY_WEBHOOK_ALLOWED_IPS', getenv('ZENITHPAY_WEBHOOK_ALLOWED_IPS') ?: '195.110.59.12');
+define('ZENITHPAY_WEBHOOK_MAX_BODY_BYTES', 262144); // 256 KB
+
 // ── S8V Identity Verification Provider Configuration ─────────────────────────
 // These values come exclusively from .env — never hardcoded, never exposed to frontend.
 define('S8V_API_BASE',        rtrim(getenv('S8V_API_BASE') ?: 'https://www.s8v.ng/api', '/'));
@@ -122,4 +128,3 @@ if (APP_DEBUG) {
 }
 
 date_default_timezone_set('Africa/Lagos');
-

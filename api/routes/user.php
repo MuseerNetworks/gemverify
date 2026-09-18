@@ -67,5 +67,9 @@ addRoute('GET',  '/api/webhooks/recorddocs',                      function ()   
 addRoute('POST', '/webhooks/recorddocs',                          function ()    { (new \Controllers\Webhooks\RecordDocsWebhookController())->handle(); });
 addRoute('POST', '/api/webhooks/recorddocs',                      function ()    { (new \Controllers\Webhooks\RecordDocsWebhookController())->handle(); });
 
+// ZenithPay webhook discovery route. This records authenticated provider events
+// for contract validation only; it does not create or credit wallet transactions.
+addRoute('POST', '/webhooks/zenithpay',                           function ()    { (new \Controllers\Webhooks\ZenithPayWebhookController())->handle(); });
+addRoute('POST', '/api/webhooks/zenithpay',                       function ()    { (new \Controllers\Webhooks\ZenithPayWebhookController())->handle(); });
 
 
