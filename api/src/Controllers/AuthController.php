@@ -51,9 +51,11 @@ class AuthController {
         try {
             $db->beginTransaction();
             
-            $stmt = $db->prepare("INSERT INTO users (business_name, email, phone, password_hash, is_active) VALUES (?, ?, ?, ?, 1)");
+            $stmt = $db->prepare("INSERT INTO users (business_name, first_name, last_name, email, phone, password_hash, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)");
             $stmt->execute([
                 $data['business_name'],
+                trim((string) ($data['first_name'] ?? strtok($data['business_name'], ' '))),
+                trim((string) ($data['last_name'] ?? substr(strstr($data['business_name'], ' ') ?: '', 1))),
                 $data['email'],
                 $data['phone'],
                 $passwordHash
@@ -64,27 +66,7 @@ class AuthController {
             $stmt = $db->prepare("INSERT INTO wallets (user_id, balance, currency) VALUES (?, 0.00, 'NGN')");
             $stmt->execute([$userId]);
 
-            // Pre-create a pending virtual_accounts row so the row always exists
-            $db->prepare("
-                INSERT IGNORE INTO virtual_accounts (user_id, status, created_at, updated_at)
-                VALUES (?, 'pending', NOW(), NOW())
-            ")->execute([$userId]);
-
             $db->commit();
-
-            // Attempt KatPay virtual account provisioning after commit (non-blocking)
-            // If KatPay fails, the pending row stays and will be retried on first wallet view
-            try {
-                $vaService = new \Services\VirtualAccountService($db);
-                $vaService->createForUser((int) $userId, [
-                    'business_name' => $data['business_name'],
-                    'email'         => $data['email'],
-                    'phone'         => $data['phone'],
-                ]);
-            } catch (\Throwable $e) {
-                // Log but never fail registration
-                error_log('[VirtualAccount] Auto-provision failed for user ' . $userId . ': ' . $e->getMessage());
-            }
             
             Response::success([
                 'user' => [

@@ -34,6 +34,20 @@ class TopUpController {
         $userId = AuthMiddleware::getUserId();
         $db     = db();
 
+        // A global maintenance switch stops new KatPay payment instructions even
+        // if an old browser still displays a cached funding button.
+        try {
+            $setting = $db->prepare("SELECT setting_value FROM payment_gateway_settings WHERE setting_key = 'katpay_funding_enabled'");
+            $setting->execute();
+            if ($setting->fetchColumn() === '0') {
+                Response::error('Wallet funding is temporarily unavailable.', 503);
+                return;
+            }
+        } catch (\Throwable) {
+            // The setting table is introduced by the ZenithPay migration; retain
+            // the legacy behavior until that migration has been installed.
+        }
+
         $body   = json_decode(file_get_contents('php://input'), true) ?? [];
         $amount = isset($body['amount']) ? (float) $body['amount'] : 0;
 

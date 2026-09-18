@@ -39,14 +39,11 @@ class WalletController {
             $t['amount'] = (float) $t['amount'];
         }
 
-        // ── Virtual Account ────────────────────────────────────────────────
-        // Fetch user info for potential retry provisioning
-        $userStmt = $db->prepare("SELECT business_name, email, phone FROM users WHERE id = ?");
-        $userStmt->execute([$userId]);
-        $userInfo = $userStmt->fetch(PDO::FETCH_ASSOC);
-
-        $vaService = new \Services\VirtualAccountService($db);
-        $va = $vaService->getOrCreate($userId, $userInfo ?: []);
+        // KatPay accounts are legacy records. Never auto-provision one from a
+        // wallet page: ZenithPay activation is deliberate and BVN-gated.
+        $vaStmt = $db->prepare('SELECT * FROM virtual_accounts WHERE user_id = ?');
+        $vaStmt->execute([$userId]);
+        $va = $vaStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
         $virtualAccount = null;
         if ($va && $va['status'] === 'active') {
@@ -60,11 +57,24 @@ class WalletController {
             $virtualAccount = ['status' => 'pending', 'message' => 'Your account is being set up. Please check back shortly.'];
         }
 
+        $funding = (new ZenithPayWalletController())->fundingStatus($userId);
+        if (($funding['zenithpay']['status'] ?? '') === 'active') {
+            $virtualAccount = [
+                'account_number' => $funding['zenithpay']['account_number'],
+                'account_name' => $funding['zenithpay']['account_name'],
+                'bank_name' => $funding['zenithpay']['bank_name'],
+                'status' => 'active',
+            ];
+        } elseif (!$funding['katpay_funding_enabled']) {
+            $virtualAccount = null;
+        }
+
         Response::success([
             'balance'          => $wallet['balance'],
             'ledger_balance'   => $wallet['ledger_balance'],
             'currency'         => $wallet['currency'],
             'virtual_account'  => $virtualAccount,
+            'funding'          => $funding,
             'recent_transactions' => $transactions,
         ]);
     }

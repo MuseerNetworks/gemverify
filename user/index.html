@@ -1158,6 +1158,8 @@ aside .mt-1.space-y-1 {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               business_name: fname + ' ' + lname,
+              first_name: fname,
+              last_name: lname,
               email: email,
               phone: phone,
               password: password,
@@ -4713,5 +4715,6 @@ async function gvDownloadResult(reference) {
 })();
 </script>
 <!-- END GV PATCH v3 -->
+<script src="zenithpay-activation.js"></script>
 </body>
 </html>

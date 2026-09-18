@@ -99,6 +99,9 @@ define('KATPAY_BANK_CODES',   getenv('KATPAY_BANK_CODES')   ?: 'PALMPAY,OPAY');
 // payload and settlement lifecycle have been captured and reviewed.
 define('ZENITHPAY_WEBHOOK_ALLOWED_IPS', getenv('ZENITHPAY_WEBHOOK_ALLOWED_IPS') ?: '195.110.59.12');
 define('ZENITHPAY_WEBHOOK_MAX_BODY_BYTES', 262144); // 256 KB
+define('ZENITHPAY_BEARER_TOKEN', getenv('ZENITHPAY_BEARER_TOKEN') ?: '');
+define('ZENITHPAY_ACCOUNT_ASSIGN_URL', rtrim(getenv('ZENITHPAY_ACCOUNT_ASSIGN_URL') ?: 'https://zenithpay.ng/api/dedicated_account/assign', '/'));
+define('ZENITHPAY_TIMEOUT', (int) (getenv('ZENITHPAY_TIMEOUT') ?: 30));
 
 // ── S8V Identity Verification Provider Configuration ─────────────────────────
 // These values come exclusively from .env — never hardcoded, never exposed to frontend.

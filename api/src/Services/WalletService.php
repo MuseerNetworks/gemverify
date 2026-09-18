@@ -123,9 +123,16 @@ class WalletService {
                 $this->db->beginTransaction();
             }
 
-            $balStmt = $this->db->prepare("SELECT balance FROM wallets WHERE user_id = :userId");
+            // The caller may already hold a wider transaction (for example a
+            // provider webhook). Lock the wallet before reading its balance so
+            // concurrent deposits cannot write an incorrect balance snapshot.
+            $balStmt = $this->db->prepare("SELECT balance FROM wallets WHERE user_id = :userId FOR UPDATE");
             $balStmt->execute(['userId' => $userId]);
-            $balanceBefore = (float)$balStmt->fetchColumn();
+            $balance = $balStmt->fetchColumn();
+            if ($balance === false) {
+                throw new RuntimeException("Wallet not found for user ID: $userId");
+            }
+            $balanceBefore = (float)$balance;
             $balanceAfter = $balanceBefore + $amount;
 
             $stmt = $this->db->prepare("UPDATE wallets SET balance = balance + :amount WHERE user_id = :userId");

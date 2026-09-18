@@ -9,6 +9,12 @@ use Controllers\Admin\RefundController;
 use Controllers\Admin\StatsController;
 use Controllers\Admin\ApiTransactionController;
 
+// ZenithPay funding controls and reconciliation (super-admin only).
+addRoute('GET', '/admin/payment-gateways', function () { (new \Controllers\Admin\ZenithPayAdminController())->settings(); });
+addRoute('PATCH', '/admin/payment-gateways', function () { (new \Controllers\Admin\ZenithPayAdminController())->updateSettings(); });
+addRoute('GET', '/admin/zenithpay/deposits', function () { (new \Controllers\Admin\ZenithPayAdminController())->deposits(); });
+addRoute('POST', '/admin/zenithpay/accounts/recover', function () { (new \Controllers\Admin\ZenithPayAdminController())->recoverAccount(); });
+
 // ── First-Admin Setup (PUBLIC — no auth required) ────────────────────────────
 addRoute('GET',  '/admin/setup', function () { (new \Controllers\AuthController())->checkSetupRequired(); });
 addRoute('POST', '/admin/setup', function () { (new \Controllers\AuthController())->createFirstAdmin(); });
@@ -174,4 +180,3 @@ addRoute('POST', '/admin/withdrawals',                           function ()    
 // ── KatPay Webhook (PUBLIC — no auth, signature-verified internally) ──────────
 // This route MUST be registered last as a fallback to avoid auth middleware
 addRoute('POST', '/payment/callback',                             function ()    { (new \Controllers\TopUpController())->handleCallback(); });
-
