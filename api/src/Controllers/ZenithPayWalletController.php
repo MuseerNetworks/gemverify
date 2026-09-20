@@ -5,6 +5,7 @@ use Helpers\Response;
 use Middleware\AuthMiddleware;
 use PDO;
 use Services\ZenithPayService;
+use Services\PaymentAccountService;
 
 final class ZenithPayWalletController
 {
@@ -89,6 +90,11 @@ final class ZenithPayWalletController
             ];
             $db->prepare("UPDATE zenithpay_virtual_accounts SET account_reference=?, account_number=?, account_name=?, bank_name=?, customer_email=?, status='active', provider_response=?, last_error=NULL, updated_at=NOW() WHERE user_id=?")
                 ->execute([$reference, $number, $data['accountName'] ?? null, $data['bankName'] ?? null, $data['customerEmail'] ?? $user['email'], json_encode($safeResponse), $userId]);
+            (new PaymentAccountService())->upsert($db, [
+                'user_id'=>$userId, 'provider_key'=>'zenithpay', 'provider_account_id'=>$reference,
+                'account_reference'=>$reference, 'account_number'=>$number, 'account_name'=>$data['accountName'] ?? null,
+                'bank_name'=>$data['bankName'] ?? null, 'currency'=>'NGN', 'status'=>'active', 'provider_metadata'=>$safeResponse,
+            ]);
             $account = $this->accountForUser($db, $userId);
             Response::success(['account' => $this->publicAccount($account)], 'Your bank account is active.');
         } catch (\Throwable $e) {
@@ -111,9 +117,12 @@ final class ZenithPayWalletController
             // its phpMyAdmin migration: retain the existing KatPay experience.
             return ['zenithpay' => ['status' => 'activation_required'], 'katpay_funding_enabled' => true];
         }
+        $accounts = [];
+        try { $accounts = (new PaymentAccountService())->customerFundingAccounts($db, $userId); } catch (\Throwable) {}
         return [
             'zenithpay' => $account ? $this->publicAccount($account) : ['status' => 'activation_required'],
             'katpay_funding_enabled' => $this->setting($db, 'katpay_funding_enabled', '1') === '1',
+            'accounts' => $accounts,
         ];
     }
 

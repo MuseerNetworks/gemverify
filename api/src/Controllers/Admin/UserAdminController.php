@@ -56,11 +56,11 @@ class UserAdminController
             // Search filter (ID, name, email, phone, NUBAN account number)
             if ($search !== '') {
                 if (ctype_digit($search)) {
-                    $whereClauses[] = '(u.id = :search_id OR u.business_name LIKE :search_like OR u.email LIKE :search_like OR u.phone LIKE :search_like OR va.account_number LIKE :search_like OR u.account_number LIKE :search_like)';
+                    $whereClauses[] = '(u.id = :search_id OR u.business_name LIKE :search_like OR u.email LIKE :search_like OR u.phone LIKE :search_like OR va.account_number LIKE :search_like OR u.account_number LIKE :search_like OR EXISTS (SELECT 1 FROM payment_virtual_accounts pva WHERE pva.user_id=u.id AND (pva.account_number LIKE :search_like OR pva.account_reference LIKE :search_like OR pva.bank_name LIKE :search_like OR pva.provider_key LIKE :search_like)))';
                     $params['search_id']   = (int) $search;
                     $params['search_like'] = '%' . $search . '%';
                 } else {
-                    $whereClauses[] = '(u.business_name LIKE :search_like OR u.email LIKE :search_like OR u.phone LIKE :search_like OR va.account_number LIKE :search_like OR va.bank_name LIKE :search_like)';
+                    $whereClauses[] = '(u.business_name LIKE :search_like OR u.email LIKE :search_like OR u.phone LIKE :search_like OR va.account_number LIKE :search_like OR va.bank_name LIKE :search_like OR EXISTS (SELECT 1 FROM payment_virtual_accounts pva WHERE pva.user_id=u.id AND (pva.account_number LIKE :search_like OR pva.account_reference LIKE :search_like OR pva.bank_name LIKE :search_like OR pva.provider_key LIKE :search_like)))';
                     $params['search_like'] = '%' . $search . '%';
                 }
             }
@@ -180,39 +180,16 @@ class UserAdminController
             $user['total_requests']        = $user['manual_requests_count'] + $apiCount;
             $user['transactions_count']    = (int) $user['transactions_count'];
 
-            // Fetch dedicated virtual bank account details
-            $vaStmt = $this->db->prepare("
-                SELECT account_number, account_name, bank_name, bank_code, currency, status, last_credit_at, created_at, updated_at
-                FROM virtual_accounts
-                WHERE user_id = ?
-                LIMIT 1
-            ");
-            $vaStmt->execute([$id]);
-            $va = $vaStmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($va) {
-                $user['virtual_account'] = [
-                    'account_number' => $va['account_number'] ?: ($user['account_number'] ?? null),
-                    'account_name'   => $va['account_name']   ?: ($user['account_name'] ?? null),
-                    'bank_name'      => $va['bank_name']      ?? null,
-                    'bank_code'      => $va['bank_code']      ?? null,
-                    'currency'       => $va['currency']       ?? 'NGN',
-                    'status'         => $va['status']         ?? 'none',
-                    'last_credit_at' => $va['last_credit_at'] ?? null,
-                    'created_at'     => $va['created_at']     ?? null,
-                ];
-            } else {
-                $user['virtual_account'] = [
-                    'account_number' => $user['account_number'] ?? null,
-                    'account_name'   => $user['account_name']   ?? null,
-                    'bank_name'      => null,
-                    'bank_code'      => null,
-                    'currency'       => 'NGN',
-                    'status'         => !empty($user['account_number']) ? 'active' : 'none',
-                    'last_credit_at' => null,
-                    'created_at'     => null,
-                ];
-            }
+            // Independent cards: each provider keeps its own bank/account name,
+            // number and reference. No provider data is merged with another.
+            $accountStmt = $this->db->prepare("SELECT a.provider_key,p.display_name,a.account_reference,a.account_number,a.account_name,a.bank_name,a.currency,a.status,a.last_credit_at,a.created_at,a.updated_at,p.customer_funding_enabled,p.maintenance_enabled
+                FROM payment_virtual_accounts a JOIN payment_providers p ON p.provider_key=a.provider_key
+                WHERE a.user_id=? ORDER BY p.customer_funding_enabled DESC,p.display_order,a.created_at");
+            $accountStmt->execute([$id]);
+            $user['payment_accounts'] = $accountStmt->fetchAll(PDO::FETCH_ASSOC);
+            // Compatibility for older admin code; it deliberately points only to
+            // the first independent card and must not be used for new UI.
+            $user['virtual_account'] = $user['payment_accounts'][0] ?? ['status'=>'none'];
 
             Response::success($user);
         } catch (Exception $e) {

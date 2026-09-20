@@ -36,7 +36,7 @@ final class ZenithPayWebhookController {
                 $this->db->prepare("UPDATE zenithpay_deposits SET processing_status='ignored' WHERE id=?")->execute([$depositId]);
                 $this->db->commit(); $this->markEvent($eventId, 'mapped'); $this->respond(200, true, 'Webhook recorded without wallet credit.'); return;
             }
-            $stmt = $this->db->prepare("SELECT * FROM zenithpay_virtual_accounts WHERE (account_reference = ? AND ? <> '') OR (account_number = ? AND ? <> '') LIMIT 1 FOR UPDATE");
+            $stmt = $this->db->prepare("SELECT * FROM payment_virtual_accounts WHERE provider_key='zenithpay' AND ((account_reference = ? AND ? <> '') OR (account_number = ? AND ? <> '')) LIMIT 1 FOR UPDATE");
             $stmt->execute([$reference, $reference, $number, $number]); $account = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$account || $account['status'] !== 'active') {
                 $this->db->prepare("UPDATE zenithpay_deposits SET processing_status='unmatched' WHERE id=?")->execute([$depositId]);
@@ -44,7 +44,8 @@ final class ZenithPayWebhookController {
             }
             $credit = (new WalletService($this->db))->creditAtomically((int) $account['user_id'], (float) $gross, 'Wallet funding via ZenithPay (Ref: ' . $transactionId . ')', null);
             $this->db->prepare("UPDATE zenithpay_deposits SET user_id=?,zenithpay_virtual_account_id=?,processing_status='credited',credited_tx_id=?,completed_at=NOW() WHERE id=?")->execute([(int)$account['user_id'], (int)$account['id'], (int)$credit['id'], $depositId]);
-            $this->db->prepare('UPDATE zenithpay_virtual_accounts SET last_credit_at=NOW(),updated_at=NOW() WHERE id=?')->execute([(int)$account['id']]);
+            $this->db->prepare('UPDATE payment_virtual_accounts SET last_credit_at=NOW(),updated_at=NOW() WHERE id=?')->execute([(int)$account['id']]);
+            $this->db->prepare('UPDATE zenithpay_virtual_accounts SET last_credit_at=NOW(),updated_at=NOW() WHERE user_id=?')->execute([(int)$account['user_id']]);
             $this->db->commit(); $this->markEvent($eventId, 'mapped'); $this->respond(200, true, 'Wallet credited.');
         } catch (\Throwable $e) { if ($this->db->inTransaction()) $this->db->rollBack(); $this->markEvent($eventId, 'rejected'); error_log('[ZenithPay Webhook] ' . $e->getMessage()); $this->respond(500, false, 'Webhook processing failed.'); }
     }

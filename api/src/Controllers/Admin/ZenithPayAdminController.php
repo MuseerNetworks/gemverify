@@ -7,6 +7,22 @@ use PDO;
 
 final class ZenithPayAdminController
 {
+    public function providers(): void {
+        AdminMiddleware::requireRole('super_admin');
+        Response::success(['providers'=>db()->query('SELECT provider_key,display_name,customer_funding_enabled,account_assignment_enabled,maintenance_enabled,display_order FROM payment_providers ORDER BY display_order,display_name')->fetchAll(PDO::FETCH_ASSOC)]);
+    }
+    public function updateProvider(string $provider): void {
+        AdminMiddleware::requireRole('super_admin');
+        $d=json_decode(file_get_contents('php://input'),true)?:[]; $db=db();
+        $stmt=$db->prepare('SELECT provider_key FROM payment_providers WHERE provider_key=?');$stmt->execute([$provider]); if(!$stmt->fetchColumn()){Response::error('Payment provider not found.',404);return;}
+        $funding=filter_var($d['customer_funding_enabled']??false,FILTER_VALIDATE_BOOLEAN)?1:0;
+        $assignment=filter_var($d['account_assignment_enabled']??false,FILTER_VALIDATE_BOOLEAN)?1:0;
+        $maintenance=filter_var($d['maintenance_enabled']??false,FILTER_VALIDATE_BOOLEAN)?1:0;
+        $order=max(0,(int)($d['display_order']??100));
+        $db->prepare('UPDATE payment_providers SET customer_funding_enabled=?,account_assignment_enabled=?,maintenance_enabled=?,display_order=?,updated_at=NOW() WHERE provider_key=?')->execute([$funding,$assignment,$maintenance,$order,$provider]);
+        if($provider==='katpay') $db->prepare("INSERT INTO payment_gateway_settings (setting_key,setting_value,updated_by) VALUES ('katpay_funding_enabled',?,?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value),updated_by=VALUES(updated_by),updated_at=NOW()") ->execute([$funding,(int)AdminMiddleware::getAdminId()]);
+        Response::success([], 'Provider settings updated.');
+    }
     public function settings(): void {
         AdminMiddleware::requireRole('super_admin');
         $rows = db()->query("SELECT setting_key, setting_value, updated_at FROM payment_gateway_settings WHERE setting_key IN ('katpay_funding_enabled','zenithpay_activation_enabled')")->fetchAll(PDO::FETCH_ASSOC);

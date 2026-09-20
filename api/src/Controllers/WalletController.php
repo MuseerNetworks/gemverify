@@ -58,6 +58,11 @@ class WalletController {
         }
 
         $funding = (new ZenithPayWalletController())->fundingStatus($userId);
+        $fundingAccounts = $funding['accounts'] ?? [];
+        if (!empty($fundingAccounts)) {
+            $primary = $fundingAccounts[0];
+            $virtualAccount = ['account_number'=>$primary['account_number'],'account_name'=>$primary['account_name'],'bank_name'=>$primary['bank_name'],'status'=>$primary['status']];
+        }
         if (($funding['zenithpay']['status'] ?? '') === 'active') {
             $virtualAccount = [
                 'account_number' => $funding['zenithpay']['account_number'],
@@ -75,6 +80,7 @@ class WalletController {
             'currency'         => $wallet['currency'],
             'virtual_account'  => $virtualAccount,
             'funding'          => $funding,
+            'funding_accounts' => $fundingAccounts,
             'recent_transactions' => $transactions,
         ]);
     }

@@ -2675,25 +2675,18 @@ async function openUserDrawer(userId) {
     const u = json.data;
     const active = parseInt(u.is_active) === 1 && !u.deleted_at;
     const initial = (u.business_name || u.email || 'U')[0].toUpperCase();
-    const va = u.virtual_account || {};
-
-    let vaSection = '';
-    if (va.account_number) {
-      vaSection = `
-        <div style="background:linear-gradient(135deg,#0a1931,#123b79);color:#fff;border-radius:16px;padding:18px;margin-bottom:20px;box-shadow:0 8px 24px rgba(10,25,49,.12)">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-            <span style="background:rgba(255,255,255,.2);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">${gvEscapeHtml(va.bank_name || 'Bank')}</span>
-            <span class="pill ${va.status === 'active' ? 'green' : 'amber'}" style="font-size:10px">${va.status || 'Active'}</span>
-          </div>
-          <div style="font-size:10px;color:#94a3b8;margin-bottom:2px">VIRTUAL ACCOUNT NUMBER</div>
-          <div style="font-family:monospace;font-size:22px;font-weight:800;letter-spacing:1px;color:#38bdf8">${gvEscapeHtml(va.account_number)}</div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1);font-size:11px">
-            <span>Beneficiary: <b>${gvEscapeHtml(va.account_name || u.business_name || '—')}</b></span>
-            <button class="secondary" style="padding:3px 8px;font-size:11px;background:rgba(255,255,255,.15);color:#fff;border-color:transparent" onclick="gvCopyText('${gvEscapeHtml(va.account_number)}','Copied account number!')">Copy</button>
-          </div>
-        </div>
-      `;
-    } else {
+    const accounts = Array.isArray(u.payment_accounts) ? u.payment_accounts : [];
+    let vaSection = accounts.map(function (account) {
+      const enabled = parseInt(account.customer_funding_enabled) === 1 && parseInt(account.maintenance_enabled) !== 1;
+      const label = account.display_name || account.provider_key || 'Payment Provider';
+      return `<div style="background:linear-gradient(135deg,#0a1931,#123b79);color:#fff;border-radius:16px;padding:18px;margin-bottom:12px;box-shadow:0 8px 24px rgba(10,25,49,.12)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="background:rgba(255,255,255,.2);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">${gvEscapeHtml(label)} · ${gvEscapeHtml(account.bank_name || 'Bank')}</span><span class="pill ${account.status === 'active' ? 'green' : 'amber'}" style="font-size:10px">${gvEscapeHtml(account.status || 'unknown')}</span></div>
+        <div style="font-size:10px;color:#94a3b8;margin-bottom:2px">VIRTUAL ACCOUNT NUMBER</div><div style="font-family:monospace;font-size:22px;font-weight:800;letter-spacing:1px;color:#38bdf8">${gvEscapeHtml(account.account_number || '—')}</div>
+        <div style="margin-top:8px;font-size:11px;color:#cbd5e1">Beneficiary: <b>${gvEscapeHtml(account.account_name || u.business_name || '—')}</b>${account.account_reference ? ' · Ref: ' + gvEscapeHtml(account.account_reference) : ''}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1);font-size:11px"><span>${enabled ? 'Customer funding enabled' : 'Admin/history only'}</span><button class="secondary" style="padding:3px 8px;font-size:11px;background:rgba(255,255,255,.15);color:#fff;border-color:transparent" onclick="gvCopyText('${gvEscapeHtml(account.account_number || '')}','Copied account number!')">Copy</button></div>
+      </div>`;
+    }).join('');
+    if (!vaSection) {
       vaSection = `
         <div style="padding:16px;border:1px dashed var(--line);border-radius:14px;background:var(--bg);text-align:center;margin-bottom:20px">
           <div style="font-size:13px;font-weight:700;margin-bottom:4px">No Virtual Account Assigned</div>

@@ -12,6 +12,8 @@ use Controllers\Admin\ApiTransactionController;
 // ZenithPay funding controls and reconciliation (super-admin only).
 addRoute('GET', '/admin/payment-gateways', function () { (new \Controllers\Admin\ZenithPayAdminController())->settings(); });
 addRoute('PATCH', '/admin/payment-gateways', function () { (new \Controllers\Admin\ZenithPayAdminController())->updateSettings(); });
+addRoute('GET', '/admin/payment-providers', function () { (new \Controllers\Admin\ZenithPayAdminController())->providers(); });
+addRoute('PATCH', '/admin/payment-providers/{provider}', function ($p) { (new \Controllers\Admin\ZenithPayAdminController())->updateProvider($p['provider']); });
 addRoute('GET', '/admin/zenithpay/deposits', function () { (new \Controllers\Admin\ZenithPayAdminController())->deposits(); });
 addRoute('POST', '/admin/zenithpay/accounts/recover', function () { (new \Controllers\Admin\ZenithPayAdminController())->recoverAccount(); });
 

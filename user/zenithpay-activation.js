@@ -13,6 +13,12 @@
     el.style.cssText = 'position:fixed;right:20px;bottom:20px;z-index:9998;width:min(390px,calc(100vw - 32px));padding:20px;border-radius:18px;background:#102044;color:#fff;box-shadow:0 18px 48px rgba(0,0,0,.28);font:14px system-ui,sans-serif';
     el.innerHTML = html; document.body.appendChild(el); return el;
   };
+  const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const showFundingAccounts = (accounts) => {
+    const rows = accounts.map(a => '<div style="padding:12px 0;border-top:1px solid rgba(255,255,255,.16)"><div style="font-size:11px;color:#93c5fd;font-weight:700">'+escapeHtml(a.display_name || a.provider_key)+' · '+escapeHtml(a.bank_name || 'Bank')+'</div><div style="font:700 19px monospace;margin-top:4px">'+escapeHtml(a.account_number)+'</div><div style="font-size:12px;color:#dbeafe;margin-top:4px">'+escapeHtml(a.account_name || '')+'</div><button data-copy="'+escapeHtml(a.account_number)+'" style="margin-top:7px;padding:5px 9px;border:0;border-radius:7px;background:#31558d;color:#fff">Copy account</button></div>').join('');
+    const el = card('<button id="gv-z-close" style="float:right;border:0;background:none;color:#fff;font-size:18px">×</button><h3 style="margin:0 0 8px">Fund your wallet</h3><p style="margin:0 0 8px;color:#dbeafe;font-size:12px">Use any account shown below.</p>'+rows);
+    el.querySelector('#gv-z-close').onclick=remove; el.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>navigator.clipboard?.writeText(b.dataset.copy));
+  };
   const activate = () => {
     const el = card('<button id="gv-z-close" style="float:right;border:0;background:none;color:#fff;font-size:18px">×</button><h3 style="margin:0 0 8px">Activate your bank account</h3><p style="margin:0 0 14px;line-height:1.45;color:#dbeafe">Enter your 11-digit BVN to create your bank account for wallet funding. Your existing wallet balance stays unchanged.</p><input id="gv-z-bvn" inputmode="numeric" maxlength="11" placeholder="Enter your BVN" style="box-sizing:border-box;width:100%;padding:12px;border-radius:10px;border:1px solid #5270a9;background:#fff;color:#102044"><button id="gv-z-submit" style="margin-top:10px;width:100%;padding:12px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:700">Activate bank account</button><p id="gv-z-error" style="margin:9px 0 0;color:#fecaca;font-size:12px"></p>');
     el.querySelector('#gv-z-close').onclick = remove;
@@ -29,6 +35,7 @@
     try {
       const json = await request('/user/wallet'); if (!json.success || !json.data?.funding) return;
       const f = json.data.funding, z = f.zenithpay || {};
+      const accounts = Array.isArray(json.data.funding_accounts) ? json.data.funding_accounts : (Array.isArray(f.accounts) ? f.accounts : []);
       if (!f.katpay_funding_enabled) {
         document.querySelectorAll('button').forEach((button) => {
           const label = (button.textContent || '').trim().toLowerCase();
@@ -37,6 +44,7 @@
       }
       if (z.status === 'activation_required' || z.status === 'failed') { activate(); return; }
       if (z.status === 'pending' || z.status === 'unknown') { card('<h3 style="margin:0 0 8px">Bank account activation</h3><p style="margin:0;color:#dbeafe;line-height:1.45">Your bank account is being confirmed. Please check back shortly.</p>'); return; }
+      if (accounts.length) { showFundingAccounts(accounts); return; }
       remove();
     } catch (_) {}
   };
