@@ -2,6 +2,8 @@
 (function () {
   'use strict';
   const api = '../api';
+  let fundingAccounts = [];
+  let fundingState = null;
   const token = () => localStorage.getItem('gv_token') || '';
   const request = async (url, options) => {
     const res = await fetch(api + url, Object.assign({ headers: { Authorization: 'Bearer ' + token() } }, options || {}));
@@ -36,17 +38,29 @@
       const json = await request('/user/wallet'); if (!json.success || !json.data?.funding) return;
       const f = json.data.funding, z = f.zenithpay || {};
       const accounts = Array.isArray(json.data.funding_accounts) ? json.data.funding_accounts : (Array.isArray(f.accounts) ? f.accounts : []);
-      if (!f.katpay_funding_enabled) {
-        document.querySelectorAll('button').forEach((button) => {
-          const label = (button.textContent || '').trim().toLowerCase();
-          if (label === 'fund wallet' || label === 'top up' || label === 'add funds') button.style.display = 'none';
-        });
-      }
+      fundingAccounts = accounts;
+      fundingState = z.status || null;
       if (z.status === 'activation_required' || z.status === 'failed') { activate(); return; }
       if (z.status === 'pending' || z.status === 'unknown') { card('<h3 style="margin:0 0 8px">Bank account activation</h3><p style="margin:0;color:#dbeafe;line-height:1.45">Your bank account is being confirmed. Please check back shortly.</p>'); return; }
-      if (accounts.length) { showFundingAccounts(accounts); return; }
       remove();
     } catch (_) {}
   };
+  window.gvOpenFundingAccounts = async () => {
+    if (!token()) return;
+    if (!fundingState && !fundingAccounts.length) await load();
+    if (fundingState === 'activation_required' || fundingState === 'failed') { activate(); return; }
+    if (fundingState === 'pending' || fundingState === 'unknown') {
+      card('<h3 style="margin:0 0 8px">Bank account activation</h3><p style="margin:0;color:#dbeafe;line-height:1.45">Your bank account is being confirmed. Please check back shortly.</p>');
+      return;
+    }
+    if (fundingAccounts.length) showFundingAccounts(fundingAccounts);
+  };
+  document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('.gv-wallet-fund-btn, .welcome .btn.primary, [data-gvx-page="wallet"]');
+    if (!trigger) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    window.gvOpenFundingAccounts();
+  }, true);
   window.addEventListener('load', () => setTimeout(load, 1200));
 })();
