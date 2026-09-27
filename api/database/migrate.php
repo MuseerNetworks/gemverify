@@ -266,6 +266,20 @@ try {
               INDEX idx_user_unread (user_id, is_read)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ",
+        "announcements" => "
+            CREATE TABLE IF NOT EXISTS announcements (
+              id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+              title VARCHAR(200) NOT NULL,
+              body TEXT NOT NULL,
+              status ENUM('draft','published','paused') NOT NULL DEFAULT 'draft',
+              created_by BIGINT UNSIGNED NOT NULL,
+              published_at DATETIME NULL,
+              created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              FOREIGN KEY (created_by) REFERENCES admins(id),
+              INDEX idx_announcements_status_published (status, published_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ",
         "audit_logs" => "
             CREATE TABLE IF NOT EXISTS audit_logs (
               id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

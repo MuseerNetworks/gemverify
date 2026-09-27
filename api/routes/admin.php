@@ -9,6 +9,13 @@ use Controllers\Admin\RefundController;
 use Controllers\Admin\StatsController;
 use Controllers\Admin\ApiTransactionController;
 
+// Global customer login announcements (super-admin only).
+addRoute('GET', '/admin/announcements', function () { (new \Controllers\Admin\AnnouncementAdminController())->list(); });
+addRoute('POST', '/admin/announcements', function () { (new \Controllers\Admin\AnnouncementAdminController())->create(); });
+addRoute('PATCH', '/admin/announcements/{id}', function ($p) { (new \Controllers\Admin\AnnouncementAdminController())->update((int) $p['id']); });
+addRoute('POST', '/admin/announcements/{id}/publish', function ($p) { (new \Controllers\Admin\AnnouncementAdminController())->publish((int) $p['id']); });
+addRoute('POST', '/admin/announcements/{id}/pause', function ($p) { (new \Controllers\Admin\AnnouncementAdminController())->pause((int) $p['id']); });
+
 // ZenithPay funding controls and reconciliation (super-admin only).
 addRoute('GET', '/admin/payment-gateways', function () { (new \Controllers\Admin\ZenithPayAdminController())->settings(); });
 addRoute('PATCH', '/admin/payment-gateways', function () { (new \Controllers\Admin\ZenithPayAdminController())->updateSettings(); });

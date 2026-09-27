@@ -2357,6 +2357,7 @@ async function go(page,btn){
   if(page === "refunds") loadRefunds();
   if(page === "api-transactions") { if(typeof fetchApiTransactions==="function") fetchApiTransactions(1); if(typeof fetchApiTxnStats==="function") fetchApiTxnStats(); }
   if(page === "services") fetchAdminServices();
+  if(page === "announcements" && typeof loadAnnouncements === "function") loadAnnouncements();
   if(page === "provider-balance") { refreshProviderBalances(); loadTopUpHistory(1); }
   if(page === "wallet-funding") fetchWalletTopups(1);
   if(page === "admin-profile") { gvInitProfileUI(); gvLoadAdminList(); }
@@ -5089,5 +5090,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // ── End Session Management ────────────────────────────────────────────────
 </script>
 <script src="zenithpay.js"></script>
+<script src="announcements.js"></script>
 </body>
 </html>

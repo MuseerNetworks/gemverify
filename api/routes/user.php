@@ -22,6 +22,7 @@ addRoute('PATCH', '/user/profile',               function () { (new UserControll
 addRoute('GET',   '/user/stats',                 function () { (new UserController())->getStats(); });
 addRoute('GET',   '/user/notifications',         function () { (new UserController())->getNotifications(); });
 addRoute('PATCH', '/user/notifications/{id}/read', function ($p) { (new UserController())->markNotificationRead((int)$p['id']); });
+addRoute('GET',   '/user/announcements/active',  function () { (new \Controllers\AnnouncementController())->active(); });
 
 // Wallet & Transactions
 addRoute('GET', '/user/wallet',                  function () { (new WalletController())->getWallet(); });
@@ -72,4 +73,3 @@ addRoute('POST', '/api/webhooks/recorddocs',                      function ()   
 // for contract validation only; it does not create or credit wallet transactions.
 addRoute('POST', '/webhooks/zenithpay',                           function ()    { (new \Controllers\Webhooks\ZenithPayWebhookController())->handle(); });
 addRoute('POST', '/api/webhooks/zenithpay',                       function ()    { (new \Controllers\Webhooks\ZenithPayWebhookController())->handle(); });
-
