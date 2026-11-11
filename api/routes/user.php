@@ -15,6 +15,8 @@ use Controllers\TopUpController;
 addRoute('GET', '/services',                      function () { (new ServiceController())->getAll(); });
 addRoute('GET', '/services/{slug}',              function ($p) { (new ServiceController())->getBySlug($p['slug']); });
 addRoute('GET', '/services/{slug}/price',        function ($p) { (new ServiceController())->getPrice($p['slug']); });
+addRoute('GET', '/enrollment-banks',             function () { (new \Controllers\PublicEnrollmentBankController())->list(); });
+
 
 // User Profile & Stats
 addRoute('GET',   '/user/profile',               function () { (new UserController())->getProfile(); });

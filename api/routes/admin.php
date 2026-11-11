@@ -186,6 +186,13 @@ addRoute('GET',  '/admin/banks',                                 function ()    
 addRoute('GET',  '/admin/withdrawals',                           function ()    { (new \Controllers\Admin\WithdrawalController())->listWithdrawals(); });
 addRoute('POST', '/admin/withdrawals',                           function ()    { (new \Controllers\Admin\WithdrawalController())->createWithdrawal(); });
 
+// ── BVN Enrollment Banks Management (Admin) ──────────────────────────────────
+addRoute('GET',    '/admin/enrollment-banks',                    function ()    { (new \Controllers\Admin\EnrollmentBankController())->list(); });
+addRoute('POST',   '/admin/enrollment-banks',                    function ()    { (new \Controllers\Admin\EnrollmentBankController())->create(); });
+addRoute('PATCH',  '/admin/enrollment-banks/{id}',               function ($p)  { (new \Controllers\Admin\EnrollmentBankController())->update((int)$p['id']); });
+addRoute('DELETE', '/admin/enrollment-banks/{id}',               function ($p)  { (new \Controllers\Admin\EnrollmentBankController())->delete((int)$p['id']); });
+
+
 // ── KatPay Webhook (PUBLIC — no auth, signature-verified internally) ──────────
 // This route MUST be registered last as a fallback to avoid auth middleware
 addRoute('POST', '/payment/callback',                             function ()    { (new \Controllers\TopUpController())->handleCallback(); });

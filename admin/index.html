@@ -412,6 +412,7 @@ body.dark-mode .chart-tab.active{background:#1e293b;color:#60a5fa}
       <div class="nav-label" onclick="toggleNavCat(this)" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleNavCat(this)}">PLATFORM<span class="nav-caret">▾</span></div>
       <div class="nav-sub">
         <button data-page="services" onclick="go('services',this)">⚙　Services & Pricing</button>
+        <button data-page="enrollment-banks" onclick="go('enrollment-banks',this)">🏦 Enrollment Banks</button>
         <button data-page="admins" onclick="go('admins',this)">♙　Admin Staff</button>
         <button data-page="audit" onclick="go('audit',this)">◷　Audit Logs</button>
         <button data-page="settings" onclick="go('settings',this)">⚙　General Settings</button>
@@ -575,6 +576,52 @@ body.dark-mode .chart-tab.active{background:#1e293b;color:#60a5fa}
           <strong id="statRegUsers">0</strong>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="page-enrollment-banks" class="page">
+  <div class="heading">
+    <div>
+      <h1>BVN Enrollment Banks</h1>
+      <p>Configure which banks appear in the BVN Modification Enrollment Type dropdown. Toggle active/inactive, add custom banks, rename, or delete.</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="secondary" onclick="loadEnrollmentBanks()">↻ Refresh</button>
+      <button class="primary" onclick="openAddBankModal()">+ Add Bank</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h3>Bank Directory</h3>
+      <span id="enrollment-banks-summary">Loading banks...</span>
+    </div>
+    <div style="padding:15px">
+      <div class="toolbar" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <input id="enrollmentBankSearch" oninput="filterEnrollmentBanks()" placeholder="Search bank name..." style="max-width:300px">
+        <select id="enrollmentBankFilter" onchange="filterEnrollmentBanks()" style="max-width:180px">
+          <option value="">All Statuses</option>
+          <option value="active">Active (Visible)</option>
+          <option value="hidden">Hidden (Inactive)</option>
+        </select>
+        <div id="enrollmentBankMsg" style="margin-left:auto;font-size:13px;font-weight:600"></div>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="enrollment-banks-table">
+        <thead>
+          <tr>
+            <th style="width:60px">#</th>
+            <th>Bank Name</th>
+            <th style="width:140px;text-align:center">User Visibility</th>
+            <th style="width:180px;text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="enrollment-banks-tbody">
+          <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">Loading...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </section>
@@ -2357,6 +2404,7 @@ async function go(page,btn){
   if(page === "refunds") loadRefunds();
   if(page === "api-transactions") { if(typeof fetchApiTransactions==="function") fetchApiTransactions(1); if(typeof fetchApiTxnStats==="function") fetchApiTxnStats(); }
   if(page === "services") fetchAdminServices();
+  if(page === "enrollment-banks" && typeof loadEnrollmentBanks === "function") loadEnrollmentBanks();
   if(page === "announcements" && typeof loadAnnouncements === "function") loadAnnouncements();
   if(page === "provider-balance") { refreshProviderBalances(); loadTopUpHistory(1); }
   if(page === "wallet-funding") fetchWalletTopups(1);
@@ -5091,5 +5139,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script src="zenithpay.js"></script>
 <script src="announcements.js"></script>
+<script src="enrollment-banks.js"></script>
 </body>
 </html>

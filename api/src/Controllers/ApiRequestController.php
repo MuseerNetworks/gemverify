@@ -860,6 +860,33 @@ class ApiRequestController
             return;
         }
 
+        // ── RATE LIMIT / THROTTLE GUARD (Prevents Apache Thread Congestion) ──
+        // If polled less than 45 seconds ago, return current DB state immediately.
+        // This stops repetitive frontend polls from exhausting web server threads.
+        $lastChecked = !empty($tx['last_checked_at']) ? strtotime($tx['last_checked_at']) : 0;
+        $secondsSinceCheck = time() - $lastChecked;
+        if ($secondsSinceCheck < 45 && !empty($lastChecked)) {
+            $statusLabel = match($tx['gv_status']) {
+                'completed'  => 'Your request has been completed! You can now view and download your result.',
+                'processing' => 'Your request is being processed on the registry. Next live sync in ' . (45 - $secondsSinceCheck) . 's.',
+                default      => 'Current status: ' . $tx['gv_status'],
+            };
+            Response::success([
+                'gv_reference' => $tx['gv_reference'],
+                'status'       => $tx['gv_status'],
+                'message'      => $statusLabel,
+                'cached'       => true,
+                'tx'           => $tx
+            ]);
+            return;
+        }
+
+        // Update last_checked_at immediately to reserve this execution slot
+        try {
+            $this->db->prepare("UPDATE api_transactions SET last_checked_at = NOW() WHERE id = ?")
+                     ->execute([$tx['id']]);
+        } catch (\Throwable $_) {}
+
         try {
             if ($activeProvider === 's8v') {
                 $trackingIdForCheck = null;
