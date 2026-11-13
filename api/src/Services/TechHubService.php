@@ -234,15 +234,24 @@ class TechHubService
         $method = $inputMethod ?? 'by_nin';
 
         if ($slug === 'nin-verification') {
+            $phoneClean = $this->sanitisePhone($formData['phone'] ?? $formData['phone_number'] ?? $formData['nin'] ?? '');
+            $demoPayload = [
+                'firstname' => strtoupper(trim((string)($formData['firstname'] ?? $formData['first_name'] ?? $formData['first'] ?? ''))),
+                'lastname'  => strtoupper(trim((string)($formData['lastname']  ?? $formData['last_name']  ?? $formData['last']  ?? ''))),
+                'dob'       => $this->formatDob((string)($formData['dob'] ?? '')),
+            ];
+            $genderVal = strtoupper(trim((string)($formData['gender'] ?? '')));
+            if ($genderVal !== '') {
+                $demoPayload['gender'] = substr($genderVal, 0, 1);
+            }
+
             return match ($method) {
                 'by_nin'   => ['nin'   => $this->sanitiseNin($formData['nin'] ?? '')],
-                'by_phone' => ['phone' => $this->sanitisePhone($formData['phone'] ?? '')],
-                'by_demo'  => [
-                    'firstname' => strtoupper(trim($formData['firstname'] ?? '')),
-                    'lastname'  => strtoupper(trim($formData['lastname']  ?? '')),
-                    'dob'       => $this->formatDob($formData['dob'] ?? ''),
-                    'gender'    => strtoupper(trim($formData['gender'] ?? '')),
+                'by_phone' => [
+                    'phone' => $phoneClean,
+                    'nin'   => $phoneClean,
                 ],
+                'by_demo'  => $demoPayload,
                 default => throw new \RuntimeException("Unknown input_method: {$method}"),
             };
         }

@@ -64,7 +64,7 @@ class ApiRequestController
         'nin-verification' => [
             'by_nin'   => ['nin'],
             'by_phone' => ['phone'],
-            'by_demo'  => ['firstname', 'lastname', 'dob', 'gender'],
+            'by_demo'  => ['firstname', 'lastname', 'dob'],
         ],
         'bvn-verification' => [
             null => ['bvn'],
@@ -142,19 +142,48 @@ class ApiRequestController
         $pin            = $input['pin'] ?? null;
 
         // Auto-detect input_method if not explicitly passed
+        if (empty($inputMethod) && !empty($input['method'])) {
+            $methodMap = [
+                'nin'         => 'by_nin',
+                'by_nin'      => 'by_nin',
+                'phone'       => 'by_phone',
+                'by_phone'    => 'by_phone',
+                'demographic' => 'by_demo',
+                'by_demo'     => 'by_demo',
+            ];
+            $inputMethod = $methodMap[$input['method']] ?? null;
+        }
+
         if (empty($inputMethod)) {
             if (!empty($input['nin'])) {
                 $inputMethod = 'by_nin';
-            } elseif (!empty($input['phone'])) {
+            } elseif (!empty($input['phone']) || !empty($input['phone_number'])) {
                 $inputMethod = 'by_phone';
-            } elseif (!empty($input['firstname']) || !empty($input['first_name'])) {
+            } elseif (!empty($input['firstname']) || !empty($input['first_name']) || !empty($input['first'])) {
                 $inputMethod = 'by_demo';
             }
         }
 
+        // Normalize demographic and contact field aliases
+        if (!empty($input['first']) && empty($input['firstname'])) {
+            $input['firstname'] = trim((string)$input['first']);
+        }
+        if (!empty($input['first_name']) && empty($input['firstname'])) {
+            $input['firstname'] = trim((string)$input['first_name']);
+        }
+        if (!empty($input['last']) && empty($input['lastname'])) {
+            $input['lastname'] = trim((string)$input['last']);
+        }
+        if (!empty($input['last_name']) && empty($input['lastname'])) {
+            $input['lastname'] = trim((string)$input['last_name']);
+        }
+        if (!empty($input['phone_number']) && empty($input['phone'])) {
+            $input['phone'] = trim((string)$input['phone_number']);
+        }
+
         // Strip meta-fields from formData passed to provider
         $formData = $input;
-        foreach (['service_slug','variant_key','input_method','idempotency_key','pin'] as $k) {
+        foreach (['service_slug','variant_key','input_method','idempotency_key','pin','method'] as $k) {
             unset($formData[$k]);
         }
 
