@@ -75,8 +75,8 @@ class RecordDocsService
 
             if ($inputMethod === 'by_demo') {
                 $payload = [
-                    'firstName' => trim((string)($formData['firstName'] ?? $formData['first_name'] ?? '')),
-                    'lastName'  => trim((string)($formData['lastName']  ?? $formData['last_name']  ?? '')),
+                    'firstName' => trim((string)($formData['firstName'] ?? $formData['firstname'] ?? $formData['first_name'] ?? '')),
+                    'lastName'  => trim((string)($formData['lastName']  ?? $formData['lastname']  ?? $formData['last_name']  ?? '')),
                     'dob'       => trim((string)($formData['dob'] ?? $formData['dateOfBirth'] ?? $formData['date_of_birth'] ?? '')),
                     'gender'    => strtoupper(trim((string)($formData['gender'] ?? 'M'))),
                 ];
