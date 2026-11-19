@@ -18,10 +18,10 @@ final class AnnouncementAdminController
     {
         AdminMiddleware::requireRole('super_admin');
         $data = $this->input();
-        [$title, $body] = $this->validatedContent($data);
+        [$title, $body, $ctaLabel, $ctaUrl] = $this->validatedContent($data);
         $db = db();
-        $db->prepare("INSERT INTO announcements (title, body, status, created_by, created_at, updated_at) VALUES (?, ?, 'draft', ?, NOW(), NOW())")
-            ->execute([$title, $body, AdminMiddleware::getAdminId()]);
+        $db->prepare("INSERT INTO announcements (title, body, cta_label, cta_url, status, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, 'draft', ?, NOW(), NOW())")
+            ->execute([$title, $body, $ctaLabel, $ctaUrl, AdminMiddleware::getAdminId()]);
         Response::success(['id' => (int) $db->lastInsertId()], 'Announcement saved as draft.', 201);
     }
 
@@ -29,9 +29,9 @@ final class AnnouncementAdminController
     {
         AdminMiddleware::requireRole('super_admin');
         $data = $this->input();
-        [$title, $body] = $this->validatedContent($data);
-        $stmt = db()->prepare('UPDATE announcements SET title = ?, body = ?, updated_at = NOW() WHERE id = ?');
-        $stmt->execute([$title, $body, $id]);
+        [$title, $body, $ctaLabel, $ctaUrl] = $this->validatedContent($data);
+        $stmt = db()->prepare('UPDATE announcements SET title = ?, body = ?, cta_label = ?, cta_url = ?, updated_at = NOW() WHERE id = ?');
+        $stmt->execute([$title, $body, $ctaLabel, $ctaUrl, $id]);
         if ($stmt->rowCount() === 0) { Response::notFound('Announcement not found.'); }
         Response::success([], 'Announcement updated.');
     }
@@ -73,6 +73,26 @@ final class AnnouncementAdminController
         if ($title === '' || mb_strlen($title) > 200 || $body === '' || mb_strlen($body) > 4000) {
             Response::error('Title (1-200 characters) and message (1-4000 characters) are required.', 422);
         }
-        return [$title, $body];
+        $ctaLabel = trim((string) ($data['cta_label'] ?? ''));
+        $ctaUrl = trim((string) ($data['cta_url'] ?? ''));
+        if (($ctaLabel === '') !== ($ctaUrl === '')) {
+            Response::error('Provide both a button label and a button URL, or leave both blank.', 422);
+        }
+        if ($ctaUrl !== '' && !$this->isValidHttpsUrl($ctaUrl)) {
+            Response::error('Button URL must be a valid HTTPS URL.', 422);
+        }
+        if (mb_strlen($ctaLabel) > 80 || mb_strlen($ctaUrl) > 255) {
+            Response::error('Button label or URL is too long.', 422);
+        }
+        return [$title, $body, $ctaLabel ?: null, $ctaUrl ?: null];
+    }
+
+    private function isValidHttpsUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+        return filter_var($url, FILTER_VALIDATE_URL) !== false
+            && is_array($parts)
+            && strtolower((string) ($parts['scheme'] ?? '')) === 'https'
+            && !empty($parts['host']);
     }
 }

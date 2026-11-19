@@ -271,6 +271,8 @@ try {
               id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
               title VARCHAR(200) NOT NULL,
               body TEXT NOT NULL,
+              cta_label VARCHAR(80) NULL,
+              cta_url VARCHAR(255) NULL,
               status ENUM('draft','published','paused') NOT NULL DEFAULT 'draft',
               created_by BIGINT UNSIGNED NOT NULL,
               published_at DATETIME NULL,

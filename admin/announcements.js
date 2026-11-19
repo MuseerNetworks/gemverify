@@ -25,6 +25,8 @@
     const item = selected();
     byId('gv-announcement-title').value = item ? item.title : '';
     byId('gv-announcement-body').value = item ? item.body : '';
+    byId('gv-announcement-cta-label').value = item ? (item.cta_label || '') : 'WhatsApp';
+    byId('gv-announcement-cta-url').value = item ? (item.cta_url || '') : 'https://chat.whatsapp.com/HKAudY0A56n3b8yrBRI0y9?s=sh&p=a&iam=1';
     updateActionState();
   }
 
@@ -69,10 +71,12 @@
   async function save() {
     const title = byId('gv-announcement-title').value.trim();
     const body = byId('gv-announcement-body').value.trim();
+    const cta_label = byId('gv-announcement-cta-label').value.trim();
+    const cta_url = byId('gv-announcement-cta-url').value.trim();
     if (!title || !body) throw new Error('Enter both a title and a message.');
-    if (selectedId) await api('/admin/announcements/' + selectedId, { method: 'PATCH', body: JSON.stringify({ title, body }) });
+    if (selectedId) await api('/admin/announcements/' + selectedId, { method: 'PATCH', body: JSON.stringify({ title, body, cta_label, cta_url }) });
     else {
-      const data = await api('/admin/announcements', { method: 'POST', body: JSON.stringify({ title, body }) });
+      const data = await api('/admin/announcements', { method: 'POST', body: JSON.stringify({ title, body, cta_label, cta_url }) });
       selectedId = data.id;
     }
     await reload(false);
@@ -91,7 +95,7 @@
     if (!content) return;
     const page = document.createElement('section');
     page.id = 'page-announcements'; page.className = 'page';
-    page.innerHTML = '<div class="heading"><div><h1>Customer Announcements</h1><p>Published messages appear for every customer after each login.</p></div><button id="gv-announcement-new" class="secondary">+ New announcement</button></div><div style="display:grid;grid-template-columns:minmax(250px,.8fr) minmax(0,1.4fr);gap:18px;align-items:start" class="gv-announcement-grid"><div class="card"><div class="head"><h2>Messages</h2></div><div id="gv-announcements-list" style="padding:14px"></div></div><div class="card"><div class="head"><h2>Announcement editor</h2></div><div style="padding:18px"><label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px">Title</label><input id="gv-announcement-title" maxlength="200" placeholder="Important notice" style="width:100%;box-sizing:border-box;margin-bottom:14px"><label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px">Message</label><textarea id="gv-announcement-body" maxlength="4000" rows="8" placeholder="Write the message users should see after login." style="width:100%;box-sizing:border-box;resize:vertical"></textarea><p id="gv-announcement-message" style="min-height:18px;font-size:12px;margin:10px 0"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="gv-announcement-save" class="secondary">Save draft</button><button id="gv-announcement-publish" class="primary">Publish</button><button id="gv-announcement-pause" class="secondary" style="color:#b45309">Pause</button></div></div></div></div>';
+    page.innerHTML = '<div class="heading"><div><h1>Customer Announcements</h1><p>Published messages show once after login and remain as a WhatsApp button until paused.</p></div><button id="gv-announcement-new" class="secondary">+ New announcement</button></div><div style="display:grid;grid-template-columns:minmax(250px,.8fr) minmax(0,1.4fr);gap:18px;align-items:start" class="gv-announcement-grid"><div class="card"><div class="head"><h2>Messages</h2></div><div id="gv-announcements-list" style="padding:14px"></div></div><div class="card"><div class="head"><h2>Announcement editor</h2></div><div style="padding:18px"><label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px">Title</label><input id="gv-announcement-title" maxlength="200" placeholder="Join our WhatsApp Community" style="width:100%;box-sizing:border-box;margin-bottom:14px"><label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px">Message</label><textarea id="gv-announcement-body" maxlength="4000" rows="5" placeholder="Samu sabbin updates, offers, da support kai tsaye daga GemVerify." style="width:100%;box-sizing:border-box;resize:vertical"></textarea><label style="display:block;font-weight:700;font-size:12px;margin:14px 0 6px">Button label</label><input id="gv-announcement-cta-label" maxlength="80" placeholder="WhatsApp" style="width:100%;box-sizing:border-box;margin-bottom:14px"><label style="display:block;font-weight:700;font-size:12px;margin-bottom:6px">Button URL</label><input id="gv-announcement-cta-url" type="url" maxlength="255" placeholder="https://chat.whatsapp.com/..." style="width:100%;box-sizing:border-box"><p style="font-size:12px;color:var(--muted);margin:8px 0">Use a full HTTPS link. Users see a clean WhatsApp button, never the raw URL.</p><p id="gv-announcement-message" style="min-height:18px;font-size:12px;margin:10px 0"></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="gv-announcement-save" class="secondary">Save draft</button><button id="gv-announcement-publish" class="primary">Publish</button><button id="gv-announcement-pause" class="secondary" style="color:#b45309">Pause</button></div></div></div></div>';
     content.appendChild(page);
     byId('gv-announcement-new').onclick = () => { selectedId = null; setMessage(''); populateEditor(); renderList(); byId('gv-announcement-title').focus(); };
     byId('gv-announcement-title').addEventListener('input', updateActionState);

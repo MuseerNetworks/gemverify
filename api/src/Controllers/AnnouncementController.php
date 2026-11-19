@@ -11,7 +11,7 @@ final class AnnouncementController
     {
         AuthMiddleware::getUserId();
         try {
-            $stmt = db()->query("SELECT id, title, body, published_at FROM announcements WHERE status = 'published' ORDER BY published_at DESC, id DESC LIMIT 1");
+            $stmt = db()->query("SELECT id, title, body, cta_label, cta_url, published_at FROM announcements WHERE status = 'published' ORDER BY published_at DESC, id DESC LIMIT 1");
             $announcement = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
             Response::success(['announcement' => $announcement]);
         } catch (\Throwable) {
