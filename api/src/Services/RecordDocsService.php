@@ -63,14 +63,14 @@ class RecordDocsService
             }
 
             $res = $this->client->post('identity/bvn', ['bvn' => $bvn]);
-            return $this->normaliseSyncResult($slug, $res);
+            return $this->normaliseSyncResult($slug, $res, $variantKey);
         }
 
         if ($slug === 'nin-verification') {
             if ($inputMethod === 'by_phone') {
                 $phone = preg_replace('/\D/', '', (string)($formData['phone'] ?? $formData['phone_number'] ?? $formData['phoneNumber'] ?? ''));
                 $res = $this->client->post('identity/nin/phone', ['phone' => $phone]);
-                return $this->normaliseSyncResult($slug, $res);
+                return $this->normaliseSyncResult($slug, $res, $variantKey);
             }
 
             if ($inputMethod === 'by_demo') {
@@ -81,7 +81,7 @@ class RecordDocsService
                     'gender'    => strtoupper(trim((string)($formData['gender'] ?? 'M'))),
                 ];
                 $res = $this->client->post('identity/nin/demographics', $payload);
-                return $this->normaliseSyncResult($slug, $res);
+                return $this->normaliseSyncResult($slug, $res, $variantKey);
             }
 
             // Default: by_nin
@@ -99,7 +99,7 @@ class RecordDocsService
             }
 
             $res = $this->client->post('identity/nin', ['nin' => $nin]);
-            return $this->normaliseSyncResult($slug, $res);
+            return $this->normaliseSyncResult($slug, $res, $variantKey);
         }
 
         return [
@@ -113,7 +113,7 @@ class RecordDocsService
         ];
     }
 
-    private function normaliseSyncResult(string $slug, array $clientResult): array
+    private function normaliseSyncResult(string $slug, array $clientResult, ?string $variantKey = null): array
     {
         $httpCode = $clientResult['http_code'] ?? 0;
         $data     = $clientResult['data'] ?? [];
@@ -152,6 +152,9 @@ class RecordDocsService
 
         // Auto-generate high-res NIN PDF slip for NIN verifications
         if ($slug === 'nin-verification' && is_array($citizenData)) {
+            if (!empty($variantKey)) {
+                $citizenData['slip_type'] = $variantKey;
+            }
             require_once __DIR__ . '/SlipGeneratorService.php';
             $slipRes = SlipGeneratorService::generateNinSlip($citizenData);
             if ($slipRes['success']) {

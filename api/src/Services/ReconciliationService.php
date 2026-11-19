@@ -354,6 +354,9 @@ class ReconciliationService
                 // Auto-generate slip for personalization if needed
                 if (in_array($serviceSlug, ['personalization', 'nin-personalization'], true) && is_array($rawResultData)) {
                     if (empty($rawResultData['pdf_base64'])) {
+                        if (!empty($tx['variant_key']) && empty($rawResultData['slip_type'])) {
+                            $rawResultData['slip_type'] = $tx['variant_key'];
+                        }
                         require_once __DIR__ . '/SlipGeneratorService.php';
                         $slipRes = SlipGeneratorService::generateNinSlip($rawResultData);
                         if ($slipRes['success']) {

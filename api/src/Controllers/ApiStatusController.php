@@ -318,8 +318,11 @@ class ApiStatusController
             if (!empty($decoded['pdf_base64'])) {
                 $pdfBase64 = $decoded['pdf_base64'];
                 $fileName  = $decoded['file_name'] ?? $fileName;
-            } elseif (in_array($tx['service_slug'] ?? '', ['personalization', 'nin-personalization'], true)) {
+            } elseif (in_array($tx['service_slug'] ?? '', ['personalization', 'nin-personalization', 'nin-verification'], true)) {
                 // Generate NIN slip on-demand if missing
+                if (!empty($tx['variant_key']) && empty($decoded['slip_type'])) {
+                    $decoded['slip_type'] = $tx['variant_key'];
+                }
                 require_once __DIR__ . '/../Services/SlipGeneratorService.php';
                 $slipRes = \Services\SlipGeneratorService::generateNinSlip($decoded);
                 if ($slipRes['success']) {
@@ -424,6 +427,9 @@ class ApiStatusController
 
             if (in_array($serviceSlug, ['personalization', 'nin-personalization'], true) && is_array($rawResultData)) {
                 if (empty($rawResultData['pdf_base64'])) {
+                    if (!empty($tx['variant_key']) && empty($rawResultData['slip_type'])) {
+                        $rawResultData['slip_type'] = $tx['variant_key'];
+                    }
                     require_once __DIR__ . '/../Services/SlipGeneratorService.php';
                     $slipRes = \Services\SlipGeneratorService::generateNinSlip($rawResultData);
                     if ($slipRes['success']) {

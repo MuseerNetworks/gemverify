@@ -859,10 +859,13 @@ class ApiRequestController
         // Check if an S8V failed transaction needs diagnostics/IPE enrichment
         $needsS8vRefresh = ($activeProvider === 's8v' && !empty($tx['provider_ticket_id']) && $tx['gv_status'] === 'failed' && $isPersonalization && ($tx['error_code'] !== 'FAILED_IPE_CLEARANCE_REQUIRED' || empty($tx['result_data']) || stripos($tx['error_message'] ?? '', 'No matching record found') !== false));
 
-        // If already completed Personalization, ensure PDF slip is synthesized if missing
-        if ($tx['gv_status'] === 'completed' && $isPersonalization) {
+        // If already completed Personalization or NIN verification, ensure PDF slip is synthesized if missing
+        if ($tx['gv_status'] === 'completed' && ($isPersonalization || ($tx['service_slug'] ?? '') === 'nin-verification')) {
             $rd = json_decode($tx['result_data'] ?? '', true);
             if (is_array($rd) && empty($rd['pdf_base64'])) {
+                if (!empty($tx['variant_key']) && empty($rd['slip_type'])) {
+                    $rd['slip_type'] = $tx['variant_key'];
+                }
                 require_once __DIR__ . '/../Services/SlipGeneratorService.php';
                 $slipRes = \Services\SlipGeneratorService::generateNinSlip($rd);
                 if ($slipRes['success']) {
@@ -958,6 +961,9 @@ class ApiRequestController
                         // If personalization, synthesize high-resolution official NIN slip
                         if (in_array($serviceSlug, ['personalization', 'nin-personalization'], true) && is_array($resultData)) {
                             if (empty($resultData['pdf_base64'])) {
+                                if (!empty($tx['variant_key']) && empty($resultData['slip_type'])) {
+                                    $resultData['slip_type'] = $tx['variant_key'];
+                                }
                                 require_once __DIR__ . '/../Services/SlipGeneratorService.php';
                                 $slipRes = \Services\SlipGeneratorService::generateNinSlip($resultData);
                                 if ($slipRes['success']) {

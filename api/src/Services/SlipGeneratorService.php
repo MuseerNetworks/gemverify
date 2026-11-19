@@ -15,6 +15,7 @@ class SlipGeneratorService
     private const TEMPLATE_DIGITAL  = __DIR__ . '/../../../assets/img/templates/nin_digital_fpdf_bg.jpg';
     private const TEMPLATE_IMPROVED = __DIR__ . '/../../../assets/img/templates/nin_improved_fpdf_bg.jpg';
     private const TEMPLATE_STANDARD = __DIR__ . '/../../../assets/img/templates/nin_standard_enrolment_template.jpg';
+    private const TEMPLATE_BASIC_BG = __DIR__ . '/../../../assets/img/templates/nin_basic_bg_obj8.bin';
     private const FONT_OCRB         = __DIR__ . '/../../../assets/fonts/OCRB10PitchBT-Regular.ttf';
 
     /**
@@ -26,13 +27,21 @@ class SlipGeneratorService
     public static function generateNinSlip(array $citizenData): array
     {
         try {
-            // Determine slip template type: 'digital', 'improved', or 'standard' / 'enrolment'
-            $type = strtolower(trim((string)($citizenData['template_type'] ?? $citizenData['slip_type'] ?? 'digital')));
-            if ($type === 'standard' || $type === 'enrolment') {
-                return self::generateStandardEnrolmentSlip($citizenData);
+            // Determine slip template type: 'basic', 'digital'/'premium'/'vnin', 'improved'/'regular', or 'standard'/'enrolment'
+            $rawType = strtolower(trim((string)($citizenData['template_type'] ?? $citizenData['slip_type'] ?? $citizenData['variant_key'] ?? 'digital')));
+            $type = match ($rawType) {
+                'basic'                          => 'basic',
+                'standard', 'enrolment'          => 'standard',
+                'improved', 'regular'            => 'improved',
+                'vnin', 'premium', 'digital'     => 'digital',
+                default                          => 'digital',
+            };
+
+            if ($type === 'basic') {
+                return self::generateBasicSlip($citizenData);
             }
-            if ($type !== 'improved') {
-                $type = 'digital';
+            if ($type === 'standard') {
+                return self::generateStandardEnrolmentSlip($citizenData);
             }
 
             $tplPath = ($type === 'digital') ? self::TEMPLATE_DIGITAL : self::TEMPLATE_IMPROVED;
@@ -573,6 +582,140 @@ class SlipGeneratorService
             return [
                 'success' => false,
                 'error'   => 'Standard slip generation failed: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Generate Official Basic NIN Slip (Digital Identification Verification Slip)
+     * Matches exact NIMC Digital Identification format:
+     * - Header: National Identity Management System / Federal Republic of Nigeria
+     * - Coat of Arms crest in top right
+     * - Citizen photo on left: 155 x 215 pt at (45, 457)
+     * - Personal Information table grid with bold Helvetica typography
+     * - Footer: Confidentiality disclaimer
+     */
+    public static function generateBasicSlip(array $citizenData): array
+    {
+        try {
+            if (!file_exists(self::TEMPLATE_BASIC_BG)) {
+                return ['success' => false, 'error' => 'Basic slip background template not found on server.'];
+            }
+
+            $bgObj8 = file_get_contents(self::TEMPLATE_BASIC_BG);
+            $bgLen  = strlen($bgObj8);
+
+            // 1. Sanitize demographic fields
+            $rawNin       = preg_replace('/\D/', '', (string)($citizenData['idNumber'] ?? $citizenData['nin'] ?? $citizenData['vnin'] ?? ''));
+            $trackingId   = strtoupper(trim((string)($citizenData['trackingId'] ?? $citizenData['tracking_id'] ?? $citizenData['reference'] ?? '')));
+            $firstName    = strtoupper(trim((string)($citizenData['firstName'] ?? $citizenData['firstname'] ?? '')));
+            $middleName   = strtoupper(trim((string)($citizenData['middleName'] ?? $citizenData['middlename'] ?? '')));
+            $lastName     = strtoupper(trim((string)($citizenData['lastName'] ?? $citizenData['surname'] ?? $citizenData['lastname'] ?? '')));
+            $maidenName   = strtoupper(trim((string)($citizenData['maidenName'] ?? $citizenData['maiden_name'] ?? '-')));
+            if ($maidenName === '') $maidenName = '-';
+
+            $phone        = trim((string)($citizenData['phone'] ?? $citizenData['phoneNumber'] ?? $citizenData['phone_number'] ?? ''));
+            $rawDob       = (string)($citizenData['dateOfBirth'] ?? $citizenData['dob'] ?? $citizenData['birthdate'] ?? '');
+            $dobFormatted = !empty($rawDob) ? strtoupper(date('d M Y', strtotime($rawDob))) : '';
+
+            $rawGender    = strtoupper(trim((string)($citizenData['gender'] ?? $citizenData['sex'] ?? 'M')));
+            $gender       = str_starts_with($rawGender, 'F') ? 'F' : 'M';
+
+            $residence    = strtoupper(trim((string)($citizenData['address'] ?? $citizenData['residence'] ?? $citizenData['residence_address'] ?? '')));
+
+            // 2. Prepare citizen photo (350x466 JPEG)
+            $photoSrc = null;
+            $rawPhoto = $citizenData['photo'] ?? $citizenData['image'] ?? null;
+            if (!empty($rawPhoto)) {
+                if (str_contains($rawPhoto, ',')) $rawPhoto = explode(',', $rawPhoto, 2)[1];
+                $bin = base64_decode($rawPhoto, true);
+                if ($bin !== false) $photoSrc = @imagecreatefromstring($bin);
+            }
+            $normPhoto = imagecreatetruecolor(350, 466);
+            if ($photoSrc) {
+                imagecopyresampled($normPhoto, $photoSrc, 0, 0, 0, 0, 350, 466, imagesx($photoSrc), imagesy($photoSrc));
+                imagedestroy($photoSrc);
+            } else {
+                $grey = imagecolorallocate($normPhoto, 235, 235, 235);
+                imagefill($normPhoto, 0, 0, $grey);
+            }
+            ob_start();
+            imagejpeg($normPhoto, null, 92);
+            $photoJpeg = ob_get_clean();
+            imagedestroy($normPhoto);
+            $photoLen = strlen($photoJpeg);
+
+            // 3. Build Content Stream
+            $stream = "q\n0.000 0.000 595.000 842.000 re W n\nq\n595.000 0 0 842.000 0.000 0.000 cm /I1 Do\nQ\n";
+            $stream .= "q\n45.000 457.000 155.000 215.000 re W n\nq\n155.000 0 0 215.000 45.000 457.000 cm /I2 Do\nQ \nQ\n";
+            $stream .= "/GS1 gs\n/GS2 gs\n0.000 0.000 0.000 rg\n";
+
+            if (!empty($rawNin))       $stream .= sprintf("BT 370.000 636.232 Td /F1 10.0 Tf  [(%s)] TJ ET\n", addcslashes($rawNin, '()\\'));
+            if (!empty($trackingId))   $stream .= sprintf("BT 370.000 617.232 Td /F1 10.0 Tf  [(%s)] TJ ET\n", addcslashes($trackingId, '()\\'));
+            if (!empty($firstName))    $stream .= sprintf("BT 370.000 594.232 Td /F1 10.0 Tf  [(%s)] TJ ET\n", addcslashes($firstName, '()\\'));
+            if (!empty($middleName))   $stream .= sprintf("BT 370.000 571.232 Td /F1 10.0 Tf  [(%s)] TJ ET\n", addcslashes($middleName, '()\\'));
+            if (!empty($lastName))     $stream .= sprintf("BT 370.000 549.232 Td /F1 10.0 Tf  [(%s)] TJ ET\n", addcslashes($lastName, '()\\'));
+            $stream .= sprintf("BT 370.000 526.232 Td /F1 10.0 Tf  [(%s)] TJ ET\n", addcslashes($maidenName, '()\\'));
+            if (!empty($phone))        $stream .= sprintf("BT 370.000 503.232 Td /F1 10.0 Tf  [(%s)] TJ ET\n", addcslashes($phone, '()\\'));
+            if (!empty($dobFormatted)) $stream .= sprintf("BT 370.000 481.232 Td /F1 10.0 Tf  [(%s)] TJ ET\n", addcslashes($dobFormatted, '()\\'));
+            if (!empty($gender))       $stream .= sprintf("BT 370.000 458.232 Td /F1 10.0 Tf  [(%s)] TJ ET\n", addcslashes($gender, '()\\'));
+
+            if (!empty($residence)) {
+                $lines = explode("\n", wordwrap($residence, 36, "\n"));
+                $y = 428.476;
+                foreach (array_slice($lines, 0, 2) as $line) {
+                    $stream .= sprintf("BT 370.000 %.3f Td /F1 9.0 Tf  [(%s)] TJ ET\n", $y, addcslashes(trim($line), '()\\'));
+                    $y -= 11.905;
+                }
+            }
+            $stream .= "Q\n";
+
+            $streamComp = gzcompress($stream, 9);
+            $streamLen  = strlen($streamComp);
+
+            $out = "%PDF-1.4\n";
+            $offsets = [];
+            $addObj = function($num, $body) use (&$out, &$offsets) {
+                $offsets[$num] = strlen($out);
+                $out .= "$num 0 obj\n$body\nendobj\n";
+            };
+
+            $addObj(1, "<< /Type /Catalog /Pages 3 0 R >>");
+            $addObj(2, "<< /Type /Outlines /Count 0 >>");
+            $addObj(3, "<< /Type /Pages /Kids [6 0 R ] /Count 1 /Resources << /ProcSet 4 0 R /Font << /F1 12 0 R >> /XObject << /I1 8 0 R /I2 9 0 R >> /ExtGState << /GS1 10 0 R /GS2 11 0 R >> >> /MediaBox [0.000 0.000 595.000 842.000] >>");
+            $addObj(4, "[/PDF /Text /ImageC ]");
+            $addObj(5, "<< /Producer (GemVerify NIN Engine) >>");
+            $addObj(6, "<< /Type /Page /MediaBox [0.000 0.000 595.000 842.000] /Parent 3 0 R /Contents 7 0 R >>");
+            $addObj(7, "<< /Filter /FlateDecode /Length $streamLen >>\nstream\n" . $streamComp . "\nendstream");
+            $addObj(8, "<< /Type /XObject /Subtype /Image /Width 1818 /Height 2572 /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors 3 /Columns 1818 /BitsPerComponent 8>> /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length $bgLen >>\nstream\n" . $bgObj8 . "\nendstream");
+            $addObj(9, "<< /Type /XObject /Subtype /Image /Width 350 /Height 466 /ColorSpace /DeviceRGB /Filter /DCTDecode /BitsPerComponent 8 /Length $photoLen >>\nstream\n" . $photoJpeg . "\nendstream");
+            $addObj(10, "<< /Type /ExtGState /BM /Normal /CA 1 >>");
+            $addObj(11, "<< /Type /ExtGState /BM /Normal /ca 1 >>");
+            $addObj(12, "<< /Type /Font /Subtype /Type1 /Name /F1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+
+            $startXref = strlen($out);
+            $out .= "xref\n0 13\n0000000000 65535 f \n";
+            for ($i = 1; $i <= 12; $i++) {
+                $out .= sprintf("%010d 00000 n \n", $offsets[$i]);
+            }
+            $out .= "trailer\n<< /Size 13 /Root 1 0 R /Info 5 0 R >>\nstartxref\n$startXref\n%%EOF\n";
+
+            $pdfBase64 = 'data:application/pdf;base64,' . base64_encode($out);
+            $fileName  = 'NIN_Basic_Slip_' . ($rawNin ?: time()) . '.pdf';
+
+            return [
+                'success'    => true,
+                'pdf_base64' => $pdfBase64,
+                'filename'   => $fileName,
+                'nin'        => $rawNin,
+                'error'      => null
+            ];
+
+        } catch (\Throwable $e) {
+            error_log('[SlipGeneratorService] Error generating basic slip: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error'   => 'Basic slip generation failed: ' . $e->getMessage()
             ];
         }
     }

@@ -146,6 +146,9 @@ class S8VWebhookController
 
             if ($isPersonalization && is_array($payloadData)) {
                 if (empty($payloadData['pdf_base64'])) {
+                    if (!empty($tx['variant_key']) && empty($payloadData['slip_type'])) {
+                        $payloadData['slip_type'] = $tx['variant_key'];
+                    }
                     require_once __DIR__ . '/../../Services/SlipGeneratorService.php';
                     $slipRes = \Services\SlipGeneratorService::generateNinSlip($payloadData);
                     if ($slipRes['success']) {

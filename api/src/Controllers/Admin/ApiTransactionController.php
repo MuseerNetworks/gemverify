@@ -711,6 +711,9 @@ class ApiTransactionController
 
                 if (in_array($serviceSlug, ['personalization', 'nin-personalization'], true) && is_array($rawResultData)) {
                     if (empty($rawResultData['pdf_base64'])) {
+                        if (!empty($tx['variant_key']) && empty($rawResultData['slip_type'])) {
+                            $rawResultData['slip_type'] = $tx['variant_key'];
+                        }
                         require_once __DIR__ . '/../../Services/SlipGeneratorService.php';
                         $slipRes = \Services\SlipGeneratorService::generateNinSlip($rawResultData);
                         if ($slipRes['success']) {
