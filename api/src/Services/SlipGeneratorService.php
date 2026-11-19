@@ -16,6 +16,7 @@ class SlipGeneratorService
     private const TEMPLATE_IMPROVED = __DIR__ . '/../../../assets/img/templates/nin_improved_fpdf_bg.jpg';
     private const TEMPLATE_STANDARD = __DIR__ . '/../../../assets/img/templates/nin_standard_enrolment_template.jpg';
     private const TEMPLATE_BASIC_BG = __DIR__ . '/../../../assets/img/templates/nin_basic_bg_obj8.bin';
+    private const TEMPLATE_VNIN     = __DIR__ . '/../../../assets/img/templates/nin_vnin_template.jpg';
     private const FONT_OCRB         = __DIR__ . '/../../../assets/fonts/OCRB10PitchBT-Regular.ttf';
 
     /**
@@ -33,7 +34,8 @@ class SlipGeneratorService
                 'basic'                          => 'basic',
                 'standard', 'enrolment'          => 'standard',
                 'improved', 'regular'            => 'improved',
-                'vnin', 'premium', 'digital'     => 'digital',
+                'vnin'                           => 'vnin',
+                'premium', 'digital'             => 'digital',
                 default                          => 'digital',
             };
 
@@ -42,6 +44,9 @@ class SlipGeneratorService
             }
             if ($type === 'standard') {
                 return self::generateStandardEnrolmentSlip($citizenData);
+            }
+            if ($type === 'vnin') {
+                return self::generateVninSlip($citizenData);
             }
 
             $tplPath = ($type === 'digital') ? self::TEMPLATE_DIGITAL : self::TEMPLATE_IMPROVED;
@@ -716,6 +721,155 @@ class SlipGeneratorService
             return [
                 'success' => false,
                 'error'   => 'Basic slip generation failed: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Generate Official NIMC Verification-as-a-Service (vNIN) Slip
+     * Matches exact NIMC Verification-as-a-Service DOMPDF specification:
+     * - Header: NIMC Commission crest & Verification-as-a-Service branding
+     * - Side-by-side: Verified credentials card on left, large prominent identity text in middle
+     * - Far right: High-density 2D barcode container
+     * - Bottom table: TimeStamp, Transaction ID, Verification Type (TOKEN), Status (OK), Agent ID
+     */
+    public static function generateVninSlip(array $citizenData): array
+    {
+        try {
+            if (!file_exists(self::TEMPLATE_VNIN)) {
+                return ['success' => false, 'error' => 'vNIN template file not found on server.'];
+            }
+
+            $templateJpg = file_get_contents(self::TEMPLATE_VNIN);
+            $templateLen = strlen($templateJpg);
+
+            // 1. Sanitize demographic fields
+            $surname    = strtoupper(trim((string)($citizenData['lastName'] ?? $citizenData['surname'] ?? $citizenData['lastname'] ?? '')));
+            $firstName  = strtoupper(trim((string)($citizenData['firstName'] ?? $citizenData['firstname'] ?? '')));
+            $middleName = strtoupper(trim((string)($citizenData['middleName'] ?? $citizenData['middlename'] ?? '')));
+            $givenNames = strtoupper(trim(implode(' ', array_filter([$firstName, $middleName]))));
+
+            $rawDob       = (string)($citizenData['dateOfBirth'] ?? $citizenData['dob'] ?? $citizenData['birthdate'] ?? '');
+            $dobFormatted = !empty($rawDob) ? strtoupper(date('d M Y', strtotime($rawDob))) : '';
+
+            $rawNin        = preg_replace('/\D/', '', (string)($citizenData['idNumber'] ?? $citizenData['nin'] ?? $citizenData['vnin'] ?? ''));
+            $timestamp     = (string)($citizenData['timestamp'] ?? $citizenData['created_at'] ?? date('Y-m-d H:i:s'));
+            $transactionId = strtolower(trim((string)($citizenData['transaction_id'] ?? $citizenData['reference'] ?? $citizenData['trackingId'] ?? md5($rawNin . time()))));
+
+            // 2. Prepare citizen photo (350x466 JPEG)
+            $photoJpeg = self::preparePhoto($citizenData['photo'] ?? $citizenData['image'] ?? null);
+            $photoLen  = strlen($photoJpeg);
+
+            // 3. Prepare scannable QR code for the small card
+            $qrPayload = json_encode([
+                'vnin'   => $rawNin,
+                'name'   => trim($surname . ' ' . $givenNames),
+                'dob'    => $dobFormatted,
+                'status' => 'VERIFIED'
+            ], JSON_UNESCAPED_SLASHES);
+
+            $qr = new \QRCode($qrPayload, [
+                's'  => 'qrm',
+                'wq' => 1,
+                'wm' => 1,
+                'sf' => 1,
+                'bc' => 'FFFFFF',
+                'fc' => '000000',
+            ]);
+            $qrImg = $qr->render_image();
+            $targetQr = imagecreatetruecolor(490, 490);
+            imagecopyresampled($targetQr, $qrImg, 0, 0, 0, 0, 490, 490, imagesx($qrImg), imagesy($qrImg));
+            imagedestroy($qrImg);
+
+            ob_start();
+            imagejpeg($targetQr, null, 95);
+            $qrJpeg = ob_get_clean();
+            imagedestroy($targetQr);
+            $qrLen = strlen($qrJpeg);
+
+            // 4. Build Content Stream matching exact DOMPDF coordinates
+            $stream = "1.000 1.000 1.000 rg\n"
+                    . "34.016 34.016 527.249 773.859 re f\n"
+                    . "q\n"
+                    . " 1.000 0.000 0.000 1.000 -329.530 194.972 cm\n"
+                    . "q\n"
+                    . "659.061 0 0 389.944 297.640 263.158 cm /I1 Do\n"
+                    . "Q \n\n"
+                    . "Q\n"
+                    . "/GS1 gs\n"
+                    . "/GS2 gs\n"
+                    . "0.000 0.000 0.000 rg\n"
+                    // Small card texts
+                    . sprintf("BT 75.141 604.680 Td 0.750 Tc /F2 6.0 Tf  [(%s)] TJ 0.000 Tc ET\n", addcslashes($surname, '()\\'))
+                    . sprintf("BT 75.141 585.333 Td 0.750 Tc /F2 6.0 Tf  [(%s)] TJ 0.000 Tc ET\n", addcslashes($givenNames, '()\\'))
+                    . sprintf("BT 75.141 565.987 Td 0.750 Tc /F2 6.0 Tf  [(%s)] TJ 0.000 Tc ET\n", addcslashes($dobFormatted, '()\\'))
+                    // Large middle texts
+                    . sprintf("BT 213.280 607.496 Td 0.750 Tc /F2 15.0 Tf  [(%s)] TJ 0.000 Tc ET\n", addcslashes($surname, '()\\'))
+                    . sprintf("BT 213.280 572.673 Td 0.750 Tc /F2 15.0 Tf  [(%s)] TJ 0.000 Tc ET\n", addcslashes($givenNames, '()\\'))
+                    // Table texts
+                    . sprintf("BT 33.488 491.005 Td 0.750 Tc /F1 7.5 Tf  [(%s)] TJ 0.000 Tc ET\n", addcslashes($timestamp, '()\\'))
+                    . sprintf("BT 136.829 492.470 Td 1.125 Tc /F1 6.0 Tf  [(%s)] TJ 0.000 Tc ET\n", addcslashes($transactionId, '()\\'))
+                    // Photo
+                    . "1.000 1.000 1.000 rg\n"
+                    . "25.580 565.874 48.000 55.500 re f\n"
+                    . "q\n"
+                    . "45.000 0 0 52.500 27.080 567.374 cm /I2 Do\n"
+                    . "Q \n"
+                    // QR Code
+                    . "155.283 576.231 40.500 40.500 re f\n"
+                    . "q\n"
+                    . "37.500 0 0 37.500 156.783 577.731 cm /I4 Do\n"
+                    . "Q\n";
+
+            $streamComp = gzcompress($stream, 9);
+            $streamLen  = strlen($streamComp);
+
+            // 5. Assemble PDF
+            $out = "%PDF-1.4\n";
+            $offsets = [];
+            $addObj = function($num, $body) use (&$out, &$offsets) {
+                $offsets[$num] = strlen($out);
+                $out .= "$num 0 obj\n$body\nendobj\n";
+            };
+
+            $addObj(1, "<< /Type /Catalog /Outlines 2 0 R /Pages 3 0 R >>");
+            $addObj(2, "<< /Type /Outlines /Count 0 >>");
+            $addObj(3, "<< /Type /Pages /Kids [6 0 R ] /Count 1 /Resources << /ProcSet 4 0 R /Font << /F1 8 0 R /F2 9 0 R >> /XObject << /I1 10 0 R /I2 13 0 R /I4 14 0 R >> /ExtGState << /GS1 11 0 R /GS2 12 0 R >> >> /MediaBox [0.000 0.000 595.280 841.890] >>");
+            $addObj(4, "[/PDF /Text /ImageC ]");
+            $addObj(5, "<< /Producer (GemVerify vNIN Engine) /Title (VNIN Slip) >>");
+            $addObj(6, "<< /Type /Page /MediaBox [0.000 0.000 595.280 841.890] /Parent 3 0 R /Contents 7 0 R >>");
+            $addObj(7, "<< /Filter /FlateDecode /Length $streamLen >>\nstream\n" . $streamComp . "\nendstream");
+            $addObj(8, "<< /Type /Font /Subtype /Type1 /Name /F1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+            $addObj(9, "<< /Type /Font /Subtype /Type1 /Name /F2 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>");
+            $addObj(10, "<< /Type /XObject /Subtype /Image /Width 1080 /Height 639 /ColorSpace /DeviceRGB /Filter /DCTDecode /BitsPerComponent 8 /Length $templateLen >>\nstream\n" . $templateJpg . "\nendstream");
+            $addObj(11, "<< /Type /ExtGState /BM /Normal /CA 1 >>");
+            $addObj(12, "<< /Type /ExtGState /BM /Normal /ca 1 >>");
+            $addObj(13, "<< /Type /XObject /Subtype /Image /Width 350 /Height 466 /ColorSpace /DeviceRGB /Filter /DCTDecode /BitsPerComponent 8 /Length $photoLen >>\nstream\n" . $photoJpeg . "\nendstream");
+            $addObj(14, "<< /Type /XObject /Subtype /Image /Width 490 /Height 490 /ColorSpace /DeviceRGB /Filter /DCTDecode /BitsPerComponent 8 /Length $qrLen >>\nstream\n" . $qrJpeg . "\nendstream");
+
+            $startXref = strlen($out);
+            $out .= "xref\n0 15\n0000000000 65535 f \n";
+            for ($i = 1; $i <= 14; $i++) {
+                $out .= sprintf("%010d 00000 n \n", $offsets[$i]);
+            }
+            $out .= "trailer\n<< /Size 15 /Root 1 0 R /Info 5 0 R >>\nstartxref\n$startXref\n%%EOF\n";
+
+            $pdfBase64 = 'data:application/pdf;base64,' . base64_encode($out);
+            $fileName  = 'VNIN_Slip_' . ($rawNin ?: time()) . '.pdf';
+
+            return [
+                'success'    => true,
+                'pdf_base64' => $pdfBase64,
+                'filename'   => $fileName,
+                'nin'        => $rawNin,
+                'error'      => null
+            ];
+
+        } catch (\Throwable $e) {
+            error_log('[SlipGeneratorService] Error generating vNIN slip: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error'   => 'vNIN slip generation failed: ' . $e->getMessage()
             ];
         }
     }
