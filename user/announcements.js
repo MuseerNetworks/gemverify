@@ -65,7 +65,7 @@
     close();
     const overlay = document.createElement('div');
     overlay.id = 'gv-announcement-popup';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,25,49,.55);font-family:system-ui,sans-serif';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,25,49,.55);font-family:system-ui,sans-serif';
     const dialog = document.createElement('section');
     dialog.setAttribute('role', 'dialog'); dialog.setAttribute('aria-modal', 'true');
     dialog.style.cssText = 'width:min(460px,100%);border-radius:18px;background:#fff;color:#102044;box-shadow:0 25px 70px rgba(0,0,0,.3);padding:24px';
@@ -89,7 +89,9 @@
     const banner = document.createElement('aside');
     banner.id = 'gv-announcement-banner';
     banner.setAttribute('aria-label', 'WhatsApp community link');
-    banner.style.cssText = 'position:fixed;right:20px;bottom:20px;z-index:9997;font-family:system-ui,sans-serif';
+    // Account for iPhone/Android safe areas so the fixed button is never hidden
+    // behind a browser or application navigation bar.
+    banner.style.cssText = 'position:fixed;right:max(16px, env(safe-area-inset-right));bottom:max(16px, env(safe-area-inset-bottom));z-index:2147483646;font-family:system-ui,sans-serif';
     const cta = makeCta(announcement, 'display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;background:#25d366;color:#fff;text-decoration:none;box-shadow:0 10px 24px rgba(37,211,102,.36);transition:transform .18s ease,box-shadow .18s ease');
     cta.setAttribute('aria-label', announcement.cta_label || 'Open WhatsApp community');
     cta.title = announcement.cta_label || 'WhatsApp';
@@ -112,6 +114,12 @@
     } catch (_) {}
   }
 
+  // Do not rely only on window.load: mobile browsers may restore this page from
+  // their back-forward cache, where load does not fire again.
   window.addEventListener('gv-auth-changed', () => { sessionStorage.removeItem(seenKey); setTimeout(load, 450); });
-  window.addEventListener('load', () => { if (token() && !sessionStorage.getItem(seenKey)) setTimeout(load, 1200); });
+  window.addEventListener('pageshow', () => { setTimeout(load, 150); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') setTimeout(load, 150);
+  });
+  setTimeout(load, 0);
 })();
